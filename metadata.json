@@ -1,0 +1,6 @@
+{
+  "name": "SENA Attendance Dashboard",
+  "description": "Dashboard for tracking student attendance and absences for SENA courses.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

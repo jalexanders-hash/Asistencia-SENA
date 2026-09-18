@@ -1,0 +1,30 @@
+{
+  "entities": {
+    "Ficha": {
+      "title": "Ficha",
+      "description": "Attendance data for a specific course group.",
+      "type": "object",
+      "properties": {
+        "fechas_asistencia": {
+          "type": "array",
+          "description": "List of dates attendance was taken."
+        },
+        "asistencias_aprendices": {
+          "type": "array",
+          "description": "List of student attendance records."
+        },
+        "equipo_instructores": {
+          "type": "array",
+          "description": "List of instructors."
+        }
+      },
+      "required": ["fechas_asistencia", "asistencias_aprendices", "equipo_instructores"]
+    }
+  },
+  "firestore": {
+    "/fichas/{fichaId}": {
+      "schema": "Ficha",
+      "description": "Stores attendance data per group (Ficha)."
+    }
+  }
+}

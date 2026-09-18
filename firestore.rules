@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() { return request.resource.data; }
+    
+    function isValidFicha(data) {
+      return data.keys().hasAll(['fechas_asistencia', 'asistencias_aprendices', 'equipo_instructores'])
+        && data.fechas_asistencia is list
+        && data.asistencias_aprendices is list
+        && data.equipo_instructores is list;
+    }
+
+    match /fichas/{fichaId} {
+      // The app design explicitly supports anonymous (unauthenticated) users via magic links.
+      allow read: if isValidId(fichaId);
+      allow create: if isValidId(fichaId) && isValidFicha(incoming());
+      allow update: if isValidId(fichaId) 
+        && isValidFicha(incoming())
+        && incoming().diff(resource.data).affectedKeys().hasOnly(['fechas_asistencia', 'asistencias_aprendices', 'equipo_instructores', 'fechas_por_instructor', 'ficha_de_caracterizacion', 'programa', 'centro', 'denominacion']);
+    }
+  }
+}
