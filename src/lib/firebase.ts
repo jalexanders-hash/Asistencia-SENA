@@ -3,26 +3,20 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'fireba
 import { getAuth } from 'firebase/auth';
 import { courseData as defaultData } from '../data';
 
-// Configuración utilizando estrictamente las variables de entorno de Vercel (Vite)
+// Configuración directa del proyecto nuevo para evitar fallos de inyección en Vercel
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyCXrNcoBX4yqK-PCZsc_Qf2GbbI-7nMbDo",
+  authDomain: "asistenciasena-78819.firebaseapp.com",
+  projectId: "asistenciasena-78819",
+  storageBucket: "asistenciasena-78819.firebasestorage.app",
+  messagingSenderId: "842202356335",
+  appId: "1:842202356335:web:148076f83f5e342e6c8b9a",
+  measurementId: "G-DHS61ZMT5N"
 };
 
-// Validación de seguridad para desarrollo/producción
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  console.error("⚠️ [Firebase] Faltan variables de entorno en Vercel. Revisa que comiencen por VITE_ y estén activas en producción.");
-}
-
-// Inicializar Firebase evitando duplicados si la app ya se cargó previamente
+// Inicializar Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Inicializar Cloud Firestore y Firebase Auth
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
@@ -30,13 +24,10 @@ const FICHA_ID = "3387401";
 const docRef = doc(db, "fichas", FICHA_ID);
 
 export const subscribeToFichaData = async (callback: (data: typeof defaultData) => void) => {
-  // Asegurar que el documento exista antes de suscribirse en tiempo real
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) {
     await setDoc(docRef, defaultData);
   }
-  
-  // Escucha en tiempo real
   return onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
       callback(snap.data() as typeof defaultData);
