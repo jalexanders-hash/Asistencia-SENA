@@ -1,9 +1,9 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { courseData as defaultData } from '../data';
 
-// Usar las variables de entorno configuradas en Vercel
+// Configuración utilizando estrictamente las variables de entorno de Vercel (Vite)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -14,26 +14,29 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Validación de seguridad para desarrollo/producción
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error("⚠️ [Firebase] Faltan variables de entorno en Vercel. Revisa que comiencen por VITE_ y estén activas en producción.");
+}
 
-// Initialize Cloud Firestore
+// Inicializar Firebase evitando duplicados si la app ya se cargó previamente
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// Inicializar Cloud Firestore y Firebase Auth
 export const db = getFirestore(app);
-
-// Initialize Firebase Auth
 export const auth = getAuth(app);
 
 const FICHA_ID = "3387401";
 const docRef = doc(db, "fichas", FICHA_ID);
 
 export const subscribeToFichaData = async (callback: (data: typeof defaultData) => void) => {
-  // Ensure the document exists before subscribing
+  // Asegurar que el documento exista antes de suscribirse en tiempo real
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) {
     await setDoc(docRef, defaultData);
   }
   
-  // Real-time listener
+  // Escucha en tiempo real
   return onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
       callback(snap.data() as typeof defaultData);
@@ -41,7 +44,11 @@ export const subscribeToFichaData = async (callback: (data: typeof defaultData) 
   });
 };
 
-export const saveAttendanceData = async (fechas_asistencia: string[], asistencias_aprendices: typeof defaultData['asistencias_aprendices'], fechas_por_instructor?: Record<string, string[]>) => {
+export const saveAttendanceData = async (
+  fechas_asistencia: string[], 
+  asistencias_aprendices: typeof defaultData['asistencias_aprendices'], 
+  fechas_por_instructor?: Record<string, string[]>
+) => {
   await updateDoc(docRef, {
     fechas_asistencia,
     asistencias_aprendices,
