@@ -24,10 +24,15 @@ const FICHA_ID = "3387401";
 const docRef = doc(db, "fichas", FICHA_ID);
 
 export const subscribeToFichaData = async (callback: (data: typeof defaultData) => void) => {
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) {
-    await setDoc(docRef, defaultData);
+  try {
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      await setDoc(docRef, defaultData);
+    }
+  } catch (error) {
+    console.error("Error al verificar/crear el documento inicial:", error);
   }
+
   return onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
       callback(snap.data() as typeof defaultData);
@@ -40,13 +45,24 @@ export const saveAttendanceData = async (
   asistencias_aprendices: typeof defaultData['asistencias_aprendices'], 
   fechas_por_instructor?: Record<string, string[]>
 ) => {
-  await updateDoc(docRef, {
-    fechas_asistencia,
-    asistencias_aprendices,
-    ...(fechas_por_instructor && { fechas_por_instructor })
-  });
+  try {
+    await updateDoc(docRef, {
+      fechas_asistencia,
+      asistencias_aprendices,
+      ...(fechas_por_instructor && { fechas_por_instructor })
+    });
+    console.log("¡Asistencia guardada con éxito!");
+  } catch (error) {
+    console.error("Error al guardar la asistencia en Firestore:", error);
+    throw error; // Libera el estado de carga en la interfaz
+  }
 };
 
 export const updateFichaCompleteData = async (newData: typeof defaultData) => {
-  await updateDoc(docRef, newData);
+  try {
+    await updateDoc(docRef, newData);
+  } catch (error) {
+    console.error("Error al actualizar la ficha completa:", error);
+    throw error;
+  }
 };
