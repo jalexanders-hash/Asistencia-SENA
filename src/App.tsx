@@ -371,7 +371,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Campana de Notificaciones con Dropdown Interactiva y Configuración Trasladada */}
+            {/* Campana de Notificaciones con Dropdown Interactiva */}
             <div className="relative">
               <button 
                 onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
@@ -391,7 +391,6 @@ export default function App() {
                     <span className="text-[11px] text-sena font-semibold cursor-pointer hover:underline" onClick={() => { setActiveTab('alertas'); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
                   </div>
 
-                  {/* Configuración rápida de inasistencias integrada en el dropdown */}
                   <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-slate-700">Notificar a partir de:</span>
@@ -465,7 +464,7 @@ export default function App() {
             </h1>
           </div>
 
-          {/* Botones de Acción Superior Operativos */}
+          {/* Botones de Acción Superior */}
           <div className="flex flex-wrap items-center gap-2">
             <button 
               onClick={handleOpenAttendance}
@@ -499,7 +498,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Pestañas de Navegación Funcionales */}
+        {/* Pestañas de Navegación */}
         <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
           <button 
             onClick={() => setActiveTab('ficha')}
@@ -530,7 +529,7 @@ export default function App() {
         {/* CONTENIDO SEGÚN PESTAÑA ACTIVA */}
         {activeTab === 'aprendices' && (
           <>
-            {/* Tarjetas KPI (5 métricas clave) */}
+            {/* Tarjetas KPI */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
                 <div className="flex justify-between items-start">
@@ -573,7 +572,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Tabla de Aprendices y Herramientas */}
+            {/* Tabla de Aprendices */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="relative w-full sm:w-80">
@@ -840,48 +839,98 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL DE EXPORTACIÓN PDF */}
+      {/* MODAL DE EXPORTACIÓN PDF CON LISTA DESPLEGABLE CORREGIDA */}
       {showExportModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-200">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+            
+            {/* Cabecera del Modal */}
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800">Generar Reporte Oficial PDF</h3>
-              <button onClick={() => setShowExportModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+              <h3 className="font-bold text-slate-800 flex items-center gap-2 text-base">
+                <FileOutput className="w-5 h-5 text-sena" /> Generar Reporte Oficial PDF
+              </h3>
+              <button 
+                onClick={() => setShowExportModal(false)} 
+                className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 flex items-center justify-center text-slate-600 font-bold transition-colors"
+              >
+                ✕
+              </button>
             </div>
+
+            {/* Contenido del Formulario de Exportación */}
             <div className="p-6 space-y-4 text-sm">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Tipo de Reporte:</label>
-                <select 
-                  value={selectedReportType} 
-                  onChange={(e) => setSelectedReportType(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg p-2 bg-white"
-                >
-                  {REPORT_TYPES.map(rt => (
-                    <option key={rt.id} value={rt.id}>{rt.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Inicio:</label>
-                  <input type="text" value={exportStartDate} onChange={(e) => setExportStartDate(e.target.value)} className="w-full border border-slate-300 rounded p-1.5 text-xs" />
+                <label className="block font-semibold text-slate-700 mb-1.5">
+                  Seleccionar Tipo de Informe:
+                </label>
+                <div className="relative">
+                  <select 
+                    value={selectedReportType} 
+                    onChange={(e) => setSelectedReportType(e.target.value)}
+                    className="w-full border-2 border-slate-300 rounded-lg p-3 bg-white text-slate-800 font-medium shadow-sm focus:outline-none focus:border-sena focus:ring-2 focus:ring-sena/20 cursor-pointer appearance-none pr-10"
+                  >
+                    {REPORT_TYPES.map(rt => (
+                      <option key={rt.id} value={rt.id} className="py-2 text-slate-800 bg-white">
+                        {rt.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                    ▼
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Fin:</label>
-                  <input type="text" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} className="w-full border border-slate-300 rounded p-1.5 text-xs" />
+                <p className="text-xs text-slate-500 mt-1.5">
+                  Selecciona el formato normativo requerido para la gestión de tu ficha.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha Inicio:</label>
+                  <input 
+                    type="text" 
+                    value={exportStartDate} 
+                    onChange={(e) => setExportStartDate(e.target.value)} 
+                    className="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono bg-slate-50" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha Fin:</label>
+                  <input 
+                    type="text" 
+                    value={exportEndDate} 
+                    onChange={(e) => setExportEndDate(e.target.value)} 
+                    className="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono bg-slate-50" 
+                  />
                 </div>
               </div>
             </div>
+
+            {/* Acciones del Modal */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-              <button onClick={() => setShowExportModal(false)} className="px-4 py-2 text-sm text-slate-600">Cancelar</button>
+              <button 
+                onClick={() => setShowExportModal(false)} 
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
               <button 
                 onClick={handleExportConfirm} 
                 disabled={isPreparingPdf}
-                className="px-4 py-2 bg-sena text-white font-semibold rounded-lg hover:bg-sena-dark shadow-sm text-sm"
+                className="px-5 py-2 bg-sena text-white font-semibold rounded-lg hover:bg-sena-dark shadow-sm text-sm flex items-center gap-2 transition-colors disabled:opacity-70"
               >
-                {isPreparingPdf ? 'Generando PDF...' : 'Descargar PDF'}
+                {isPreparingPdf ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Generando...
+                  </>
+                ) : (
+                  <>
+                    <FileOutput className="w-4 h-4" /> Descargar PDF
+                  </>
+                )}
               </button>
             </div>
+
           </div>
         </div>
       )}
