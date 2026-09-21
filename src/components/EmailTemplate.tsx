@@ -21,7 +21,7 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
 }) => {
   const [copiado, setCopiado] = useState(false);
 
-  // Toma de forma segura el correo ya sea de correoAprendiz o de correo_electronico (data.ts)
+  // Toma de forma segura el correo ya sea de correo_electronico (data.ts) o de correoAprendiz
   const correoFinalBD = correo_electronico && correo_electronico.trim() !== "" 
     ? correo_electronico.trim() 
     : (correoAprendiz && correoAprendiz.trim() !== "" ? correoAprendiz.trim() : "");
@@ -33,7 +33,7 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
     `Se le notifica formalmente el registro de inasistencia(s) a las actividades de formación correspondientes, en la(s) siguiente(s) fecha(s): ${fechasFaltas}.\n` +
     `Programa / Ficha: Tecnología en Gestión Administrativa (${ficha})\n` +
     `Instructor a cargo: Jorge Alexander Sepúlveda Vélez\n\n` +
-    `De conformidad con el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), se detallan las disposiciones normativas aplicables:\n` +
+    `De conformidad com el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), se detallan las disposiciones normativas aplicables:\n` +
     `- Artículo 28 (Incumplimiento Justificado): Las inasistencias pueden ser justificadas por causas programadas (informadas con al menos 1 día de anterioridad) o no programadas (reportadas a más tardar dentro de los 5 días hábiles siguientes con soportes).\n` +
     `- Artículo 29 (Incumplimiento Injustificado): Se configura cuando el aprendiz no reporta ni justifica la novedad dentro del plazo reglamentario.\n` +
     `- Artículo 30 (Deserción): El abandono injustificado activa los procedimientos institucionales de deserción según las causales normativas.\n` +
