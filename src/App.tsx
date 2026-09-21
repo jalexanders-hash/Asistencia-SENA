@@ -4,26 +4,23 @@ import { subscribeToFichaData, saveAttendanceData } from './lib/firebase';
 import { REPORT_TYPES, generatePDFReport } from './lib/pdfGenerator';
 import { HelpModal } from './components/HelpModal';
 import { SheetsTemplateModal } from './components/SheetsTemplateModal';
+import EmailTemplate from './components/EmailTemplate';
+import { auth } from "./lib/firebase";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { Login } from "./components/Login";
+import { LogOut } from "lucide-react";
 import { 
   Users, 
-  CalendarDays, 
   BookOpen, 
   UserSquare2,
-  CheckCircle2,
   XCircle,
   Clock,
   AlertCircle,
   Search,
-  Download,
   Mail,
   AlertTriangle,
   Loader2,
-  CheckCircle,
-  FileText,
-  Copy,
-  Calendar,
   ClipboardList,
-  Save,
   FileOutput,
   FileSpreadsheet
 } from 'lucide-react';
@@ -44,11 +41,6 @@ const formatDateForDisplay = (dateString: string) => {
   }
   return dateString;
 };
-
-import { auth } from "./lib/firebase";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { Login } from "./components/Login";
-import { LogOut } from "lucide-react";
 
 export default function App() {
   const [courseData, setCourseData] = useState(initialCourseData);
@@ -88,12 +80,12 @@ export default function App() {
       setCurrentInstructorIdx(null);
     }
   }, [user, courseData]);
-   
+    
   const [searchTerm, setSearchTerm] = useState('');
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
-   
+    
   const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
 
   const currentInstructorDates = useMemo(() => {
@@ -103,7 +95,7 @@ export default function App() {
     }
     return courseData.fechas_asistencia;
   }, [currentInstructor, courseData]);
-   
+    
   const [showNotifyModal, setShowNotifyModal] = useState(false);
   const [notifyTab, setNotifyTab] = useState<'inasistencias' | 'retardos'>('inasistencias');
   const [selectedTemplateStudent, setSelectedTemplateStudent] = useState<string | null>(null);
@@ -111,7 +103,7 @@ export default function App() {
   const [isSending, setIsSending] = useState(false);
   const [notifySuccess, setNotifySuccess] = useState(false);
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
-   
+    
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState(REPORT_TYPES[0].id);
   const [exportStartDate, setExportStartDate] = useState('');
@@ -248,34 +240,12 @@ export default function App() {
     return filtered;
   }, [searchTerm, showRiskOnly, studentsWithStats]);
 
-  const studentsAtRiskFallas = useMemo(() => studentsWithStats.filter(s => s.enRiesgo), [studentsWithStats]);
-  const studentsAtRiskTarde = useMemo(() => studentsWithStats.filter(s => s.enRiesgoTarde), [studentsWithStats]);
-
   const handleOpenExportModal = () => {
     if (currentInstructorDates.length > 0) {
       setExportStartDate(currentInstructorDates[0]);
       setExportEndDate(currentInstructorDates[currentInstructorDates.length - 1]);
     }
     setShowExportModal(true);
-  };
-
-  const handleExportConfirm = () => {
-    setIsPreparingPdf(true);
-    setTimeout(async () => {
-      try {
-        await generatePDFReport(selectedReportType, courseData, studentsWithStats, {
-          startDate: exportStartDate,
-          endDate: exportEndDate,
-          mode: exportMode,
-          instructor: exportInstructor
-        });
-      } catch (err) {
-        console.error("Error generating PDF", err);
-        alert("Hubo un error al generar el PDF. Por favor intente nuevamente.");
-      }
-      setIsPreparingPdf(false);
-      setShowExportModal(false);
-    }, 100);
   };
 
   const handleNotifyClick = () => {
@@ -290,180 +260,6 @@ export default function App() {
   };
 
   const correoInstructorActual = (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || '';
-
-  const handleSendEmailDirect = (student: typeof studentsWithStats[0], tipo: 'inasistencia' | 'retardo') => {
-    setIsSending(true);
-    setSelectedTemplateStudent(student.numero_documento);
-
-    const fechas = tipo === 'inasistencia' 
-      ? student.fechasFalla.map(formatDateForDisplay).join(', ') 
-      : student.fechasTarde.map(formatDateForDisplay).join(', ');
-
-    const asunto = encodeURIComponent(`Notificación formal de ${tipo} - Reglamento del Aprendiz - Ficha ${courseData.ficha_de_caracterizacion}`);
-    const cuerpo = encodeURIComponent(
-      `Estimado(a) Aprendiz: ${student.nombres} ${student.apellidos}\n\n` +
-      `Se le notifica registro de ${tipo}(s) en las fechas: ${fechas}.\n` +
-      `Programa: ${courseData.programa} (Ficha: ${courseData.ficha_de_caracterizacion})\n` +
-      `Instructor: ${currentInstructor?.nombre_del_instructor}\n\n` +
-      `De acuerdo con el Reglamento del Aprendiz (Acuerdo 09 de 2024), cuenta con un plazo de hasta cinco (5) días hábiles para presentar sus soportes de justificación válidos (citas médicas, calamidad doméstica, etc.).\n\n` +
-      `--- Copia de evidencia enviada automáticamente (CC) a: ${correoInstructorActual} ---`
-    );
-
-    setTimeout(() => {
-      setIsSending(false);
-      setNotifySuccess(true);
-      
-      const mailtoLink = `mailto:aprendiz@sena.edu.co?cc=${encodeURIComponent(correoInstructorActual)}&subject=${asunto}&body=${cuerpo}`;
-      window.open(mailtoLink, '_blank');
-
-      setTimeout(() => {
-        setNotifySuccess(false);
-        setSelectedTemplateStudent(null);
-      }, 2500);
-    }, 1200);
-  };
-
-  const generateAbsenceTemplate = (student: typeof studentsWithStats[0]) => {
-    const fechas = student.fechasFalla.map(formatDateForDisplay).join(', ') || '[Fecha]';
-    return `<div>
-<p><strong>ASUNTO:</strong> Notificación de inasistencia y recordatorio del Reglamento del Aprendiz (Acuerdo 09 de 2024) - ${courseData.programa}</p>
-<br>
-<p><strong>Destinatario:</strong><br>
-Aprendiz: ${student.nombres} ${student.apellidos}<br>
-Documento: ${student.numero_documento}<br>
-Ficha: ${courseData.ficha_de_caracterizacion}</p>
-<br>
-<p><strong>Detalle del Incumplimiento:</strong><br>
-Competencia: ${currentInstructor?.competencia}<br>
-Fechas de inasistencia: ${fechas}</p>
-<br>
-<p><strong>Normativa de Referencia (Reglamento del Aprendiz SENA - Acuerdo 09 de 2024):</strong><br>
-Se le recuerda el deber de cumplir satisfactoriamente con el proceso formativo asistiendo puntualmente a las actividades programadas (Artículo 27). Los incumplimientos injustificados (Artículo 29) o la falta de reporte oportuno pueden derivar en llamado de atención o deserción (Artículo 30).</p>
-<br>
-<p><strong>Causales de Incumplimiento Justificado (Artículo 28):</strong><br>
-Si su inasistencia obedece a causas programadas (citas médicas, calamidad doméstica, fuerza mayor, etc.), cuenta con un plazo máximo de <strong>cinco (5) días hábiles</strong> siguientes a su ocurrencia para presentar los soportes pertinentes ante el instructor.</p>
-<br>
-<p><em>Este reporte incluye copia automática de evidencia (CC) al correo del instructor:</em> <strong>${correoInstructorActual}</strong></p>
-</div>`;
-  };
-
-  const generateLateTemplate = (student: typeof studentsWithStats[0]) => {
-    const f1 = formatDateForDisplay(student.fechasTarde[0]) || '[Fecha]';
-    const f2 = formatDateForDisplay(student.fechasTarde[1]) || '[Fecha]';
-    const f3 = formatDateForDisplay(student.fechasTarde[2]) || '[Fecha]';
-    
-    return `<div>
-<p><strong>ASUNTO:</strong> Notificación de tercer retardo y Primer Llamado de Atención Escrito - Ficha ${courseData.ficha_de_caracterizacion}</p>
-<br>
-<p><strong>Para:</strong> ${student.nombres} ${student.apellidos}<br>
-<strong>De:</strong> ${currentInstructor?.nombre_del_instructor} (${currentInstructor?.competencia})</p>
-<br>
-<p>Estimado(a) aprendiz:<br>
-Se le notifica formalmente que ha acumulado tres (3) llegadas tarde injustificadas a las sesiones formativas:</p>
-<br>
-<ul>
-  <li>Retardo 1: ${f1}</li>
-  <li>Retardo 2: ${f2}</li>
-  <li>Retardo 3: ${f3}</li>
-</ul>
-<br>
-<p>De acuerdo con el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), la puntualidad es un deber fundamental. Este registro constituye un Primer Llamado de Atención Escrito. Dispone de cinco (5) días hábiles para presentar soportes si existiera alguna causal justificada.</p>
-<br>
-<p><em>Copia de evidencia (CC) enviada al correo del instructor:</em> <strong>${correoInstructorActual}</strong></p>
-</div>`;
-  };
-
-  const copyToClipboard = async (html: string) => {
-    try {
-      const plainText = html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n').replace(/<[^>]+>/g, '');
-      if (navigator.clipboard && window.ClipboardItem) {
-        const textBlob = new Blob([plainText], { type: 'text/plain' });
-        const htmlBlob = new Blob([html], { type: 'text/html' });
-        const clipboardItem = new ClipboardItem({
-          'text/plain': textBlob,
-          'text/html': htmlBlob,
-        });
-        await navigator.clipboard.write([clipboardItem]);
-      } else {
-        await navigator.clipboard.writeText(plainText);
-      }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy: ', err);
-    }
-  };
-
-  const handleDateChange = (newDate: string) => {
-    setAttendanceDate(newDate);
-    const formattedDate = formatDateForData(newDate);
-    const newRecords: Record<string, string> = {};
-     
-    courseData.asistencias_aprendices.forEach(student => {
-      const status = student.registros[formattedDate as keyof typeof student.registros];
-      newRecords[student.numero_documento] = status || 'Presente';
-    });
-     
-    setTempRecords(newRecords);
-  };
-
-  const handleSaveAttendance = async () => {
-    setIsSavingAttendance(true);
-    const formattedDate = formatDateForData(attendanceDate);
-     
-    let newFechas = [...courseData.fechas_asistencia];
-    if (!newFechas.includes(formattedDate)) {
-      const newDateObj = new Date(attendanceDate);
-      let insertIdx = newFechas.length;
-       
-      for (let i = 0; i < newFechas.length; i++) {
-        const [m, d, y] = newFechas[i].split('/');
-        const existingDateObj = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`);
-        if (newDateObj < existingDateObj) {
-          insertIdx = i;
-          break;
-        }
-      }
-      newFechas.splice(insertIdx, 0, formattedDate);
-    }
-     
-    let newFechasPorInstructor = { ...(courseData.fechas_por_instructor || {}) };
-    if (currentInstructor) {
-      let currentDates = [...(newFechasPorInstructor[currentInstructor.nombre_del_instructor] || [])];
-      if (!currentDates.includes(formattedDate)) {
-        currentDates.push(formattedDate);
-        currentDates.sort((a,b) => {
-           const da = new Date(a.split('/')[2], parseInt(a.split('/')[0])-1, a.split('/')[1]);
-           const db = new Date(b.split('/')[2], parseInt(b.split('/')[0])-1, b.split('/')[1]);
-           return da.getTime() - db.getTime();
-        });
-        newFechasPorInstructor[currentInstructor.nombre_del_instructor] = currentDates;
-      }
-    }
-     
-    const newAprendices = courseData.asistencias_aprendices.map(student => {
-      const status = tempRecords[student.numero_documento];
-      const newRegistros = { ...student.registros } as Record<string, string>;
-       
-      if (status === 'Presente') {
-        delete newRegistros[formattedDate];
-      } else {
-        newRegistros[formattedDate] = status;
-      }
-       
-      return { ...student, registros: newRegistros };
-    });
-     
-    try {
-      await saveAttendanceData(newFechas, newAprendices, newFechasPorInstructor);
-      setShowAttendanceModal(false);
-    } catch (error) {
-      console.error("Failed to save attendance", error);
-      alert("Error al guardar la asistencia en la nube.");
-    } finally {
-      setIsSavingAttendance(false);
-    }
-  };
 
   if (!authReady || isLoading) {
     return (
@@ -623,7 +419,7 @@ Se le notifica formalmente que ha acumulado tres (3) llegadas tarde injustificad
           
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col">
             <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-sena" />
+              <Users className="w-4 h-4 text-sena" />
               Asistencia Global
             </span>
             <span className="text-3xl font-bold text-slate-900 mt-2">{stats.attendanceRate}%</span>
@@ -689,38 +485,58 @@ Se le notifica formalmente que ha acumulado tres (3) llegadas tarde injustificad
                   <th className="p-3 font-semibold text-center">Documento</th>
                   <th className="p-3 font-semibold text-center">Inasistencias</th>
                   <th className="p-3 font-semibold text-center">Retardos</th>
-                  <th className="p-3 font-semibold text-center">Estado de Riesgo</th>
+                  <th className="p-3 font-semibold text-center">Estado de Riesgo / Notificación</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <tr key={student.numero_documento} className="hover:bg-slate-50/80">
-                      <td className="p-3 font-medium text-slate-800">
-                        {student.apellidos} {student.nombres}
-                      </td>
-                      <td className="p-3 text-center text-slate-500 font-mono text-xs">
-                        {student.numero_documento}
-                      </td>
-                      <td className="p-3 text-center font-bold text-slate-700">
-                        {student.fallasAcumuladas}
-                      </td>
-                      <td className="p-3 text-center font-bold text-slate-700">
-                        {student.tardanzasAcumuladas}
-                      </td>
-                      <td className="p-3 text-center">
-                        {(student.fallasAcumuladas >= limiteInasistencias || student.tardanzasAcumuladas >= 3) ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                            Atención Requerida
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-sena-dark">
-                            Normal
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                  filteredStudents.map((student) => {
+                    const fechasFaltasStr = student.fechasFalla.length > 0
+                      ? student.fechasFalla.map(formatDateForDisplay).join(', ')
+                      : 'Sin inasistencias';
+
+                    const estaEnRiesgo = student.fallasAcumuladas >= limiteInasistencias || student.tardanzasAcumuladas >= 3;
+
+                    return (
+                      <tr key={student.numero_documento} className="hover:bg-slate-50/80">
+                        <td className="p-3 font-medium text-slate-800">
+                          {student.apellidos} {student.nombres}
+                        </td>
+                        <td className="p-3 text-center text-slate-500 font-mono text-xs">
+                          {student.numero_documento}
+                        </td>
+                        <td className="p-3 text-center font-bold text-slate-700">
+                          {student.fallasAcumuladas}
+                        </td>
+                        <td className="p-3 text-center font-bold text-slate-700">
+                          {student.tardanzasAcumuladas}
+                        </td>
+                        <td className="p-3 text-center">
+                          {estaEnRiesgo ? (
+                            <div className="flex flex-col items-center gap-2 py-2">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                Atención Requerida
+                              </span>
+                              
+                              {/* INTEGRACIÓN DEL COMPONENTE EMAIL TEMPLATE DINÁMICO */}
+                              <EmailTemplate 
+                                nombreAprendiz={`${student.nombres} ${student.apellidos}`}
+                                documento={student.numero_documento}
+                                ficha={courseData.ficha_de_caracterizacion}
+                                fechasFaltas={fechasFaltasStr}
+                                correoInstructor={correoInstructorActual}
+                                correo_electronico={student.correo_electronico}
+                              />
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-sena-dark">
+                              Normal
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-400">
@@ -734,220 +550,9 @@ Se le notifica formalmente que ha acumulado tres (3) llegadas tarde injustificad
         </div>
       </main>
 
-      {/* MODAL DE TOMA DE ASISTENCIA */}
-      {showAttendanceModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Llamado a Lista</h2>
-                <p className="text-xs text-slate-500">Instructor: {currentInstructor?.nombre_del_instructor}</p>
-              </div>
-              <input 
-                type="date" 
-                value={attendanceDate}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-medium"
-              />
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 space-y-4">
-              {courseData.asistencias_aprendices.map((student) => {
-                const currentStatus = tempRecords[student.numero_documento] || 'Presente';
-                return (
-                  <div key={student.numero_documento} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200 gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{student.apellidos} {student.nombres}</p>
-                      <p className="text-xs font-mono text-slate-500">{student.numero_documento}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {['Presente', 'X', 'Tarde', 'Excusa'].map((st) => {
-                        const isSelected = currentStatus === st;
-                        return (
-                          <button
-                            key={st}
-                            type="button"
-                            onClick={() => setTempRecords({ ...tempRecords, [student.numero_documento]: st })}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                              isSelected 
-                                ? st === 'X' ? 'bg-red-600 text-white shadow-sm' : st === 'Tarde' ? 'bg-amber-500 text-white shadow-sm' : 'bg-sena text-white shadow-sm'
-                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            {st === 'X' ? 'Falla' : st}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3">
-              <button 
-                onClick={() => setShowAttendanceModal(false)}
-                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleSaveAttendance}
-                disabled={isSavingAttendance}
-                className="px-5 py-2 bg-sena text-white rounded-lg text-sm font-medium hover:bg-sena-dark flex items-center gap-2 disabled:opacity-50"
-              >
-                {isSavingAttendance && <Loader2 className="w-4 h-4 animate-spin" />}
-                Guardar Asistencia
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE NOTIFICACIONES CON PESTAÑAS (INASISTENCIAS Y RETARDOS) */}
-      {showNotifyModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Centro de Notificaciones - Reglamento SENA</h2>
-                <p className="text-xs text-slate-500">Con copia de respaldo automática (CC) a: <strong>{correoInstructorActual}</strong></p>
-              </div>
-              <button onClick={() => setShowNotifyModal(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold">
-                &times;
-              </button>
-            </div>
-
-            {/* Pestañas de Navegación */}
-            <div className="flex border-b border-slate-200 bg-white px-6 pt-3 gap-4">
-              <button
-                onClick={() => setNotifyTab('inasistencias')}
-                className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
-                  notifyTab === 'inasistencias'
-                    ? 'border-sena text-sena'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Inasistencias ({studentsAtRiskFallas.length})
-              </button>
-              <button
-                onClick={() => setNotifyTab('retardos')}
-                className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
-                  notifyTab === 'retardos'
-                    ? 'border-amber-500 text-amber-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Llegadas Tarde &ge; 3 ({studentsAtRiskTarde.length})
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto flex-1 space-y-4">
-              {notifyTab === 'inasistencias' ? (
-                studentsAtRiskFallas.length > 0 ? (
-                  studentsAtRiskFallas.map((student) => (
-                    <div key={student.numero_documento} className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h4 className="font-bold text-slate-800 text-sm">{student.apellidos} {student.nombres}</h4>
-                          <p className="text-xs text-slate-500">Inasistencias acumuladas: <span className="font-bold text-red-600">{student.fallasAcumuladas}</span> (Umbral &ge; {limiteInasistencias})</p>
-                        </div>
-                        <span className="text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-md font-semibold">Alerta Faltas</span>
-                      </div>
-
-                      <div className="bg-white p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-600 max-h-36 overflow-y-auto">
-                        <div dangerouslySetInnerHTML={{ __html: generateAbsenceTemplate(student) }} />
-                      </div>
-
-                      <div className="flex justify-end gap-2 flex-wrap">
-                        <button
-                          onClick={() => copyToClipboard(generateAbsenceTemplate(student))}
-                          className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300 flex items-center gap-1.5"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          Copiar Plantilla
-                        </button>
-                        <button
-                          onClick={() => handleSendEmailDirect(student, 'inasistencia')}
-                          disabled={isSending && selectedTemplateStudent === student.numero_documento}
-                          className="px-4 py-1.5 bg-sena text-white rounded-lg text-xs font-semibold hover:bg-sena-dark flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-                        >
-                          {isSending && selectedTemplateStudent === student.numero_documento ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Mail className="w-3.5 h-3.5" />
-                          )}
-                          Enviar Notificación (Con Copia CC)
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 text-slate-400">
-                    No hay aprendices que alcancen el límite de {limiteInasistencias} inasistencia(s).
-                  </div>
-                )
-              ) : (
-                studentsAtRiskTarde.length > 0 ? (
-                  studentsAtRiskTarde.map((student) => (
-                    <div key={student.numero_documento} className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h4 className="font-bold text-slate-800 text-sm">{student.apellidos} {student.nombres}</h4>
-                          <p className="text-xs text-slate-500">Retardos acumulados: <span className="font-bold text-amber-600">{student.tardanzasAcumuladas}</span></p>
-                        </div>
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md font-semibold">Alerta Retardos</span>
-                      </div>
-
-                      <div className="bg-white p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-600 max-h-36 overflow-y-auto">
-                        <div dangerouslySetInnerHTML={{ __html: generateLateTemplate(student) }} />
-                      </div>
-
-                      <div className="flex justify-end gap-2 flex-wrap">
-                        <button
-                          onClick={() => copyToClipboard(generateLateTemplate(student))}
-                          className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300 flex items-center gap-1.5"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          Copiar Plantilla
-                        </button>
-                        <button
-                          onClick={() => handleSendEmailDirect(student, 'retardo')}
-                          disabled={isSending && selectedTemplateStudent === student.numero_documento}
-                          className="px-4 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-semibold hover:bg-amber-700 flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-                        >
-                          {isSending && selectedTemplateStudent === student.numero_documento ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Mail className="w-3.5 h-3.5" />
-                          )}
-                          Enviar Llamado Retardos (Con Copia CC)
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-12 text-slate-400">
-                    No hay aprendices con 3 o más llegadas tarde.
-                  </div>
-                )
-              )}
-            </div>
-
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button 
-                onClick={() => setShowNotifyModal(false)}
-                className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-900"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-      <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} courseData={courseData} />
+      {/* Modales auxiliares */}
+      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
+      {isSheetsModalOpen && <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} courseData={courseData} />}
     </div>
   );
 }
