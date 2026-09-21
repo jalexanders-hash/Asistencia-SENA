@@ -19,7 +19,7 @@ interface ExportModalProps {
   fichaNumber?: string;
 }
 
-// IDs mapeados exactamente a los que reconoce el motor pdfGenerator.ts
+// IDs mapeados exactamente con los que utiliza pdfGenerator.ts en tu proyecto
 export const REPORT_OPTIONS = [
   {
     id: 'consolidado_general',
@@ -57,7 +57,7 @@ export default function ExportReportModal({
   const [selectedReportId, setSelectedReportId] = useState<string>('');
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   
-  // Fechas por defecto en formato YYYY-MM-DD compatibles con input type="date"
+  // Fechas funcionales en formato YYYY-MM-DD
   const [exportStartDate, setExportStartDate] = useState<string>('2026-02-01');
   const [exportEndDate, setExportEndDate] = useState<string>('2026-09-21');
 
@@ -77,7 +77,7 @@ export default function ExportReportModal({
 
   return (
     <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-visible">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-slate-200 relative">
         
         {/* Cabecera Institucional */}
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center rounded-t-2xl">
@@ -129,9 +129,9 @@ export default function ExportReportModal({
               <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
             </div>
 
-            {/* Lista Desplegable Flotante con Scroll (Soluciona el corte visual) */}
+            {/* Lista Desplegable Flotante con Scroll (Soluciona el corte y permite navegar) */}
             {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-[150] max-h-56 overflow-y-auto divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-[200] max-h-60 overflow-y-auto divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
                 {REPORT_OPTIONS.map((option) => {
                   const IconComponent = option.icon;
                   const isSelected = option.id === selectedReportId;
@@ -164,7 +164,7 @@ export default function ExportReportModal({
             )}
           </div>
 
-          {/* Rango de Fechas Funcional con Selector de Fecha */}
+          {/* Rango de Fechas Funcional */}
           <div className="grid grid-cols-2 gap-4 pt-1">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Inicio:</label>
