@@ -57,9 +57,20 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
     orientation: isLandscape ? 'landscape' : 'portrait'
   });
   
+  // Consolidar fechas globales de todos los instructores y fechas generales de la ficha
+  let globalDates: string[] = [...(courseData.fechas_asistencia || [])];
+  if (courseData.fechas_por_instructor) {
+    Object.values(courseData.fechas_por_instructor).forEach((dates: any) => {
+      if (Array.isArray(dates)) {
+        dates.forEach(d => {
+          if (!globalDates.includes(d)) globalDates.push(d);
+        });
+      }
+    });
+  }
+
   if (reportType === "listado_control") {
     const logoDataUrl = await getLogoDataUrl();
-    
     const today = new Date();
     const dia = String(today.getDate()).padStart(2, '0');
     const mesNames = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
@@ -80,10 +91,6 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       if (logoDataUrl) {
         const logoSize = 14;
         doc.addImage(logoDataUrl, 'PNG', pageWidth / 2 - logoSize / 2, 8, logoSize, logoSize);
-      } else {
-        doc.setFontSize(22);
-        doc.setFont("helvetica", "bold");
-        doc.text("SENA", pageWidth / 2, 20, { align: "center" });
       }
 
       doc.setFontSize(10);
@@ -101,12 +108,9 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(80, 80, 80);
-      
-      const politica = "De acuerdo con La Ley 1581 de 2012, Protección de Datos Personales, el Servicio Nacional de Aprendizaje SENA, se compromete a garantizar la seguridad y protección de los datos personales que se encuentran almacenados en este documento, y les dará el tratamiento correspondiente en cumplimiento de lo establecido legalmente.";
+      const politica = "De acuerdo con La Ley 1581 de 2012, Protección de Datos Personales, el Servicio Nacional de Aprendizaje SENA, se compromete a garantizar la seguridad y protección de los datos personales...";
       const splitPolicy = doc.splitTextToSize(politica, pageWidth - 28);
-      
       doc.text(splitPolicy, 14, pageHeight - 15);
-      
       doc.setFont("helvetica", "bold");
       doc.setTextColor(0, 0, 0);
       doc.text("GOR-F-085 V02", pageWidth / 2, pageHeight - 6, { align: "center" });
@@ -116,14 +120,10 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       (index + 1).toString(),
       `${s.apellidos} ${s.nombres}`,
       s.numero_documento,
-      "", 
-      "", 
-      "Aprendiz", 
-      "SENA", 
+      "", "", "Aprendiz", "SENA", 
       s.correo_electronico || "",
       s.celular || "",
-      "", 
-      ""  
+      "", ""  
     ]);
 
     autoTable(doc, {
@@ -135,19 +135,6 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], font: 'helvetica', fontSize: 7, halign: 'center', valign: 'middle', lineColor: [0, 0, 0], lineWidth: 0.2 },
       bodyStyles: { font: 'helvetica', fontSize: 7, valign: 'middle', lineColor: [0, 0, 0], lineWidth: 0.2 },
       styles: { cellPadding: 1, overflow: 'linebreak' },
-      columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 45 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 12 },
-        4: { cellWidth: 18 },
-        5: { cellWidth: 16 },
-        6: { cellWidth: 28 },
-        7: { cellWidth: 42 },
-        8: { cellWidth: 20 },
-        9: { cellWidth: 18 },
-        10: { cellWidth: 38 },
-      },
       didDrawPage: function (data) {
         drawHeader(data);
         drawFooter(data);
@@ -175,26 +162,12 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
     doc.text(`Fecha de generación: ${new Date().toLocaleDateString()}`, 14, 50);
 
     if (reportType === "asistencia_diaria_acumulada") {
-      let datesToInclude = courseData.fechas_asistencia || [];
+      let datesToInclude = globalDates;
       if (options?.startDate && options?.endDate) {
         const startIdx = datesToInclude.indexOf(options.startDate);
         const endIdx = datesToInclude.indexOf(options.endDate);
         if (startIdx !== -1 && endIdx !== -1 && startIdx <= endIdx) {
           datesToInclude = datesToInclude.slice(startIdx, endIdx + 1);
-        }
-      }
-
-      if (options?.instructor && options.instructor !== 'all') {
-        const inst = courseData.equipo_instructores.find((i: any) => i.nombre_del_instructor === options.instructor);
-        const dayMap: Record<string, number> = {
-          "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6
-        };
-        if (inst && inst.dia && dayMap[inst.dia] !== undefined) {
-          const targetDay = dayMap[inst.dia];
-          datesToInclude = datesToInclude.filter((d: string) => {
-            const dateObj = new Date(d);
-            return dateObj.getDay() === targetDay;
-          });
         }
       }
 
@@ -224,21 +197,12 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
           ];
         });
         
-        doc.setFontSize(10);
-        if (options?.instructor && options.instructor !== 'all') {
-          doc.text(`Instructor: ${options.instructor}`, 14, 56);
-        }
-        
         autoTable(doc, {
           startY: 62,
           head: head,
           body: tableData,
           styles: { fontSize: 7, cellPadding: 1 },
-          headStyles: { fillColor: [230, 230, 230], textColor: [0,0,0], halign: 'center' },
-          columnStyles: {
-            0: { cellWidth: 20 },
-            1: { cellWidth: 35 },
-          }
+          headStyles: { fillColor: [230, 230, 230], textColor: [0,0,0], halign: 'center' }
         });
       } else {
         const tableData = studentsWithStats.map(s => {
@@ -263,11 +227,6 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
           ];
         });
         
-        doc.setFontSize(10);
-        if (options?.instructor && options.instructor !== 'all') {
-          doc.text(`Instructor: ${options.instructor}`, 14, 56);
-        }
-        
         autoTable(doc, {
           startY: 62,
           head: [['Documento', 'Aprendiz', 'Presentes', 'Ausentes', 'Tardes', 'Excusas', '% Asistencia']],
@@ -280,8 +239,8 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
         .map(s => [
           s.numero_documento,
           `${s.nombres} ${s.apellidos}`,
-          s.totalAbsent,
-          s.totalLate,
+          s.fallasAcumuladas?.toString() || '0',
+          s.tardanzasAcumuladas?.toString() || '0',
           s.enRiesgo ? "Riesgo Inasistencia" : "Riesgo Retardos"
         ]);
       
@@ -292,13 +251,26 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       });
     } else if (reportType === "justificaciones_novedades") {
       const tableData = studentsWithStats
-        .filter(s => s.totalExcused > 0)
-        .map(s => [
-          s.numero_documento,
-          `${s.nombres} ${s.apellidos}`,
-          s.totalExcused,
-          "Excusa presentada"
-        ]);
+        .filter(s => {
+          let hasExcused = false;
+          globalDates.forEach(d => {
+            if (s.registros?.[d] === 'Excusa' || s.registros?.[d] === 'Evento') hasExcused = true;
+          });
+          return hasExcused;
+        })
+        .map(s => {
+          let countExcused = 0;
+          globalDates.forEach(d => {
+            if (s.registros?.[d] === 'Excusa' || s.registros?.[d] === 'Evento') countExcused++;
+          });
+          return [
+            s.numero_documento,
+            `${s.nombres} ${s.apellidos}`,
+            countExcused.toString(),
+            "Excusa presentada"
+          ];
+        });
+
       autoTable(doc, {
         startY: 60,
         head: [['Documento', 'Aprendiz', 'Total Excusas', 'Observación']],
@@ -308,18 +280,27 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
         doc.text("No se encontraron aprendices con excusas/novedades.", 14, 70);
       }
     } else if (reportType === "historico_tendencias") {
-      const totalPresent = studentsWithStats.reduce((sum, s) => sum + s.totalPresent, 0);
-      const totalAbsent = studentsWithStats.reduce((sum, s) => sum + s.totalAbsent, 0);
-      const totalLate = studentsWithStats.reduce((sum, s) => sum + s.totalLate, 0);
+      let totalPresent = 0;
+      let totalAbsent = 0;
+      let totalLate = 0;
+
+      studentsWithStats.forEach(s => {
+        globalDates.forEach(d => {
+          const st = s.registros?.[d];
+          if (!st || st === 'Presente') totalPresent++;
+          else if (st === 'X') totalAbsent++;
+          else if (st === 'Tarde') totalLate++;
+        });
+      });
       
       const tableData = [
-        ["Total Presentes", totalPresent.toString()],
-        ["Total Ausentes", totalAbsent.toString()],
-        ["Total Tardes", totalLate.toString()],
+        ["Total Presentes (Global)", totalPresent.toString()],
+        ["Total Ausentes (Global)", totalAbsent.toString()],
+        ["Total Tardes (Global)", totalLate.toString()],
       ];
       autoTable(doc, {
         startY: 60,
-        head: [['Indicador Global', 'Valor (Acumulado)']],
+        head: [['Indicador Global', 'Valor Acumulado (Todos los Instructores)']],
         body: tableData,
       });
     }
