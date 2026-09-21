@@ -6,6 +6,7 @@ interface EmailTemplateProps {
   ficha?: string;
   fechasFaltas?: string;
   correoInstructor?: string;
+  correoAprendiz?: string;
 }
 
 export const EmailTemplate: React.FC<EmailTemplateProps> = ({
@@ -13,21 +14,28 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
   documento = "1098765432",
   ficha = "3387401",
   fechasFaltas = "15/09/2026, 18/09/2026",
-  correoInstructor = "jasepulvedad@sena.edu.co"
+  correoInstructor = "jasepulvedad@sena.edu.co",
+  correoAprendiz = "aprendiz@sena.edu.co"
 }) => {
   
-  // Codificación segura para el enlace mailto con asunto y cuerpo prellenados
-  const subject = encodeURIComponent(`Notificación de Inasistencia - Ficha ${ficha} - ${nombreAprendiz}`);
+  // Estructura completa de la plantilla institucional para el cliente de correo
+  const subject = encodeURIComponent(`Notificación de Inasistencia y Requerimiento de Soportes - Ficha ${ficha}`);
   const body = encodeURIComponent(
-    `Cordial saludo, instructor.\n\n` +
-    `Adjunto el soporte correspondiente a mi inasistencia de las fechas registradas.\n\n` +
-    `Detalles del aprendiz:\n` +
-    `- Nombre: ${nombreAprendiz}\n` +
-    `- Documento: ${documento}\n` +
-    `- Ficha: ${ficha}`
+    `Estimado(a) Aprendiz: ${nombreAprendiz}\n\n` +
+    `Se le notifica formalmente el registro de inasistencia(s) a las actividades de formación correspondientes, en la(s) siguiente(s) fecha(s): ${fechasFaltas}.\n` +
+    `Programa / Ficha: Análisis y Desarrollo de Software (${ficha})\n` +
+    `Instructor a cargo: Jorge Alexander Sepúlveda Vélez\n\n` +
+    `De conformidad con el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), se detallan las disposiciones normativas aplicables:\n` +
+    `- Artículo 28 (Incumplimiento Justificado): Las inasistencias pueden ser justificadas por causas programadas (informadas con al menos 1 día de anterioridad) o no programadas (reportadas a más tardar dentro de los 5 días hábiles siguientes con soportes).\n` +
+    `- Artículo 29 (Incumplimiento Injustificado): Se configura cuando el aprendiz no reporta ni justifica la novedad dentro del plazo reglamentario.\n` +
+    `- Artículo 30 (Deserción): El abandono injustificado activa los procedimientos institucionales de deserción según las causales normativas.\n` +
+    `- Artículo 31 (Procedimiento): Establece el debido proceso y las medidas aplicables.\n\n` +
+    `Por favor, adjunte los soportes correspondientes en respuesta a este mensaje.\n\n` +
+    `-- Copia de evidencia enviada automáticamente (CC) a: ${correoInstructor} --`
   );
 
-  const mailtoLink = `mailto:${correoInstructor}?subject=${subject}&body=${body}`;
+  // Enlace mailto que incluye al destinatario principal, copia CC, asunto y cuerpo completo
+  const mailtoLink = `mailto:${correoAprendiz}?cc=${correoInstructor}&subject=${subject}&body=${body}`;
 
   return (
     <div style={{
@@ -65,7 +73,7 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
         </ol>
       </div>
 
-      {/* BOTÓN FUNCIONAL PARA CARGAR SOPORTES */}
+      {/* BOTÓN FUNCIONAL PARA ABRIR EL CORREO CON LA PLANTILLA COMPLETA */}
       <div style={{ textAlign: 'center', margin: '30px 0' }}>
         <a 
           href={mailtoLink} 
@@ -81,7 +89,7 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
             boxShadow: '0 2px 5px rgba(0,0,0,0.15)'
           }}
         >
-          📂 Enviar Soporte de Inasistencia por Correo
+          📂 Enviar Notificación (Con Copia CC)
         </a>
       </div>
 
