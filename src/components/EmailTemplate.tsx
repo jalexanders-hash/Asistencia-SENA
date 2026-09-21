@@ -6,7 +6,7 @@ interface EmailTemplateProps {
   ficha?: string;
   fechasFaltas?: string;
   correoInstructor?: string;
-  correoElectronico?: string;
+  correo_electronico?: string;
 }
 
 export const EmailTemplate: React.FC<EmailTemplateProps> = ({
@@ -15,14 +15,16 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
   ficha = "3387401",
   fechasFaltas = "No especificadas",
   correoInstructor = "jasepulveda@sena.edu.co",
-  correoElectronico = ""
+  correo_electronico = ""
 }) => {
   const [copiado, setCopiado] = useState(false);
 
-  const destinatarioFinal = correoElectronico && correoElectronico.trim() !== "" 
-    ? correoElectronico.trim() 
+  // Valida estrictamente el correo del aprendiz que viene de data.ts
+  const destinatarioFinal = correo_electronico && correo_electronico.trim() !== "" 
+    ? correo_electronico.trim() 
     : "correo.no.registrado@sena.edu.co";
 
+  // Plantilla completa formal SENA
   const asunto = `Notificación de Inasistencia y Requerimiento de Soportes - Ficha ${ficha}`;
   const cuerpoCompleto = 
     `Estimado(a) Aprendiz: ${nombreAprendiz}\n\n` +
@@ -32,10 +34,11 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
     `De conformidad con el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), se detallan las disposiciones normativas aplicables:\n` +
     `- Artículo 28 (Incumplimiento Justificado): Presentación de soportes en máximo 5 días hábiles.\n` +
     `- Artículo 29 (Incumplimiento Injustificado): Falta de reporte o soportes en el plazo.\n` +
-    `- Artículo 30 y 31 (Deserción y Procedimiento): Activación de debido proceso.\n\n` +
+    `- Artículo 30 y 31 (Deserción y Procedimiento): Activación de debido proceso institucional.\n\n` +
     `Por favor, adjunte los soportes correspondientes en respuesta a este mensaje.\n\n` +
     `-- Copia de evidencia enviada automáticamente (CC) a: ${correoInstructor} --`;
 
+  // Enlace mailto seguro
   const mailtoLink = `mailto:${destinatarioFinal}?cc=${correoInstructor}&subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpoCompleto)}`;
 
   const handleCopiarYEnviar = () => {
@@ -62,11 +65,11 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
       <p><strong>ASUNTO:</strong> {asunto}</p>
       
       <div style={{ background: '#f9f9f9', padding: '15px', borderRadius: '6px', margin: '15px 0', fontSize: '14px', lineHeight: '1.6' }}>
-        <strong>Correo Destinatario (data.ts):</strong> <span style={{ color: destinatarioFinal ? '#008000' : 'red', fontWeight: 'bold' }}>{destinatarioFinal}</span><br />
+        <strong>Correo Destinatario (data.ts):</strong> <span style={{ color: destinatarioFinal.includes('@') ? '#008000' : 'red', fontWeight: 'bold' }}>{destinatarioFinal}</span><br />
         <strong>Nombre:</strong> {nombreAprendiz}<br />
         <strong>Documento:</strong> {documento}<br />
         <strong>Ficha:</strong> {ficha}<br />
-        <strong>Fechas:</strong> {fechasFaltas}
+        <strong>Fechas con faltas:</strong> {fechasFaltas}
       </div>
 
       <div style={{ textAlign: 'center', margin: '30px 0' }}>
