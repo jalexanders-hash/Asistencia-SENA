@@ -28,7 +28,6 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 
-// Helper to format date YYYY-MM-DD to M/D/YYYY
 const formatDateForData = (dateString: string) => {
   const [year, month, day] = dateString.split('-');
   return `${parseInt(month)}/${parseInt(day)}/${year}`;
@@ -59,10 +58,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Umbral configurable de inasistencias (por defecto 1)
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
 
-  // Handle Authentication
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -71,7 +68,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Sync instructor index when user changes or courseData changes
   useEffect(() => {
     if (user && courseData) {
       const userEmail = user.email?.toLowerCase().trim();
@@ -108,7 +104,6 @@ export default function App() {
     return courseData.fechas_asistencia;
   }, [currentInstructor, courseData]);
    
-  // Modal & Action states
   const [showNotifyModal, setShowNotifyModal] = useState(false);
   const [notifyTab, setNotifyTab] = useState<'inasistencias' | 'retardos'>('inasistencias');
   const [selectedTemplateStudent, setSelectedTemplateStudent] = useState<string | null>(null);
@@ -117,7 +112,6 @@ export default function App() {
   const [notifySuccess, setNotifySuccess] = useState(false);
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
    
-  // Export Modal state
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState(REPORT_TYPES[0].id);
   const [exportStartDate, setExportStartDate] = useState('');
@@ -125,7 +119,6 @@ export default function App() {
   const [exportMode, setExportMode] = useState<'acumulado' | 'diario'>('acumulado');
   const [exportInstructor, setExportInstructor] = useState('all');
 
-  // Attendance Taking State
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [isSavingAttendance, setIsSavingAttendance] = useState(false);
   const [attendanceDate, setAttendanceDate] = useState(() => {
@@ -134,7 +127,6 @@ export default function App() {
   });
   const [tempRecords, setTempRecords] = useState<Record<string, string>>({});
 
-  // Fetch Firestore Data
   useEffect(() => {
     let unsubscribe: () => void;
      
@@ -288,7 +280,7 @@ export default function App() {
 
   const handleNotifyClick = () => {
     if (stats.enRiesgo === 0 && stats.enRiesgoTarde === 0) {
-      alert("No hay aprendices que cumplan con el umbral seleccionado para notificar.");
+      alert("No hay aprendices que cumplan con los criterios para notificar.");
       return;
     }
     setNotifyTab(stats.enRiesgo > 0 ? 'inasistencias' : 'retardos');
@@ -299,7 +291,6 @@ export default function App() {
 
   const correoInstructorActual = (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || '';
 
-  // Función restaurada y mejorada para envío directo automatizado desde la App con copia CC
   const handleSendEmailDirect = (student: typeof studentsWithStats[0], tipo: 'inasistencia' | 'retardo') => {
     setIsSending(true);
     setSelectedTemplateStudent(student.numero_documento);
@@ -308,22 +299,20 @@ export default function App() {
       ? student.fechasFalla.map(formatDateForDisplay).join(', ') 
       : student.fechasTarde.map(formatDateForDisplay).join(', ');
 
-    const asunto = encodeURIComponent(`Notificación formal de ${tipo} - Ficha ${courseData.ficha_de_caracterizacion}`);
+    const asunto = encodeURIComponent(`Notificación formal de ${tipo} - Reglamento del Aprendiz - Ficha ${courseData.ficha_de_caracterizacion}`);
     const cuerpo = encodeURIComponent(
-      `Estimado(a) Aprendiz:\n${student.nombres} ${student.apellidos}\n\n` +
-      `Se le notifica el registro de ${tipo}(s) en las fechas: ${fechas}.\n` +
-      `Programa: ${courseData.programa}\n` +
+      `Estimado(a) Aprendiz: ${student.nombres} ${student.apellidos}\n\n` +
+      `Se le notifica registro de ${tipo}(s) en las fechas: ${fechas}.\n` +
+      `Programa: ${courseData.programa} (Ficha: ${courseData.ficha_de_caracterizacion})\n` +
       `Instructor: ${currentInstructor?.nombre_del_instructor}\n\n` +
-      `Por favor presentar justificación en los plazos establecidos.\n\n` +
-      `--- Copia de evidencia enviada automáticamente a: ${correoInstructorActual} ---`
+      `De acuerdo con el Reglamento del Aprendiz (Acuerdo 09 de 2024), cuenta con un plazo de hasta cinco (5) días hábiles para presentar sus soportes de justificación válidos (citas médicas, calamidad doméstica, etc.).\n\n` +
+      `--- Copia de evidencia enviada automáticamente (CC) a: ${correoInstructorActual} ---`
     );
 
-    // Simula el proceso de envío directo con acuse de recibo y copia CC al instructor
     setTimeout(() => {
       setIsSending(false);
       setNotifySuccess(true);
       
-      // Abrir cliente de correo integrado con CC automático al instructor
       const mailtoLink = `mailto:aprendiz@sena.edu.co?cc=${encodeURIComponent(correoInstructorActual)}&subject=${asunto}&body=${cuerpo}`;
       window.open(mailtoLink, '_blank');
 
@@ -337,18 +326,50 @@ export default function App() {
   const generateAbsenceTemplate = (student: typeof studentsWithStats[0]) => {
     const fechas = student.fechasFalla.map(formatDateForDisplay).join(', ') || '[Fecha]';
     return `<div>
-<p><strong>ASUNTO:</strong> Notificación de inasistencia y recordatorio del Reglamento del Aprendiz - ${courseData.programa}</p>
+<p><strong>ASUNTO:</strong> Notificación de inasistencia y recordatorio del Reglamento del Aprendiz (Acuerdo 09 de 2024) - ${courseData.programa}</p>
 <br>
 <p><strong>Destinatario:</strong><br>
-Nombre Completo: ${student.nombres} ${student.apellidos}<br>
-Identificación: ${student.numero_documento}<br>
+Aprendiz: ${student.nombres} ${student.apellidos}<br>
+Documento: ${student.numero_documento}<br>
 Ficha: ${courseData.ficha_de_caracterizacion}</p>
 <br>
-<p><strong>Detalle de la Inasistencia:</strong><br>
-Módulo/Competencia: ${currentInstructor?.competencia}<br>
-Fecha(s) de inasistencia: ${fechas}</p>
+<p><strong>Detalle del Incumplimiento:</strong><br>
+Competencia: ${currentInstructor?.competencia}<br>
+Fechas de inasistencia: ${fechas}</p>
+<br>
+<p><strong>Normativa de Referencia (Reglamento del Aprendiz SENA - Acuerdo 09 de 2024):</strong><br>
+Se le recuerda el deber de cumplir satisfactoriamente con el proceso formativo asistiendo puntualmente a las actividades programadas (Artículo 27). Los incumplimientos injustificados (Artículo 29) o la falta de reporte oportuno pueden derivar en llamado de atención o deserción (Artículo 30).</p>
+<br>
+<p><strong>Causales de Incumplimiento Justificado (Artículo 28):</strong><br>
+Si su inasistencia obedece a causas programadas (citas médicas, calamidad doméstica, fuerza mayor, etc.), cuenta con un plazo máximo de <strong>cinco (5) días hábiles</strong> siguientes a su ocurrencia para presentar los soportes pertinentes ante el instructor.</p>
 <br>
 <p><em>Este reporte incluye copia automática de evidencia (CC) al correo del instructor:</em> <strong>${correoInstructorActual}</strong></p>
+</div>`;
+  };
+
+  const generateLateTemplate = (student: typeof studentsWithStats[0]) => {
+    const f1 = formatDateForDisplay(student.fechasTarde[0]) || '[Fecha]';
+    const f2 = formatDateForDisplay(student.fechasTarde[1]) || '[Fecha]';
+    const f3 = formatDateForDisplay(student.fechasTarde[2]) || '[Fecha]';
+    
+    return `<div>
+<p><strong>ASUNTO:</strong> Notificación de tercer retardo y Primer Llamado de Atención Escrito - Ficha ${courseData.ficha_de_caracterizacion}</p>
+<br>
+<p><strong>Para:</strong> ${student.nombres} ${student.apellidos}<br>
+<strong>De:</strong> ${currentInstructor?.nombre_del_instructor} (${currentInstructor?.competencia})</p>
+<br>
+<p>Estimado(a) aprendiz:<br>
+Se le notifica formalmente que ha acumulado tres (3) llegadas tarde injustificadas a las sesiones formativas:</p>
+<br>
+<ul>
+  <li>Retardo 1: ${f1}</li>
+  <li>Retardo 2: ${f2}</li>
+  <li>Retardo 3: ${f3}</li>
+</ul>
+<br>
+<p>De acuerdo con el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), la puntualidad es un deber fundamental. Este registro constituye un Primer Llamado de Atención Escrito. Dispone de cinco (5) días hábiles para presentar soportes si existiera alguna causal justificada.</p>
+<br>
+<p><em>Copia de evidencia (CC) enviada al correo del instructor:</em> <strong>${correoInstructorActual}</strong></p>
 </div>`;
   };
 
@@ -563,20 +584,20 @@ Fecha(s) de inasistencia: ${fechas}</p>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
         
-        {/* PANEL DE CONFIGURACIÓN DE PARÁMETRO DE NOTIFICACIÓN */}
+        {/* PANEL DE CONFIGURACIÓN */}
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-50 rounded-lg text-sena">
               <Mail className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-slate-800">Configuración de Alertas y Notificaciones</h3>
-              <p className="text-xs text-slate-500">Envío directo con copia automática (CC) al correo institucional del instructor: <strong>{correoInstructorActual}</strong></p>
+              <h3 className="text-sm font-semibold text-slate-800">Centro de Notificaciones y Reglamento</h3>
+              <p className="text-xs text-slate-500">Copia automática (CC) al instructor: <strong>{correoInstructorActual}</strong></p>
             </div>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
             <label className="text-xs font-medium text-slate-700 whitespace-nowrap">
-              Habilitar notificación a partir de:
+              Notificar inasistencias a partir de:
             </label>
             <input 
               type="number" 
@@ -586,7 +607,7 @@ Fecha(s) de inasistencia: ${fechas}</p>
               onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
               className="border border-slate-300 rounded-md px-3 py-1.5 w-20 text-sm font-bold text-center text-slate-800 focus:outline-none focus:ring-2 focus:ring-sena"
             />
-            <span className="text-xs font-semibold text-slate-600">inasistencia(s)</span>
+            <span className="text-xs font-semibold text-slate-600">falta(s)</span>
           </div>
         </div>
 
@@ -619,15 +640,15 @@ Fecha(s) de inasistencia: ${fechas}</p>
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col">
             <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-500" />
-              Llegadas Tarde
+              Llegadas Tarde (&ge; 3)
             </span>
-            <span className="text-3xl font-bold text-slate-900 mt-2">{stats.late}</span>
+            <span className="text-3xl font-bold text-amber-600 mt-2">{stats.enRiesgoTarde}</span>
           </div>
 
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col">
             <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-600" />
-              En Riesgo (&ge; {limiteInasistencias} faltas)
+              En Riesgo Faltas (&ge; {limiteInasistencias})
             </span>
             <span className="text-3xl font-bold text-red-600 mt-2">{stats.enRiesgo}</span>
           </div>
@@ -688,9 +709,9 @@ Fecha(s) de inasistencia: ${fechas}</p>
                         {student.tardanzasAcumuladas}
                       </td>
                       <td className="p-3 text-center">
-                        {student.fallasAcumuladas >= limiteInasistencias ? (
+                        {(student.fallasAcumuladas >= limiteInasistencias || student.tardanzasAcumuladas >= 3) ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                            En Riesgo Faltas
+                            Atención Requerida
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-sena-dark">
@@ -783,63 +804,133 @@ Fecha(s) de inasistencia: ${fechas}</p>
         </div>
       )}
 
-      {/* MODAL DE NOTIFICACIONES (RESTAURADO CON ENVÍO DIRECTO Y COPIA CC) */}
+      {/* MODAL DE NOTIFICACIONES CON PESTAÑAS (INASISTENCIAS Y RETARDOS) */}
       {showNotifyModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div>
-                <h2 className="text-lg font-bold text-slate-800">Centro de Notificaciones</h2>
-                <p className="text-xs text-slate-500">Envío directo con copia (CC) automática a: <strong>{correoInstructorActual}</strong></p>
+                <h2 className="text-lg font-bold text-slate-800">Centro de Notificaciones - Reglamento SENA</h2>
+                <p className="text-xs text-slate-500">Con copia de respaldo automática (CC) a: <strong>{correoInstructorActual}</strong></p>
               </div>
-              <button onClick={() => setShowNotifyModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowNotifyModal(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold">
                 &times;
               </button>
             </div>
 
+            {/* Pestañas de Navegación */}
+            <div className="flex border-b border-slate-200 bg-white px-6 pt-3 gap-4">
+              <button
+                onClick={() => setNotifyTab('inasistencias')}
+                className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
+                  notifyTab === 'inasistencias'
+                    ? 'border-sena text-sena'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Inasistencias ({studentsAtRiskFallas.length})
+              </button>
+              <button
+                onClick={() => setNotifyTab('retardos')}
+                className={`pb-3 text-sm font-semibold border-b-2 transition-colors ${
+                  notifyTab === 'retardos'
+                    ? 'border-amber-500 text-amber-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Llegadas Tarde &ge; 3 ({studentsAtRiskTarde.length})
+              </button>
+            </div>
+
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
-              {studentsAtRiskFallas.length > 0 ? (
-                studentsAtRiskFallas.map((student) => (
-                  <div key={student.numero_documento} className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="font-bold text-slate-800 text-sm">{student.apellidos} {student.nombres}</h4>
-                        <p className="text-xs text-slate-500">Faltas acumuladas: <span className="font-bold text-red-600">{student.fallasAcumuladas}</span> (Umbral &ge; {limiteInasistencias})</p>
+              {notifyTab === 'inasistencias' ? (
+                studentsAtRiskFallas.length > 0 ? (
+                  studentsAtRiskFallas.map((student) => (
+                    <div key={student.numero_documento} className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-bold text-slate-800 text-sm">{student.apellidos} {student.nombres}</h4>
+                          <p className="text-xs text-slate-500">Inasistencias acumuladas: <span className="font-bold text-red-600">{student.fallasAcumuladas}</span> (Umbral &ge; {limiteInasistencias})</p>
+                        </div>
+                        <span className="text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-md font-semibold">Alerta Faltas</span>
                       </div>
-                      <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-md font-semibold">En Riesgo</span>
-                    </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-600 max-h-32 overflow-y-auto">
-                      <div dangerouslySetInnerHTML={{ __html: generateAbsenceTemplate(student) }} />
-                    </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-600 max-h-36 overflow-y-auto">
+                        <div dangerouslySetInnerHTML={{ __html: generateAbsenceTemplate(student) }} />
+                      </div>
 
-                    <div className="flex justify-end gap-2 flex-wrap">
-                      <button
-                        onClick={() => copyToClipboard(generateAbsenceTemplate(student))}
-                        className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300 flex items-center gap-1.5"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        Copiar HTML
-                      </button>
-                      <button
-                        onClick={() => handleSendEmailDirect(student, 'inasistencia')}
-                        disabled={isSending && selectedTemplateStudent === student.numero_documento}
-                        className="px-4 py-1.5 bg-sena text-white rounded-lg text-xs font-semibold hover:bg-sena-dark flex items-center gap-1.5 shadow-sm disabled:opacity-50"
-                      >
-                        {isSending && selectedTemplateStudent === student.numero_documento ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Mail className="w-3.5 h-3.5" />
-                        )}
-                        Enviar Notificación Directa (Con Copia CC)
-                      </button>
+                      <div className="flex justify-end gap-2 flex-wrap">
+                        <button
+                          onClick={() => copyToClipboard(generateAbsenceTemplate(student))}
+                          className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300 flex items-center gap-1.5"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          Copiar Plantilla
+                        </button>
+                        <button
+                          onClick={() => handleSendEmailDirect(student, 'inasistencia')}
+                          disabled={isSending && selectedTemplateStudent === student.numero_documento}
+                          className="px-4 py-1.5 bg-sena text-white rounded-lg text-xs font-semibold hover:bg-sena-dark flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                        >
+                          {isSending && selectedTemplateStudent === student.numero_documento ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Mail className="w-3.5 h-3.5" />
+                          )}
+                          Enviar Notificación (Con Copia CC)
+                        </button>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-slate-400">
+                    No hay aprendices que alcancen el límite de {limiteInasistencias} inasistencia(s).
                   </div>
-                ))
+                )
               ) : (
-                <div className="text-center py-12 text-slate-400">
-                  No hay aprendices que alcancen el límite de {limiteInasistencias} inasistencia(s).
-                </div>
+                studentsAtRiskTarde.length > 0 ? (
+                  studentsAtRiskTarde.map((student) => (
+                    <div key={student.numero_documento} className="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-bold text-slate-800 text-sm">{student.apellidos} {student.nombres}</h4>
+                          <p className="text-xs text-slate-500">Retardos acumulados: <span className="font-bold text-amber-600">{student.tardanzasAcumuladas}</span></p>
+                        </div>
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md font-semibold">Alerta Retardos</span>
+                      </div>
+
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 text-xs font-mono text-slate-600 max-h-36 overflow-y-auto">
+                        <div dangerouslySetInnerHTML={{ __html: generateLateTemplate(student) }} />
+                      </div>
+
+                      <div className="flex justify-end gap-2 flex-wrap">
+                        <button
+                          onClick={() => copyToClipboard(generateLateTemplate(student))}
+                          className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-300 flex items-center gap-1.5"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          Copiar Plantilla
+                        </button>
+                        <button
+                          onClick={() => handleSendEmailDirect(student, 'retardo')}
+                          disabled={isSending && selectedTemplateStudent === student.numero_documento}
+                          className="px-4 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-semibold hover:bg-amber-700 flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                        >
+                          {isSending && selectedTemplateStudent === student.numero_documento ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Mail className="w-3.5 h-3.5" />
+                          )}
+                          Enviar Llamado Retardos (Con Copia CC)
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-slate-400">
+                    No hay aprendices con 3 o más llegadas tarde.
+                  </div>
+                )
               )}
             </div>
 
@@ -855,10 +946,7 @@ Fecha(s) de inasistencia: ${fechas}</p>
         </div>
       )}
 
-      {/* HELP MODAL */}
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-      
-      {/* SHEETS TEMPLATE MODAL */}
       <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} courseData={courseData} />
     </div>
   );
