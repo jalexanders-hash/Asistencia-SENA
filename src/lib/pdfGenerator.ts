@@ -51,16 +51,13 @@ const getLogoDataUrl = async (): Promise<string> => {
 export const generatePDFReport = async (reportType: string, courseData: any, studentsWithStats: any[], options?: any) => {
   let isLandscape = reportType === "listado_control";
   if (reportType === "asistencia_diaria_acumulada" && options?.mode === 'diario') {
-    isLandscape = true; // Always use landscape for diario to fit dates
+    isLandscape = true;
   }
   const doc = new jsPDF({
     orientation: isLandscape ? 'landscape' : 'portrait'
   });
   
   if (reportType === "listado_control") {
-    // -------------------------------------------------------------
-    // FORMATO INSTITUCIONAL GOR-F-085 
-    // -------------------------------------------------------------
     const logoDataUrl = await getLogoDataUrl();
     
     const today = new Date();
@@ -73,20 +70,13 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
     const pageHeight = doc.internal.pageSize.getHeight();
     
     const drawHeader = (data: any) => {
-      // Configurar fuente a Helvetica (lo más cercano a Calibri estándar sin importar archivos pesados)
       doc.setFont("helvetica");
-
-      // Dibujar recuadros del encabezado
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.2);
       
-      // Recuadro superior (Solo para el título "Registro de Asistencia...")
       doc.rect(14, 23, pageWidth - 28, 8);
-      
-      // Recuadro inferior (Objetivo)
       doc.rect(14, 31, pageWidth - 28, 9);
 
-      // 1. Logo Centrado en el Encabezado
       if (logoDataUrl) {
         const logoSize = 14;
         doc.addImage(logoDataUrl, 'PNG', pageWidth / 2 - logoSize / 2, 8, logoSize, logoSize);
@@ -96,13 +86,11 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
         doc.text("SENA", pageWidth / 2, 20, { align: "center" });
       }
 
-      // 2. Título Central
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       const tituloFecha = `REGISTRO DE ASISTENCIA / DÍA ${dia} DEL MES DE ${mes} DEL AÑO ${anio}`;
       doc.text(tituloFecha, pageWidth / 2, 28, { align: "center" });
 
-      // 3. Objetivo(s)
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       const objetivo = `OBJETIVO(S): ${courseData.programa} - Ficha: ${courseData.ficha_de_caracterizacion}`;
@@ -117,33 +105,30 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       const politica = "De acuerdo con La Ley 1581 de 2012, Protección de Datos Personales, el Servicio Nacional de Aprendizaje SENA, se compromete a garantizar la seguridad y protección de los datos personales que se encuentran almacenados en este documento, y les dará el tratamiento correspondiente en cumplimiento de lo establecido legalmente.";
       const splitPolicy = doc.splitTextToSize(politica, pageWidth - 28);
       
-      // Política alineada a la izquierda
       doc.text(splitPolicy, 14, pageHeight - 15);
       
-      // Código de formato alineado en el centro del pie de página
       doc.setFont("helvetica", "bold");
       doc.setTextColor(0, 0, 0);
       doc.text("GOR-F-085 V02", pageWidth / 2, pageHeight - 6, { align: "center" });
     };
 
-    // 4. Tabla de Asistencia Principal
     const tableData = studentsWithStats.map((s, index) => [
       (index + 1).toString(),
       `${s.apellidos} ${s.nombres}`,
       s.numero_documento,
-      "", // Planta
-      "", // Contratista
-      "Aprendiz", // Otro ¿Cual?
-      "SENA", // Dependencia / Empresa
+      "", 
+      "", 
+      "Aprendiz", 
+      "SENA", 
       s.correo_electronico || "",
       s.celular || "",
-      "", // Autoriza Grabación
-      ""  // Firma o Participación Virtual
+      "", 
+      ""  
     ]);
 
     autoTable(doc, {
-      startY: 44, // Debajo del objetivo
-      margin: { top: 44, bottom: 25 }, // Asegura espacio en siguientes páginas
+      startY: 44,
+      margin: { top: 44, bottom: 25 },
       head: [['No', 'NOMBRES Y APELLIDOS', 'No. DOCUMENTO', 'PLANTA', 'CONTRATISTA', 'OTRO ¿CUAL?', 'DEPENDENCIA/ EMPRESA', 'CORREO ELECTRÓNICO', 'TELÉFONO/EXT.', 'AUTORIZA GRABACIÓN', 'FIRMA O PARTICIPACIÓN VIRTUAL']],
       body: tableData,
       theme: 'grid',
@@ -170,9 +155,6 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
     });
     
   } else {
-    // -------------------------------------------------------------
-    // OTROS REPORTES (Verticales)
-    // -------------------------------------------------------------
     const logoDataUrl = await getLogoDataUrl();
     if (logoDataUrl) {
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -217,7 +199,6 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       }
 
       if (options?.mode === 'diario') {
-        // DIARIO MODE
         const head = [['Documento', 'Aprendiz', ...datesToInclude, 'Presentes', '% Asist.']];
         const tableData = studentsWithStats.map(s => {
           let presentCount = 0;
@@ -260,7 +241,6 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
           }
         });
       } else {
-        // ACUMULADO MODE (Recalculate based on datesToInclude)
         const tableData = studentsWithStats.map(s => {
           let p = 0; let a = 0; let l = 0; let e = 0;
           datesToInclude.forEach((d: string) => {
