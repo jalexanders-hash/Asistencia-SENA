@@ -17,31 +17,30 @@ interface ExportModalProps {
   onExport: (selectedType: string, dateRange: { start: string; end: string }) => void;
   isPreparing: boolean;
   fichaNumber?: string;
-  startDate?: string;
-  endDate?: string;
 }
 
+// IDs mapeados exactamente a los que reconoce el motor pdfGenerator.ts
 export const REPORT_OPTIONS = [
   {
-    id: 'consolidado',
+    id: 'consolidado_general',
     title: 'Consolidado de Asistencia y Alertas Tempranas',
     subtitle: 'Resumen global de asistencia y aprendices en riesgo por inasistencias.',
     icon: BarChart3,
   },
   {
-    id: 'comite',
+    id: 'comite_evaluacion',
     title: 'Reporte para Comité de Evaluación y Seguimiento',
     subtitle: 'Listado crítico para toma de decisiones académicas y reglamentarias.',
     icon: Scale,
   },
   {
-    id: 'detalle',
+    id: 'inasistencias_por_fecha',
     title: 'Detalle de Faltas y Retardos por Aprendiz',
     subtitle: 'Historial cronológico individual para control y descargos.',
     icon: Clock,
   },
   {
-    id: 'trazabilidad',
+    id: 'trazabilidad_notificaciones',
     title: 'Trazabilidad de Notificaciones y Debido Proceso',
     subtitle: 'Registro de correos y alertas enviadas a los aprendices.',
     icon: MailCheck,
@@ -54,13 +53,13 @@ export default function ExportReportModal({
   onExport,
   isPreparing,
   fichaNumber = '3387401',
-  startDate = '01/02/2026',
-  endDate = '21/09/2026',
 }: ExportModalProps) {
   const [selectedReportId, setSelectedReportId] = useState<string>('');
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-  const [exportStartDate, setExportStartDate] = useState<string>(startDate);
-  const [exportEndDate, setExportEndDate] = useState<string>(endDate);
+  
+  // Fechas por defecto en formato YYYY-MM-DD compatibles con input type="date"
+  const [exportStartDate, setExportStartDate] = useState<string>('2026-02-01');
+  const [exportEndDate, setExportEndDate] = useState<string>('2026-09-21');
 
   if (!isOpen) return null;
 
@@ -78,10 +77,10 @@ export default function ExportReportModal({
 
   return (
     <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full overflow-hidden border border-slate-200">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-visible">
         
         {/* Cabecera Institucional */}
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center rounded-t-2xl">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#39A900] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
               Ficha: {fichaNumber}
@@ -101,13 +100,13 @@ export default function ExportReportModal({
         {/* Cuerpo del Formulario */}
         <div className="p-6 space-y-5 text-sm">
           
-          {/* Dropdown Personalizado con Iconos y Subtítulos */}
+          {/* Dropdown Personalizado con Navegación y Scroll Seguro */}
           <div className="relative">
             <label className="block font-semibold text-slate-700 mb-2">
               Seleccionar Tipo de Informe Académico:
             </label>
             
-            {/* Botón Disparador del Menú Desplegable */}
+            {/* Botón Disparador */}
             <div 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className={`w-full border-2 rounded-xl p-3.5 bg-white flex items-center justify-between cursor-pointer transition-all shadow-sm ${
@@ -130,9 +129,9 @@ export default function ExportReportModal({
               <ChevronDown className={`w-5 h-5 text-slate-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
             </div>
 
-            {/* Lista Desplegable Flotante */}
+            {/* Lista Desplegable Flotante con Scroll (Soluciona el corte visual) */}
             {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-[150] max-h-56 overflow-y-auto divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
                 {REPORT_OPTIONS.map((option) => {
                   const IconComponent = option.icon;
                   const isSelected = option.id === selectedReportId;
@@ -141,7 +140,7 @@ export default function ExportReportModal({
                       key={option.id}
                       onClick={() => handleSelect(option.id)}
                       className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors ${
-                        isSelected ? 'bg-emerald-50/70' : 'hover:bg-slate-50'
+                        isSelected ? 'bg-emerald-50/80' : 'hover:bg-slate-50'
                       }`}
                     >
                       <div className={`p-2 rounded-lg mt-0.5 flex-shrink-0 ${isSelected ? 'bg-[#39A900] text-white' : 'bg-slate-100 text-slate-600'}`}>
@@ -165,31 +164,31 @@ export default function ExportReportModal({
             )}
           </div>
 
-          {/* Rango de Fechas del Reporte */}
+          {/* Rango de Fechas Funcional con Selector de Fecha */}
           <div className="grid grid-cols-2 gap-4 pt-1">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Inicio:</label>
               <input 
-                type="text" 
+                type="date" 
                 value={exportStartDate} 
                 onChange={(e) => setExportStartDate(e.target.value)} 
-                className="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-mono bg-slate-50 focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none" 
+                className="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-medium bg-white focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none cursor-pointer" 
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Cierre:</label>
               <input 
-                type="text" 
+                type="date" 
                 value={exportEndDate} 
                 onChange={(e) => setExportEndDate(e.target.value)} 
-                className="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-mono bg-slate-50 focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none" 
+                className="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-medium bg-white focus:ring-2 focus:ring-[#39A900]/20 focus:border-[#39A900] outline-none cursor-pointer" 
               />
             </div>
           </div>
         </div>
 
-        {/* Pie de Página del Modal (Botones de Acción) */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+        {/* Pie de Página del Modal */}
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 rounded-b-2xl">
           <button 
             onClick={onClose} 
             className="px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors"
