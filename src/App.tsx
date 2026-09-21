@@ -12,7 +12,6 @@ import { LogOut } from "lucide-react";
 import { 
   Users, 
   BookOpen, 
-  UserSquare2,
   XCircle,
   Clock,
   AlertCircle,
@@ -22,7 +21,10 @@ import {
   Loader2,
   ClipboardList,
   FileOutput,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Bell,
+  CheckCircle2,
+  FileText
 } from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
@@ -51,6 +53,7 @@ export default function App() {
   const [authError, setAuthError] = useState('');
 
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -96,12 +99,6 @@ export default function App() {
     return courseData.fechas_asistencia;
   }, [currentInstructor, courseData]);
     
-  const [showNotifyModal, setShowNotifyModal] = useState(false);
-  const [notifyTab, setNotifyTab] = useState<'inasistencias' | 'retardos'>('inasistencias');
-  const [selectedTemplateStudent, setSelectedTemplateStudent] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [notifySuccess, setNotifySuccess] = useState(false);
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
     
   const [showExportModal, setShowExportModal] = useState(false);
@@ -248,17 +245,6 @@ export default function App() {
     setShowExportModal(true);
   };
 
-  const handleNotifyClick = () => {
-    if (stats.enRiesgo === 0 && stats.enRiesgoTarde === 0) {
-      alert("No hay aprendices que cumplan con los criterios para notificar.");
-      return;
-    }
-    setNotifyTab(stats.enRiesgo > 0 ? 'inasistencias' : 'retardos');
-    setShowNotifyModal(true);
-    setNotifySuccess(false);
-    setSelectedTemplateStudent(null);
-  };
-
   const correoInstructorActual = (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || '';
 
   if (!authReady || isLoading) {
@@ -266,7 +252,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-sena" />
-          <p className="text-slate-500 font-medium">Cargando plataforma...</p>
+          <p className="text-slate-500 font-medium">Cargando plataforma académica...</p>
         </div>
       </div>
     );
@@ -304,153 +290,182 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="bg-sena-light text-sena-dark text-xs font-semibold px-2 py-0.5 rounded-md tracking-wide">
-                  FICHA: {courseData.ficha_de_caracterizacion}
-                </span>
-                <span className="bg-slate-100 text-slate-600 text-xs font-medium px-2 py-0.5 rounded-md">
-                  {courseData.asistencias_aprendices.length} Aprendices
-                </span>
-              </div>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
-                {courseData.denominacion}
-              </h1>
-              <div className="mt-2 p-3 bg-slate-50 border border-slate-100 rounded-lg flex items-start gap-2 max-w-3xl">
-                <BookOpen className="w-5 h-5 text-sena flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                  {currentInstructor?.competencia}
-                </p>
-              </div>
-              <div className="mt-1">
-                 <p className="text-xs text-sena font-medium">{currentInstructor?.correo}</p>
-              </div>
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12 flex flex-col justify-between">
+      
+      {/* HEADER INSTITUCIONAL */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-3">
+          
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 bg-sena rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-emerald-100">
+              <span className="text-xs tracking-tighter">SENA</span>
             </div>
-            
-            <div className="flex flex-col items-start md:items-end gap-3 w-full md:w-auto">
-              <div className="flex items-center gap-2 bg-white rounded-lg border border-slate-200 p-2 shadow-sm w-full md:w-auto">
-                <div className="w-8 h-8 rounded-full bg-sena-light flex items-center justify-center text-sena-dark">
-                  <UserSquare2 className="w-4 h-4" />
-                </div>
-                <div className="pr-2">
-                  <p className="text-sm font-semibold text-slate-800 line-clamp-1">{currentInstructor.nombre_del_instructor}</p>
-                  <p className="text-xs text-slate-500">{currentInstructor.correo}</p>
-                </div>
-              </div>
+            <span className="font-bold text-slate-800 text-base tracking-tight hidden sm:inline">
+              SENA - Gestión Académica
+            </span>
+          </div>
 
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto mt-1 justify-end">
-                <button 
-                  onClick={handleOpenAttendance}
-                  className="flex-1 md:flex-none justify-center flex items-center gap-2 px-3 py-2 bg-sena-light text-sena-dark border border-emerald-200 rounded-lg text-sm font-medium hover:bg-sena-light shadow-sm transition-colors"
-                >
-                  <ClipboardList className="w-4 h-4" />
-                  Tomar Asistencia
-                </button>
-                <button 
-                  onClick={handleNotifyClick}
-                  className="flex-1 md:flex-none justify-center flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
-                >
-                  <Mail className="w-4 h-4 text-slate-500" />
-                  Notificar
-                </button>
-                <button 
-                  onClick={() => setIsSheetsModalOpen(true)}
-                  className="flex-1 md:flex-none justify-center flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 shadow-sm transition-colors"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                  <span className="hidden sm:inline">Formato Google Sheets</span>
-                </button>
-                <button 
-                  onClick={handleOpenExportModal}
-                  disabled={isPreparingPdf}
-                  className="flex-1 md:flex-none justify-center flex items-center gap-2 px-3 py-2 bg-sena rounded-lg text-sm font-medium text-white hover:bg-sena-dark shadow-sm transition-colors disabled:opacity-70"
-                >
-                  {isPreparingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileOutput className="w-4 h-4" />}
-                  <span>{isPreparingPdf ? 'Preparando...' : 'Exportar'}</span>
-                </button>
+          <div className="flex items-center gap-4">
+            {/* Campana de Notificaciones con Dropdown Interactivo */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 relative transition-colors"
+                title="Notificaciones"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                  3
+                </span>
+              </button>
+
+              {showNotificationsDropdown && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
+                  <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center text-xs font-semibold text-slate-700">
+                    <span>Notificaciones Recientes</span>
+                    <span className="text-sena cursor-pointer hover:underline">Marcar leídas</span>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    <div className="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex gap-3 text-xs border-l-4 border-red-500 bg-red-50/30">
+                      <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-slate-800">Aprendices en riesgo de inasistencia</p>
+                        <span className="text-[10px] text-slate-400">Hace 10 minutos • Ficha {courseData.ficha_de_caracterizacion}</span>
+                      </div>
+                    </div>
+                    <div className="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex gap-3 text-xs border-l-4 border-sena">
+                      <Mail className="w-4 h-4 text-sena flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-slate-800">Reporte de Reglamento enviado</p>
+                        <span className="text-[10px] text-slate-400">Hace 45 minutos • Sistema automático</span>
+                      </div>
+                    </div>
+                    <div className="px-4 py-3 hover:bg-slate-50 flex gap-3 text-xs">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-slate-800">Asistencia sincronizada con la nube</p>
+                        <span className="text-[10px] text-slate-400">Ayer • Firebase DB</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Perfil de Usuario */}
+            <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
+              <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs border-2 border-emerald-100">
+                JS
+              </div>
+              <div className="hidden md:block text-left leading-tight">
+                <p className="text-xs font-bold text-slate-800">Jorge Alexander Sepúlveda Vélez</p>
+                <p className="text-[11px] text-slate-500">{user.email || 'j.sepulveda@email.com'}</p>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
         
-        {/* PANEL DE CONFIGURACIÓN */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-50 rounded-lg text-sena">
-              <Mail className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-slate-800">Centro de Notificaciones y Reglamento</h3>
-              <p className="text-xs text-slate-500">Copia automática (CC) al instructor: <strong>{correoInstructorActual}</strong></p>
-            </div>
+        {/* Breadcrumb & Título Principal */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-slate-500 mb-1">
+              Inicio &gt; Gestión Administrativa &gt; <span className="font-semibold text-slate-800">Ficha {courseData.ficha_de_caracterizacion}</span>
+            </p>
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900">
+              {courseData.denominacion} - Ficha {courseData.ficha_de_caracterizacion}
+            </h1>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <label className="text-xs font-medium text-slate-700 whitespace-nowrap">
-              Notificar inasistencias a partir de:
-            </label>
-            <input 
-              type="number" 
-              min="1" 
-              max="20"
-              value={limiteInasistencias} 
-              onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
-              className="border border-slate-300 rounded-md px-3 py-1.5 w-20 text-sm font-bold text-center text-slate-800 focus:outline-none focus:ring-2 focus:ring-sena"
-            />
-            <span className="text-xs font-semibold text-slate-600">falta(s)</span>
+
+          {/* Botones de Acción Superior */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button 
+              onClick={handleOpenAttendance}
+              className="flex items-center gap-2 px-3.5 py-2 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors"
+            >
+              <ClipboardList className="w-4 h-4" />
+              Tomar Asistencia
+            </button>
+            <button 
+              onClick={() => {}}
+              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
+            >
+              <Mail className="w-4 h-4 text-slate-500" />
+              Notificar Faltas
+            </button>
+            <button 
+              onClick={() => setIsSheetsModalOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 shadow-sm transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <span className="hidden sm:inline">Formato Google Sheets</span>
+            </button>
+            <button 
+              onClick={handleOpenExportModal}
+              disabled={isPreparingPdf}
+              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-colors disabled:opacity-70"
+            >
+              {isPreparingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileOutput className="w-4 h-4 text-slate-500" />}
+              <span>{isPreparingPdf ? 'Preparando...' : 'Exportar'}</span>
+            </button>
           </div>
         </div>
 
-        {/* Stats row */}
+        {/* Pestañas de Navegación Estilo Material Design */}
+        <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
+          <button className="pb-3 text-slate-500 hover:text-slate-800 transition-colors">Datos de la Ficha</button>
+          <button className="pb-3 text-sena border-b-2 border-sena font-semibold">Listado de Aprendices</button>
+          <button className="pb-3 text-slate-500 hover:text-slate-800 transition-colors">Configuración de Alertas</button>
+          <button className="pb-3 text-slate-500 hover:text-slate-800 transition-colors">Reportes</button>
+        </div>
+
+        {/* Tarjetas KPI (5 métricas clave) */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col">
-            <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
-              <Users className="w-4 h-4 text-slate-400" />
-              Total Aprendices
-            </span>
-            <span className="text-3xl font-bold text-slate-900 mt-2">{stats.totalStudents}</span>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
+              <div className="p-2 bg-emerald-50 rounded-lg text-sena"><Users className="w-4 h-4" /></div>
+            </div>
+            <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
           </div>
           
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col">
-            <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
-              <Users className="w-4 h-4 text-sena" />
-              Asistencia Global
-            </span>
-            <span className="text-3xl font-bold text-slate-900 mt-2">{stats.attendanceRate}%</span>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
+              <div className="p-2 bg-emerald-50 rounded-lg text-sena"><CheckCircle2 className="w-4 h-4" /></div>
+            </div>
+            <span className="text-2xl font-bold text-sena mt-3">{stats.attendanceRate}%</span>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col">
-            <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
-              <XCircle className="w-4 h-4 text-red-500" />
-              Total Inasistencias
-            </span>
-            <span className="text-3xl font-bold text-slate-900 mt-2">{stats.absent}</span>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-semibold text-slate-500">Total Inasistencias</span>
+              <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
+            </div>
+            <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col">
-            <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-500" />
-              Llegadas Tarde (&ge; 3)
-            </span>
-            <span className="text-3xl font-bold text-amber-600 mt-2">{stats.enRiesgoTarde}</span>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-semibold text-slate-500">Llegadas Tarde (&ge; 3)</span>
+              <div className="p-2 bg-amber-50 rounded-lg text-amber-500"><Clock className="w-4 h-4" /></div>
+            </div>
+            <span className="text-2xl font-bold text-amber-600 mt-3">{stats.enRiesgoTarde}</span>
           </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col">
-            <span className="text-sm font-medium text-slate-500 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-              En Riesgo Faltas (&ge; {limiteInasistencias})
-            </span>
-            <span className="text-3xl font-bold text-red-600 mt-2">{stats.enRiesgo}</span>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between col-span-2 md:col-span-1">
+            <div className="flex justify-between items-start">
+              <span className="text-xs font-semibold text-slate-500">En Riesgo (&ge; {limiteInasistencias})</span>
+              <div className="p-2 bg-red-50 rounded-lg text-red-600"><AlertTriangle className="w-4 h-4" /></div>
+            </div>
+            <span className="text-2xl font-bold text-red-600 mt-3">{stats.enRiesgo}</span>
           </div>
         </div>
 
-        {/* Tabla de aprendices */}
+        {/* Tabla de Aprendices y Herramientas */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="relative w-full sm:w-80">
@@ -463,7 +478,7 @@ export default function App() {
                 className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena"
               />
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
               <button
                 onClick={() => setShowRiskOnly(!showRiskOnly)}
                 className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
@@ -480,12 +495,14 @@ export default function App() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-slate-50 text-slate-700 uppercase text-xs tracking-wider border-b border-slate-200">
-                  <th className="p-3 font-semibold">Aprendiz</th>
-                  <th className="p-3 font-semibold text-center">Documento</th>
-                  <th className="p-3 font-semibold text-center">Inasistencias</th>
-                  <th className="p-3 font-semibold text-center">Retardos</th>
-                  <th className="p-3 font-semibold text-center">Estado de Riesgo / Notificación</th>
+                <tr className="bg-slate-700 text-white uppercase text-xs tracking-wider border-b border-slate-800">
+                  <th className="p-3.5 font-semibold w-12 text-center"><input type="checkbox" className="accent-sena rounded" /></th>
+                  <th className="p-3.5 font-semibold">Aprendiz</th>
+                  <th className="p-3.5 font-semibold text-center">Documento</th>
+                  <th className="p-3.5 font-semibold text-center">Inasistencias</th>
+                  <th className="p-3.5 font-semibold text-center">Retardos</th>
+                  <th className="p-3.5 font-semibold text-center">Estado de Riesgo</th>
+                  <th className="p-3.5 font-semibold text-center">Acciones / Notificación</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -498,40 +515,45 @@ export default function App() {
                     const estaEnRiesgo = student.fallasAcumuladas >= limiteInasistencias || student.tardanzasAcumuladas >= 3;
 
                     return (
-                      <tr key={student.numero_documento} className="hover:bg-slate-50/80">
-                        <td className="p-3 font-medium text-slate-800">
+                      <tr key={student.numero_documento} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3.5 text-center">
+                          <input type="checkbox" className="accent-sena rounded" />
+                        </td>
+                        <td className="p-3.5 font-medium text-slate-800">
                           {student.apellidos} {student.nombres}
                         </td>
-                        <td className="p-3 text-center text-slate-500 font-mono text-xs">
+                        <td className="p-3.5 text-center text-slate-500 font-mono text-xs">
                           {student.numero_documento}
                         </td>
-                        <td className="p-3 text-center font-bold text-slate-700">
+                        <td className="p-3.5 text-center font-bold text-slate-700">
                           {student.fallasAcumuladas}
                         </td>
-                        <td className="p-3 text-center font-bold text-slate-700">
+                        <td className="p-3.5 text-center font-bold text-slate-700">
                           {student.tardanzasAcumuladas}
                         </td>
-                        <td className="p-3 text-center">
+                        <td className="p-3.5 text-center">
                           {estaEnRiesgo ? (
-                            <div className="flex flex-col items-center gap-2 py-2">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                                Atención Requerida
-                              </span>
-                              
-                              {/* INTEGRACIÓN DEL COMPONENTE EMAIL TEMPLATE DINÁMICO */}
-                              <EmailTemplate 
-                                nombreAprendiz={`${student.nombres} ${student.apellidos}`}
-                                documento={student.numero_documento}
-                                ficha={courseData.ficha_de_caracterizacion}
-                                fechasFaltas={fechasFaltasStr}
-                                correoInstructor={correoInstructorActual}
-                                correo_electronico={student.correo_electronico}
-                              />
-                            </div>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700">
+                              ATENCIÓN REQUERIDA
+                            </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-sena-dark">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-sena-dark">
                               Normal
                             </span>
+                          )}
+                        </td>
+                        <td className="p-3.5 text-center">
+                          {estaEnRiesgo ? (
+                            <EmailTemplate 
+                              nombreAprendiz={`${student.nombres} ${student.apellidos}`}
+                              documento={student.numero_documento}
+                              ficha={courseData.ficha_de_caracterizacion}
+                              fechasFaltas={fechasFaltasStr}
+                              correoInstructor={correoInstructorActual}
+                              correo_electronico={student.correo_electronico}
+                            />
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Sin acciones</span>
                           )}
                         </td>
                       </tr>
@@ -539,7 +561,7 @@ export default function App() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-slate-400">
+                    <td colSpan={7} className="p-8 text-center text-slate-400">
                       No se encontraron aprendices con los filtros actuales.
                     </td>
                   </tr>
@@ -549,6 +571,12 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* FOOTER INSTITUCIONAL */}
+      <footer className="bg-white border-t border-slate-200 py-4 px-6 mt-12 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div>SENA - Centro de Formación Agroindustrial, Pecuario y Turístico</div>
+        <div>Versión 2.0.1 • Módulo de Gestión Académica</div>
+      </footer>
 
       {/* Modales auxiliares */}
       {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
