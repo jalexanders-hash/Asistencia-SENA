@@ -3,7 +3,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from 'fireba
 import { getAuth } from 'firebase/auth';
 import { courseData as defaultData } from '../data';
 
-// Configuración directa del proyecto nuevo para evitar fallos de inyección en Vercel
 const firebaseConfig = {
   apiKey: "AIzaSyCXrNcoBX4yqK-PCZsc_Qf2GbbI-7nMbDo",
   authDomain: "asistenciasena-78819.firebaseapp.com",
@@ -14,7 +13,6 @@ const firebaseConfig = {
   measurementId: "G-DHS61ZMT5N"
 };
 
-// Inicializar Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const db = getFirestore(app);
@@ -30,7 +28,7 @@ export const subscribeToFichaData = async (callback: (data: typeof defaultData) 
       await setDoc(docRef, defaultData);
     }
   } catch (error) {
-    console.error("Error al verificar/crear el documento inicial:", error);
+    console.error("Error al inicializar datos:", error);
   }
 
   return onSnapshot(docRef, (snap) => {
@@ -41,8 +39,8 @@ export const subscribeToFichaData = async (callback: (data: typeof defaultData) 
 };
 
 export const saveAttendanceData = async (
-  fechas_asistencia: string[], 
-  asistencias_aprendices: typeof defaultData['asistencias_aprendices'], 
+  fechas_asistencia: string[],
+  asistencias_aprendices: typeof defaultData['asistencias_aprendices'],
   fechas_por_instructor?: Record<string, string[]>
 ) => {
   try {
@@ -51,10 +49,9 @@ export const saveAttendanceData = async (
       asistencias_aprendices,
       ...(fechas_por_instructor && { fechas_por_instructor })
     });
-    console.log("¡Asistencia guardada con éxito!");
   } catch (error) {
-    console.error("Error al guardar la asistencia en Firestore:", error);
-    throw error; // Libera el estado de carga en la interfaz
+    console.error("Error al guardar asistencia:", error);
+    throw error;
   }
 };
 
@@ -62,7 +59,7 @@ export const updateFichaCompleteData = async (newData: typeof defaultData) => {
   try {
     await updateDoc(docRef, newData);
   } catch (error) {
-    console.error("Error al actualizar la ficha completa:", error);
+    console.error("Error al actualizar ficha:", error);
     throw error;
   }
 };
