@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface EmailTemplateProps {
   nombreAprendiz?: string;
@@ -6,7 +6,7 @@ interface EmailTemplateProps {
   ficha?: string;
   fechasFaltas?: string;
   correoInstructor?: string;
-  correoAprendiz?: string;
+  correoAprendiz?: string; // Recibe el correo real de la base de datos
 }
 
 export const EmailTemplate: React.FC<EmailTemplateProps> = ({
@@ -15,12 +15,18 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
   ficha = "3387401",
   fechasFaltas = "15/09/2026, 18/09/2026",
   correoInstructor = "jasepulvedad@sena.edu.co",
-  correoAprendiz = "aprendiz@sena.edu.co"
+  correoAprendiz = "" // Inicia vacío para obligar y validar la lectura desde la BD
 }) => {
-  
-  // Estructura completa de la plantilla institucional para el cliente de correo
-  const subject = encodeURIComponent(`Notificación de Inasistencia y Requerimiento de Soportes - Ficha ${ficha}`);
-  const body = encodeURIComponent(
+  const [copiado, setCopiado] = useState(false);
+
+  // Validación robusta del correo que viene de la base de datos
+  const destinatarioReal = correoAprendiz && correoAprendiz.trim() !== "" 
+    ? correoAprendiz 
+    : "correo.no.registrado@sena.edu.co";
+
+  // Plantilla estructurada completa para el correo y el portapapeles
+  const subject = `Notificación de Inasistencia y Requerimiento de Soportes - Ficha ${ficha}`;
+  const body = 
     `Estimado(a) Aprendiz: ${nombreAprendiz}\n\n` +
     `Se le notifica formalmente el registro de inasistencia(s) a las actividades de formación correspondientes, en la(s) siguiente(s) fecha(s): ${fechasFaltas}.\n` +
     `Programa / Ficha: Análisis y Desarrollo de Software (${ficha})\n` +
@@ -31,11 +37,17 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
     `- Artículo 30 (Deserción): El abandono injustificado activa los procedimientos institucionales de deserción según las causales normativas.\n` +
     `- Artículo 31 (Procedimiento): Establece el debido proceso y las medidas aplicables.\n\n` +
     `Por favor, adjunte los soportes correspondientes en respuesta a este mensaje.\n\n` +
-    `-- Copia de evidencia enviada automáticamente (CC) a: ${correoInstructor} --`
-  );
+    `-- Copia de evidencia enviada automáticamente (CC) a: ${correoInstructor} --`;
 
-  // Enlace mailto que incluye al destinatario principal, copia CC, asunto y cuerpo completo
-  const mailtoLink = `mailto:${correoAprendiz}?cc=${correoInstructor}&subject=${subject}&body=${body}`;
+  // Enlace mailto optimizado con codificación segura
+  const mailtoLink = `mailto:${destinatarioReal}?cc=${correoInstructor}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  // Función combinada: abre el correo y copia la plantilla como respaldo ante restricciones del sistema
+  const handleEnviarClick = () => {
+    navigator.clipboard.writeText(body);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 5000);
+  };
 
   return (
     <div style={{
@@ -52,15 +64,22 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
         📩 Notificación de Inasistencia y Requerimiento de Soportes
       </h2>
       
-      <p><strong>ASUNTO:</strong> Registro de Inasistencia(s) - Reglamento del Aprendiz (Ficha {ficha})</p>
+      <p><strong>ASUNTO:</strong> {subject}</p>
       
       <div style={{ background: '#f9f9f9', padding: '15px', borderRadius: '6px', margin: '15px 0', fontSize: '14px', lineHeight: '1.6' }}>
-        <strong>Destinatario:</strong> {nombreAprendiz}<br />
+        <strong>Correo Destinatario (BD):</strong> <span style={{ color: correoAprendiz ? '#000' : 'red', fontWeight: 'bold' }}>{destinatarioReal}</span><br />
+        <strong>Nombre:</strong> {nombreAprendiz}<br />
         <strong>Documento:</strong> {documento}<br />
         <strong>Programa / Ficha:</strong> Análisis y Desarrollo de Software ({ficha})<br />
         <strong>Competencia:</strong> Producir documentos de acuerdo con normas técnicas<br />
-        <strong>Fechas con inasistencia:</strong> {fechasFaltas} <em>(Total: 2 faltas)</em>
+        <strong>Fechas con inasistencia:</strong> {fechasFaltas}
       </div>
+
+      {!correoAprendiz && (
+        <div style={{ background: '#fdf2f2', color: '#c53030', padding: '10px', borderRadius: '4px', fontSize: '12px', margin: '10px 0' }}>
+          ⚠️ <strong>Aviso:</strong> El campo de correo del aprendiz en la base de datos está vacío para este registro. Se recomienda verificar los datos en el sistema.
+        </div>
+      )}
 
       <p>De conformidad con el <strong>Reglamento del Aprendiz SENA (Acuerdo 09 de 2024)</strong>, se detallan las disposiciones normativas aplicables:</p>
 
@@ -73,10 +92,11 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
         </ol>
       </div>
 
-      {/* BOTÓN FUNCIONAL PARA ABRIR EL CORREO CON LA PLANTILLA COMPLETA */}
+      {/* BOTÓN FUNCIONAL */}
       <div style={{ textAlign: 'center', margin: '30px 0' }}>
         <a 
           href={mailtoLink} 
+          onClick={handleEnviarClick}
           style={{
             backgroundColor: '#39A900',
             color: '#ffffff',
@@ -91,6 +111,11 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
         >
           📂 Enviar Notificación (Con Copia CC)
         </a>
+        {copiado && (
+          <p style={{ color: '#385723', fontSize: '12px', marginTop: '10px', fontWeight: 'bold' }}>
+            📋 ¡Plantilla copiada al portapapeles por seguridad! (Si tu cliente de correo recorta el texto, presiona Ctrl+V para pegarlo completo).
+          </p>
+        )}
       </div>
 
       <div style={{ fontSize: '12px', color: '#666', borderTop: '1px solid #f0f0f0', paddingTop: '15px', marginTop: '20px' }}>
