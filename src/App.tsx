@@ -4,6 +4,7 @@ import { subscribeToFichaData, saveAttendanceData } from './lib/firebase';
 import { REPORT_TYPES, generatePDFReport } from './lib/pdfGenerator';
 import { HelpModal } from './components/HelpModal';
 import { SheetsTemplateModal } from './components/SheetsTemplateModal';
+import ExportReportModal from './components/ExportReportModal';
 import EmailTemplate from './components/EmailTemplate';
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
@@ -107,11 +108,8 @@ export default function App() {
   // Modales de acciones
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [selectedReportType, setSelectedReportType] = useState(REPORT_TYPES[0].id);
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
-  const [exportMode, setExportMode] = useState<'acumulado' | 'diario'>('acumulado');
-  const [exportInstructor, setExportInstructor] = useState('all');
 
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [isSavingAttendance, setIsSavingAttendance] = useState(false);
@@ -201,15 +199,15 @@ export default function App() {
     setShowExportModal(true);
   };
 
-  const handleExportConfirm = () => {
+  const handleExportConfirm = (selectedReportType: string, dateRange: { start: string; end: string }) => {
     setIsPreparingPdf(true);
     setTimeout(async () => {
       try {
         await generatePDFReport(selectedReportType, courseData, studentsWithStats, {
-          startDate: exportStartDate,
-          endDate: exportEndDate,
-          mode: exportMode,
-          instructor: exportInstructor
+          startDate: dateRange.start,
+          endDate: dateRange.end,
+          mode: 'acumulado',
+          instructor: 'all'
         });
       } catch (err) {
         console.error("Error generating PDF", err);
@@ -839,101 +837,16 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL DE EXPORTACIÓN PDF CON LISTA DESPLEGABLE CORREGIDA */}
-      {showExportModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
-            
-            {/* Cabecera del Modal */}
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2 text-base">
-                <FileOutput className="w-5 h-5 text-sena" /> Generar Reporte Oficial PDF
-              </h3>
-              <button 
-                onClick={() => setShowExportModal(false)} 
-                className="w-8 h-8 rounded-full bg-slate-200/80 hover:bg-slate-300 flex items-center justify-center text-slate-600 font-bold transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Contenido del Formulario de Exportación */}
-            <div className="p-6 space-y-4 text-sm">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1.5">
-                  Seleccionar Tipo de Informe:
-                </label>
-                <div className="relative">
-                  <select 
-                    value={selectedReportType} 
-                    onChange={(e) => setSelectedReportType(e.target.value)}
-                    className="w-full border-2 border-slate-300 rounded-lg p-3 bg-white text-slate-800 font-medium shadow-sm focus:outline-none focus:border-sena focus:ring-2 focus:ring-sena/20 cursor-pointer appearance-none pr-10"
-                  >
-                    {REPORT_TYPES.map(rt => (
-                      <option key={rt.id} value={rt.id} className="py-2 text-slate-800 bg-white">
-                        {rt.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                    ▼
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 mt-1.5">
-                  Selecciona el formato normativo requerido para la gestión de tu ficha.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha Inicio:</label>
-                  <input 
-                    type="text" 
-                    value={exportStartDate} 
-                    onChange={(e) => setExportStartDate(e.target.value)} 
-                    className="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono bg-slate-50" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha Fin:</label>
-                  <input 
-                    type="text" 
-                    value={exportEndDate} 
-                    onChange={(e) => setExportEndDate(e.target.value)} 
-                    className="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono bg-slate-50" 
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Acciones del Modal */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-              <button 
-                onClick={() => setShowExportModal(false)} 
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleExportConfirm} 
-                disabled={isPreparingPdf}
-                className="px-5 py-2 bg-sena text-white font-semibold rounded-lg hover:bg-sena-dark shadow-sm text-sm flex items-center gap-2 transition-colors disabled:opacity-70"
-              >
-                {isPreparingPdf ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Generando...
-                  </>
-                ) : (
-                  <>
-                    <FileOutput className="w-4 h-4" /> Descargar PDF
-                  </>
-                )}
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
+      {/* MODAL DE EXPORTACIÓN PDF MODERNO INTEGRADO */}
+      <ExportReportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        isPreparing={isPreparingPdf}
+        fichaNumber={courseData.ficha_de_caracterizacion}
+        startDate={exportStartDate}
+        endDate={exportEndDate}
+        onExport={handleExportConfirm}
+      />
 
       {/* FOOTER INSTITUCIONAL */}
       <footer className="bg-white border-t border-slate-200 py-4 px-6 mt-12 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
