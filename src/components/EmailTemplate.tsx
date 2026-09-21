@@ -7,6 +7,7 @@ interface EmailTemplateProps {
   fechasFaltas?: string;
   correoInstructor?: string;
   correoAprendiz?: string;
+  correo_electronico?: string; // Mapeado directamente desde data.ts
 }
 
 export const EmailTemplate: React.FC<EmailTemplateProps> = ({
@@ -15,21 +16,22 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
   ficha = "3387401",
   fechasFaltas = "No especificadas",
   correoInstructor = "jasepulvedad@sena.edu.co",
-  correoAprendiz = ""
+  correoAprendiz = "",
+  correo_electronico = ""
 }) => {
   const [copiado, setCopiado] = useState(false);
 
-  // Valida el correo real de la base de datos de manera estricta
-  const destinatarioFinal = correoAprendiz && correoAprendiz.trim() !== "" 
-    ? correoAprendiz.trim() 
-    : "";
+  // Toma de forma segura el correo ya sea de correoAprendiz o de correo_electronico (data.ts)
+  const correoFinalBD = correo_electronico && correo_electronico.trim() !== "" 
+    ? correo_electronico.trim() 
+    : (correoAprendiz && correoAprendiz.trim() !== "" ? correoAprendiz.trim() : "");
 
   // Plantilla completa formal SENA
   const asunto = `Notificación de Inasistencia y Requerimiento de Soportes - Ficha ${ficha}`;
   const cuerpoCompleto = 
     `Estimado(a) Aprendiz: ${nombreAprendiz}\n\n` +
     `Se le notifica formalmente el registro de inasistencia(s) a las actividades de formación correspondientes, en la(s) siguiente(s) fecha(s): ${fechasFaltas}.\n` +
-    `Programa / Ficha: Análisis y Gestión Administrativa / Análisis y Desarrollo de Software (${ficha})\n` +
+    `Programa / Ficha: Tecnología en Gestión Administrativa (${ficha})\n` +
     `Instructor a cargo: Jorge Alexander Sepúlveda Vélez\n\n` +
     `De conformidad con el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), se detallan las disposiciones normativas aplicables:\n` +
     `- Artículo 28 (Incumplimiento Justificado): Las inasistencias pueden ser justificadas por causas programadas (informadas con al menos 1 día de anterioridad) o no programadas (reportadas a más tardar dentro de los 5 días hábiles siguientes con soportes).\n` +
@@ -39,8 +41,8 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
     `Por favor, adjunte los soportes correspondientes en respuesta a este mensaje o a través del canal institucional asignado.\n\n` +
     `-- Copia de evidencia enviada automáticamente (CC) a: ${correoInstructor} --`;
 
-  // Enlace mailto seguro
-  const mailtoLink = `mailto:${destinatarioFinal}?cc=${correoInstructor}&subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpoCompleto)}`;
+  // Enlace mailto seguro apuntando al correo real extraído
+  const mailtoLink = `mailto:${correoFinalBD}?cc=${correoInstructor}&subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpoCompleto)}`;
 
   const handleCopiarYEnviar = () => {
     navigator.clipboard.writeText(cuerpoCompleto);
@@ -66,7 +68,7 @@ export const EmailTemplate: React.FC<EmailTemplateProps> = ({
       <p><strong>ASUNTO:</strong> {asunto}</p>
       
       <div style={{ background: '#f9f9f9', padding: '15px', borderRadius: '6px', margin: '15px 0', fontSize: '14px', lineHeight: '1.6' }}>
-        <strong>Correo Destinatario (BD):</strong> <span style={{ color: destinatarioFinal ? '#008000' : 'red', fontWeight: 'bold' }}>{destinatarioFinal || "⚠️ No se encontró correo en la Base de Datos"}</span><br />
+        <strong>Correo Destinatario (data.ts):</strong> <span style={{ color: correoFinalBD ? '#008000' : 'red', fontWeight: 'bold' }}>{correoFinalBD || "⚠️ No se encontró correo en la Base de Datos"}</span><br />
         <strong>Nombre:</strong> {nombreAprendiz}<br />
         <strong>Documento:</strong> {documento}<br />
         <strong>Ficha:</strong> {ficha}<br />
