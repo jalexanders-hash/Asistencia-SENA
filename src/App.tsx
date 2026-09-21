@@ -24,6 +24,9 @@ import {
   FileSpreadsheet,
   Bell,
   CheckCircle2,
+  Settings,
+  Calendar,
+  Save,
   FileText
 } from 'lucide-react';
 
@@ -52,6 +55,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
 
+  // Estados de navegación y configuración
+  const [activeTab, setActiveTab] = useState<'ficha' | 'aprendices' | 'alertas' | 'reportes'>('aprendices');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -99,8 +104,8 @@ export default function App() {
     return courseData.fechas_asistencia;
   }, [currentInstructor, courseData]);
     
+  // Modales de acciones
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
-    
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState(REPORT_TYPES[0].id);
   const [exportStartDate, setExportStartDate] = useState('');
@@ -145,6 +150,74 @@ export default function App() {
      
     setTempRecords(existingRecords);
     setShowAttendanceModal(true);
+  };
+
+  const handleSaveAttendance = async () => {
+    setIsSavingAttendance(true);
+    const formattedDate = formatDateForData(attendanceDate);
+     
+    let newFechas = [...courseData.fechas_asistencia];
+    if (!newFechas.includes(formattedDate)) {
+      newFechas.push(formattedDate);
+    }
+     
+    let newFechasPorInstructor = { ...(courseData.fechas_por_instructor || {}) };
+    if (currentInstructor) {
+      let currentDates = [...(newFechasPorInstructor[currentInstructor.nombre_del_instructor] || [])];
+      if (!currentDates.includes(formattedDate)) {
+        currentDates.push(formattedDate);
+        newFechasPorInstructor[currentInstructor.nombre_del_instructor] = currentDates;
+      }
+    }
+     
+    const newAprendices = courseData.asistencias_aprendices.map(student => {
+      const status = tempRecords[student.numero_documento];
+      const newRegistros = { ...student.registros } as Record<string, string>;
+      if (status === 'Presente') {
+        delete newRegistros[formattedDate];
+      } else {
+        newRegistros[formattedDate] = status;
+      }
+      return { ...student, registros: newRegistros };
+    });
+     
+    try {
+      await saveAttendanceData(newFechas, newAprendices, newFechasPorInstructor);
+      setShowAttendanceModal(false);
+      alert("Asistencia guardada correctamente.");
+    } catch (error) {
+      console.error("Failed to save attendance", error);
+      alert("Error al guardar la asistencia en la nube.");
+    } finally {
+      setIsSavingAttendance(false);
+    }
+  };
+
+  const handleOpenExportModal = () => {
+    if (currentInstructorDates.length > 0) {
+      setExportStartDate(currentInstructorDates[0]);
+      setExportEndDate(currentInstructorDates[currentInstructorDates.length - 1]);
+    }
+    setShowExportModal(true);
+  };
+
+  const handleExportConfirm = () => {
+    setIsPreparingPdf(true);
+    setTimeout(async () => {
+      try {
+        await generatePDFReport(selectedReportType, courseData, studentsWithStats, {
+          startDate: exportStartDate,
+          endDate: exportEndDate,
+          mode: exportMode,
+          instructor: exportInstructor
+        });
+      } catch (err) {
+        console.error("Error generating PDF", err);
+        alert("Hubo un error al generar el PDF.");
+      }
+      setIsPreparingPdf(false);
+      setShowExportModal(false);
+    }, 100);
   };
 
   const { stats, studentsWithStats } = useMemo(() => {
@@ -237,14 +310,6 @@ export default function App() {
     return filtered;
   }, [searchTerm, showRiskOnly, studentsWithStats]);
 
-  const handleOpenExportModal = () => {
-    if (currentInstructorDates.length > 0) {
-      setExportStartDate(currentInstructorDates[0]);
-      setExportEndDate(currentInstructorDates[currentInstructorDates.length - 1]);
-    }
-    setShowExportModal(true);
-  };
-
   const correoInstructorActual = (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || '';
 
   if (!authReady || isLoading) {
@@ -306,12 +371,12 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Campana de Notificaciones con Dropdown Interactivo */}
+            {/* Campana de Notificaciones con Dropdown Interactiva y Configuración Trasladada */}
             <div className="relative">
               <button 
                 onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
                 className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 relative transition-colors"
-                title="Notificaciones"
+                title="Centro de Notificaciones"
               >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
@@ -320,31 +385,51 @@ export default function App() {
               </button>
 
               {showNotificationsDropdown && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
-                  <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center text-xs font-semibold text-slate-700">
-                    <span>Notificaciones Recientes</span>
-                    <span className="text-sena cursor-pointer hover:underline">Marcar leídas</span>
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-3 z-50">
+                  <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Centro de Notificaciones</span>
+                    <span className="text-[11px] text-sena font-semibold cursor-pointer hover:underline" onClick={() => { setActiveTab('alertas'); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
                   </div>
-                  <div className="max-h-72 overflow-y-auto">
-                    <div className="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex gap-3 text-xs border-l-4 border-red-500 bg-red-50/30">
+
+                  {/* Configuración rápida de inasistencias integrada en el dropdown */}
+                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-slate-700">Notificar a partir de:</span>
+                      <div className="flex items-center gap-1">
+                        <input 
+                          type="number" 
+                          min="1" 
+                          max="20" 
+                          value={limiteInasistencias}
+                          onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-14 text-center border border-slate-300 rounded px-1.5 py-0.5 text-xs font-bold bg-white"
+                        />
+                        <span className="text-xs text-slate-500">faltas</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">CC Automática: <strong>{correoInstructorActual}</strong></p>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+                    <div className="px-4 py-2.5 hover:bg-slate-50 flex gap-3 text-xs border-l-4 border-red-500 bg-red-50/20">
                       <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-slate-800">Aprendices en riesgo de inasistencia</p>
+                        <p className="font-medium text-slate-800">{stats.enRiesgo} aprendices superan el límite de inasistencia.</p>
                         <span className="text-[10px] text-slate-400">Hace 10 minutos • Ficha {courseData.ficha_de_caracterizacion}</span>
                       </div>
                     </div>
-                    <div className="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 flex gap-3 text-xs border-l-4 border-sena">
+                    <div className="px-4 py-2.5 hover:bg-slate-50 flex gap-3 text-xs border-l-4 border-sena">
                       <Mail className="w-4 h-4 text-sena flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-slate-800">Reporte de Reglamento enviado</p>
+                        <p className="font-medium text-slate-800">Plantilla Acuerdo 09 de 2024 activa.</p>
                         <span className="text-[10px] text-slate-400">Hace 45 minutos • Sistema automático</span>
                       </div>
                     </div>
-                    <div className="px-4 py-3 hover:bg-slate-50 flex gap-3 text-xs">
+                    <div className="px-4 py-2.5 hover:bg-slate-50 flex gap-3 text-xs">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-slate-800">Asistencia sincronizada con la nube</p>
-                        <span className="text-[10px] text-slate-400">Ayer • Firebase DB</span>
+                        <p className="font-medium text-slate-800">Sincronización con Firebase exitosa.</p>
+                        <span className="text-[10px] text-slate-400">Base de datos en tiempo real</span>
                       </div>
                     </div>
                   </div>
@@ -380,7 +465,7 @@ export default function App() {
             </h1>
           </div>
 
-          {/* Botones de Acción Superior */}
+          {/* Botones de Acción Superior Operativos */}
           <div className="flex flex-wrap items-center gap-2">
             <button 
               onClick={handleOpenAttendance}
@@ -390,7 +475,7 @@ export default function App() {
               Tomar Asistencia
             </button>
             <button 
-              onClick={() => {}}
+              onClick={() => setActiveTab('alertas')}
               className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
             >
               <Mail className="w-4 h-4 text-slate-500" />
@@ -414,163 +499,392 @@ export default function App() {
           </div>
         </div>
 
-        {/* Pestañas de Navegación Estilo Material Design */}
+        {/* Pestañas de Navegación Funcionales */}
         <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
-          <button className="pb-3 text-slate-500 hover:text-slate-800 transition-colors">Datos de la Ficha</button>
-          <button className="pb-3 text-sena border-b-2 border-sena font-semibold">Listado de Aprendices</button>
-          <button className="pb-3 text-slate-500 hover:text-slate-800 transition-colors">Configuración de Alertas</button>
-          <button className="pb-3 text-slate-500 hover:text-slate-800 transition-colors">Reportes</button>
+          <button 
+            onClick={() => setActiveTab('ficha')}
+            className={`pb-3 transition-colors ${activeTab === 'ficha' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Datos de la Ficha
+          </button>
+          <button 
+            onClick={() => setActiveTab('aprendices')}
+            className={`pb-3 transition-colors ${activeTab === 'aprendices' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Listado de Aprendices
+          </button>
+          <button 
+            onClick={() => setActiveTab('alertas')}
+            className={`pb-3 transition-colors ${activeTab === 'alertas' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Configuración de Alertas
+          </button>
+          <button 
+            onClick={() => setActiveTab('reportes')}
+            className={`pb-3 transition-colors ${activeTab === 'reportes' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Reportes
+          </button>
         </div>
 
-        {/* Tarjetas KPI (5 métricas clave) */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
-              <div className="p-2 bg-emerald-50 rounded-lg text-sena"><Users className="w-4 h-4" /></div>
-            </div>
-            <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
-          </div>
-          
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
-              <div className="p-2 bg-emerald-50 rounded-lg text-sena"><CheckCircle2 className="w-4 h-4" /></div>
-            </div>
-            <span className="text-2xl font-bold text-sena mt-3">{stats.attendanceRate}%</span>
-          </div>
+        {/* CONTENIDO SEGÚN PESTAÑA ACTIVA */}
+        {activeTab === 'aprendices' && (
+          <>
+            {/* Tarjetas KPI (5 métricas clave) */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
+                  <div className="p-2 bg-emerald-50 rounded-lg text-sena"><Users className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
+              </div>
+              
+              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
+                  <div className="p-2 bg-emerald-50 rounded-lg text-sena"><CheckCircle2 className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-sena mt-3">{stats.attendanceRate}%</span>
+              </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-slate-500">Total Inasistencias</span>
-              <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
-            </div>
-            <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
-          </div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">Total Inasistencias</span>
+                  <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
+              </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-slate-500">Llegadas Tarde (&ge; 3)</span>
-              <div className="p-2 bg-amber-50 rounded-lg text-amber-500"><Clock className="w-4 h-4" /></div>
-            </div>
-            <span className="text-2xl font-bold text-amber-600 mt-3">{stats.enRiesgoTarde}</span>
-          </div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">Llegadas Tarde (&ge; 3)</span>
+                  <div className="p-2 bg-amber-50 rounded-lg text-amber-500"><Clock className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-amber-600 mt-3">{stats.enRiesgoTarde}</span>
+              </div>
 
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between col-span-2 md:col-span-1">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-slate-500">En Riesgo (&ge; {limiteInasistencias})</span>
-              <div className="p-2 bg-red-50 rounded-lg text-red-600"><AlertTriangle className="w-4 h-4" /></div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between col-span-2 md:col-span-1">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">En Riesgo (&ge; {limiteInasistencias})</span>
+                  <div className="p-2 bg-red-50 rounded-lg text-red-600"><AlertTriangle className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-red-600 mt-3">{stats.enRiesgo}</span>
+              </div>
             </div>
-            <span className="text-2xl font-bold text-red-600 mt-3">{stats.enRiesgo}</span>
-          </div>
-        </div>
 
-        {/* Tabla de Aprendices y Herramientas */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input 
-                type="text" 
-                placeholder="Buscar por nombre o documento..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena"
-              />
+            {/* Tabla de Aprendices y Herramientas */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input 
+                    type="text" 
+                    placeholder="Buscar por nombre o documento..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena"
+                  />
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    onClick={() => setShowRiskOnly(!showRiskOnly)}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                      showRiskOnly 
+                        ? 'bg-red-50 text-red-700 border-red-200' 
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {showRiskOnly ? 'Mostrando solo en riesgo' : 'Filtrar en riesgo'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-slate-700 text-white uppercase text-xs tracking-wider border-b border-slate-800">
+                      <th className="p-3.5 font-semibold w-12 text-center"><input type="checkbox" className="accent-sena rounded" /></th>
+                      <th className="p-3.5 font-semibold">Aprendiz</th>
+                      <th className="p-3.5 font-semibold text-center">Documento</th>
+                      <th className="p-3.5 font-semibold text-center">Inasistencias</th>
+                      <th className="p-3.5 font-semibold text-center">Retardos</th>
+                      <th className="p-3.5 font-semibold text-center">Estado de Riesgo</th>
+                      <th className="p-3.5 font-semibold text-center">Acciones / Notificación</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredStudents.length > 0 ? (
+                      filteredStudents.map((student) => {
+                        const fechasFaltasStr = student.fechasFalla.length > 0
+                          ? student.fechasFalla.map(formatDateForDisplay).join(', ')
+                          : 'Sin inasistencias';
+
+                        const estaEnRiesgo = student.fallasAcumuladas >= limiteInasistencias || student.tardanzasAcumuladas >= 3;
+
+                        return (
+                          <tr key={student.numero_documento} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="p-3.5 text-center">
+                              <input type="checkbox" className="accent-sena rounded" />
+                            </td>
+                            <td className="p-3.5 font-medium text-slate-800">
+                              {student.apellidos} {student.nombres}
+                            </td>
+                            <td className="p-3.5 text-center text-slate-500 font-mono text-xs">
+                              {student.numero_documento}
+                            </td>
+                            <td className="p-3.5 text-center font-bold text-slate-700">
+                              {student.fallasAcumuladas}
+                            </td>
+                            <td className="p-3.5 text-center font-bold text-slate-700">
+                              {student.tardanzasAcumuladas}
+                            </td>
+                            <td className="p-3.5 text-center">
+                              {estaEnRiesgo ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700">
+                                  ATENCIÓN REQUERIDA
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-sena-dark">
+                                  Normal
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3.5 text-center">
+                              {estaEnRiesgo ? (
+                                <EmailTemplate 
+                                  nombreAprendiz={`${student.nombres} ${student.apellidos}`}
+                                  documento={student.numero_documento}
+                                  ficha={courseData.ficha_de_caracterizacion}
+                                  fechasFaltas={fechasFaltasStr}
+                                  correoInstructor={correoInstructorActual}
+                                  correo_electronico={student.correo_electronico}
+                                />
+                              ) : (
+                                <span className="text-slate-400 text-xs italic">Sin acciones</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-400">
+                          No se encontraron aprendices con los filtros actuales.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-              <button
-                onClick={() => setShowRiskOnly(!showRiskOnly)}
-                className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                  showRiskOnly 
-                    ? 'bg-red-50 text-red-700 border-red-200' 
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                }`}
+          </>
+        )}
+
+        {activeTab === 'ficha' && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Programa de Formación</p>
+                <p className="font-semibold text-slate-800 text-base">{courseData.programa}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Denominación</p>
+                <p className="font-semibold text-slate-800 text-base">{courseData.denominacion}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Centro de Formación</p>
+                <p className="font-semibold text-slate-800 text-base">{courseData.centro}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Ficha de Caracterización</p>
+                <p className="font-semibold text-sena text-base">{courseData.ficha_de_caracterizacion}</p>
+              </div>
+            </div>
+
+            <h3 className="text-md font-bold text-slate-800 pt-4 border-b pb-2">Equipo de Instructores Asignados</h3>
+            <div className="space-y-3">
+              {courseData.equipo_instructores.map((inst, index) => (
+                <div key={index} className="p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-col md:flex-row justify-between gap-2">
+                  <div>
+                    <p className="font-bold text-slate-800">{inst.nombre_del_instructor}</p>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">{inst.competencia}</p>
+                  </div>
+                  <div className="text-xs text-right text-slate-500 flex flex-col justify-center">
+                    <span>{inst.correo || inst.correo_institucional}</span>
+                    <span className="font-semibold text-sena">{inst.dia} ({inst.fecha_de_inicio} - {inst.fecha_terminacion})</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'alertas' && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6 shadow-sm max-w-2xl mx-auto">
+            <h2 className="text-lg font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-sena" /> Configuración de Alertas y Reglamento SENA
+            </h2>
+            <div className="space-y-4 text-sm">
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Límite de inasistencias para activar alerta de riesgo:</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="20" 
+                    value={limiteInasistencias}
+                    onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="border border-slate-300 rounded-lg px-3 py-2 w-24 text-center font-bold text-slate-800 focus:ring-2 focus:ring-sena"
+                  />
+                  <span className="text-slate-600 font-medium">falta(s) acumulada(s)</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">De acuerdo con el Reglamento del Aprendiz SENA, define el umbral a partir del cual se genera el requerimiento de soportes.</p>
+              </div>
+
+              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                <p className="text-xs font-bold text-sena-dark uppercase">Copia de Evidencia (CC)</p>
+                <p className="text-xs text-slate-700 mt-1">Los correos enviados a los aprendices incluirán copia automática institucional al instructor a cargo: <strong>{correoInstructorActual}</strong></p>
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <button 
+                  onClick={() => { setActiveTab('aprendices'); alert("Configuración guardada correctamente."); }}
+                  className="px-5 py-2.5 bg-sena text-white font-semibold rounded-lg hover:bg-sena-dark transition-colors shadow-sm"
+                >
+                  Guardar Configuración
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'reportes' && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6 shadow-sm max-w-2xl mx-auto text-center">
+            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Centro de Exportación y Reportes PDF</h2>
+            <p className="text-sm text-slate-600">Genera reportes oficiales de asistencia acumulados o por rangos de fecha para la Ficha {courseData.ficha_de_caracterizacion}.</p>
+            <div className="pt-4">
+              <button 
+                onClick={handleOpenExportModal}
+                className="px-6 py-3 bg-sena text-white font-semibold rounded-lg hover:bg-sena-dark shadow-md transition-colors inline-flex items-center gap-2"
               >
-                {showRiskOnly ? 'Mostrando solo en riesgo' : 'Filtrar en riesgo'}
+                <FileOutput className="w-5 h-5" /> Generar Reporte PDF Oficial
               </button>
             </div>
           </div>
+        )}
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="bg-slate-700 text-white uppercase text-xs tracking-wider border-b border-slate-800">
-                  <th className="p-3.5 font-semibold w-12 text-center"><input type="checkbox" className="accent-sena rounded" /></th>
-                  <th className="p-3.5 font-semibold">Aprendiz</th>
-                  <th className="p-3.5 font-semibold text-center">Documento</th>
-                  <th className="p-3.5 font-semibold text-center">Inasistencias</th>
-                  <th className="p-3.5 font-semibold text-center">Retardos</th>
-                  <th className="p-3.5 font-semibold text-center">Estado de Riesgo</th>
-                  <th className="p-3.5 font-semibold text-center">Acciones / Notificación</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => {
-                    const fechasFaltasStr = student.fechasFalla.length > 0
-                      ? student.fechasFalla.map(formatDateForDisplay).join(', ')
-                      : 'Sin inasistencias';
+      </main>
 
-                    const estaEnRiesgo = student.fallasAcumuladas >= limiteInasistencias || student.tardanzasAcumuladas >= 3;
+      {/* MODAL DE TOMA DE ASISTENCIA */}
+      {showAttendanceModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full overflow-hidden border border-slate-200">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-sena" /> Tomar Asistencia - Ficha {courseData.ficha_de_caracterizacion}
+              </h3>
+              <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Fecha de la Sesión:</label>
+                <input 
+                  type="date" 
+                  value={attendanceDate}
+                  onChange={(e) => setAttendanceDate(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-sena"
+                />
+              </div>
 
-                    return (
-                      <tr key={student.numero_documento} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="p-3.5 text-center">
-                          <input type="checkbox" className="accent-sena rounded" />
-                        </td>
-                        <td className="p-3.5 font-medium text-slate-800">
-                          {student.apellidos} {student.nombres}
-                        </td>
-                        <td className="p-3.5 text-center text-slate-500 font-mono text-xs">
-                          {student.numero_documento}
-                        </td>
-                        <td className="p-3.5 text-center font-bold text-slate-700">
-                          {student.fallasAcumuladas}
-                        </td>
-                        <td className="p-3.5 text-center font-bold text-slate-700">
-                          {student.tardanzasAcumuladas}
-                        </td>
-                        <td className="p-3.5 text-center">
-                          {estaEnRiesgo ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700">
-                              ATENCIÓN REQUERIDA
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-sena-dark">
-                              Normal
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3.5 text-center">
-                          {estaEnRiesgo ? (
-                            <EmailTemplate 
-                              nombreAprendiz={`${student.nombres} ${student.apellidos}`}
-                              documento={student.numero_documento}
-                              ficha={courseData.ficha_de_caracterizacion}
-                              fechasFaltas={fechasFaltasStr}
-                              correoInstructor={correoInstructorActual}
-                              correo_electronico={student.correo_electronico}
-                            />
-                          ) : (
-                            <span className="text-slate-400 text-xs italic">Sin acciones</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-400">
-                      No se encontraron aprendices con los filtros actuales.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+              <div className="space-y-2 pt-2">
+                <p className="text-xs font-bold text-slate-600 uppercase">Listado de Aprendices:</p>
+                {courseData.asistencias_aprendices.map((student) => (
+                  <div key={student.numero_documento} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border text-sm">
+                    <span className="font-medium text-slate-800">{student.apellidos} {student.nombres}</span>
+                    <select 
+                      value={tempRecords[student.numero_documento] || 'Presente'}
+                      onChange={(e) => setTempRecords({ ...tempRecords, [student.numero_documento]: e.target.value })}
+                      className="border border-slate-300 rounded px-2 py-1 text-xs font-semibold bg-white"
+                    >
+                      <option value="Presente">Presente</option>
+                      <option value="X">Falta (X)</option>
+                      <option value="Tarde">Tarde</option>
+                      <option value="Excusa">Excusa</option>
+                      <option value="Evento">Evento</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowAttendanceModal(false)}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSaveAttendance}
+                disabled={isSavingAttendance}
+                className="px-4 py-2 text-sm font-semibold bg-sena text-white rounded-lg hover:bg-sena-dark transition-colors shadow-sm flex items-center gap-2"
+              >
+                {isSavingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Guardar Asistencia
+              </button>
+            </div>
           </div>
         </div>
-      </main>
+      )}
+
+      {/* MODAL DE EXPORTACIÓN PDF */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden border border-slate-200">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800">Generar Reporte Oficial PDF</h3>
+              <button onClick={() => setShowExportModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            <div className="p-6 space-y-4 text-sm">
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Tipo de Reporte:</label>
+                <select 
+                  value={selectedReportType} 
+                  onChange={(e) => setSelectedReportType(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2 bg-white"
+                >
+                  {REPORT_TYPES.map(rt => (
+                    <option key={rt.id} value={rt.id}>{rt.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Inicio:</label>
+                  <input type="text" value={exportStartDate} onChange={(e) => setExportStartDate(e.target.value)} className="w-full border border-slate-300 rounded p-1.5 text-xs" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Fecha Fin:</label>
+                  <input type="text" value={exportEndDate} onChange={(e) => setExportEndDate(e.target.value)} className="w-full border border-slate-300 rounded p-1.5 text-xs" />
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+              <button onClick={() => setShowExportModal(false)} className="px-4 py-2 text-sm text-slate-600">Cancelar</button>
+              <button 
+                onClick={handleExportConfirm} 
+                disabled={isPreparingPdf}
+                className="px-4 py-2 bg-sena text-white font-semibold rounded-lg hover:bg-sena-dark shadow-sm text-sm"
+              >
+                {isPreparingPdf ? 'Generando PDF...' : 'Descargar PDF'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FOOTER INSTITUCIONAL */}
       <footer className="bg-white border-t border-slate-200 py-4 px-6 mt-12 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
