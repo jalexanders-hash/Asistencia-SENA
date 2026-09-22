@@ -315,7 +315,7 @@ export default function App() {
     return filtered;
   }, [searchTerm, showRiskOnly, studentsWithStats]);
 
-  const correoInstructorActual = (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || '';
+  const correoInstructorActual = (currentInstructor as any)?.correo_institucional_sena || (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || user?.email || '';
 
   if (!authReady || isLoading) {
     return (
@@ -484,7 +484,7 @@ export default function App() {
             </h1>
           </div>
 
-          {/* Botones de Acción Superior */}
+          {/* Botones de Acción Superior (Se eliminó el botón suelto de Exportar y se unificó en Reportes) */}
           <div className="flex flex-wrap items-center gap-2">
             <button 
               onClick={handleOpenAttendance}
@@ -507,14 +507,6 @@ export default function App() {
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
               <span className="hidden sm:inline">Formato Google Sheets</span>
-            </button>
-            <button 
-              onClick={handleOpenExportModal}
-              disabled={isPreparingPdf}
-              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-colors disabled:opacity-70"
-            >
-              {isPreparingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileOutput className="w-4 h-4 text-slate-500" />}
-              <span>{isPreparingPdf ? 'Preparando...' : 'Exportar'}</span>
             </button>
           </div>
         </div>
@@ -543,7 +535,7 @@ export default function App() {
             onClick={() => setActiveTab('reportes')}
             className={`pb-3 transition-colors ${activeTab === 'reportes' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
-            Reportes
+            Reportes y Exportación
           </button>
         </div>
 
@@ -678,7 +670,7 @@ export default function App() {
                       <th className="p-3.5 font-semibold text-center">Inasistencias</th>
                       <th className="p-3.5 font-semibold text-center">Retardos</th>
                       <th className="p-3.5 font-semibold text-center">Estado de Riesgo</th>
-                      <th className="p-3.5 font-semibold text-center">Acciones / Notificación</th>
+                      <th className="p-3.5 font-semibold text-center">Notificación (Acuerdo 09)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -729,7 +721,7 @@ export default function App() {
                                   correo_electronico={student.correo_electronico}
                                 />
                               ) : (
-                                <span className="text-slate-400 text-xs italic">Sin acciones</span>
+                                <span className="text-slate-400 text-xs italic">Sin faltas críticas</span>
                               )}
                             </td>
                           </tr>
@@ -778,15 +770,16 @@ export default function App() {
 
         {activeTab === 'reportes' && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Generación de Reportes Académicos</h2>
-            <p className="text-sm text-slate-600">Selecciona el tipo de informe oficial que deseas exportar en formato PDF para el seguimiento de la ficha.</p>
+            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Generación de Reportes Académicos y Exportación</h2>
+            <p className="text-sm text-slate-600">Desde este panel central puedes generar, previsualizar y exportar los informes oficiales consolidados de inasistencia en formato PDF.</p>
             <div className="flex gap-4">
               <button 
                 onClick={handleOpenExportModal}
-                className="px-4 py-2.5 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors flex items-center gap-2"
+                disabled={isPreparingPdf}
+                className="px-5 py-3 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors flex items-center gap-2 disabled:opacity-70"
               >
-                <FileOutput className="w-4 h-4" />
-                Exportar Reporte Consolidado PDF
+                {isPreparingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileOutput className="w-5 h-5" />}
+                <span>{isPreparingPdf ? 'Generando Reporte PDF...' : 'Exportar Reporte Consolidado PDF'}</span>
               </button>
             </div>
           </div>
@@ -798,7 +791,8 @@ export default function App() {
         <SheetsTemplateModal 
           isOpen={isSheetsModalOpen} 
           onClose={() => setIsSheetsModalOpen(false)} 
-          baseData={courseData}
+          currentFicha={currentFichaId}
+          courseData={courseData}
           onDataLoaded={(newData) => {
             setCourseData(newData);
             setIsSheetsModalOpen(false);
