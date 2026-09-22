@@ -10,6 +10,7 @@ import { auth } from "./lib/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
 import { LogOut } from "lucide-react";
+import { migrarJsonAFirebase } from './lib/restoreBackup'; // <-- Importación del script de restauración
 import { 
   Users, 
   BookOpen, 
@@ -29,7 +30,8 @@ import {
   Calendar,
   Save,
   FileText,
-  Layers
+  Layers,
+  RefreshCcw
 } from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
@@ -486,6 +488,20 @@ export default function App() {
 
           {/* Botones de Acción Superior */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* BOTÓN TEMPORAL DE RESTAURACIÓN DESDE JSON */}
+            <button
+              onClick={async () => {
+                if (confirm("¿Deseas restaurar todas las inasistencias de la Ficha 3387401 desde el respaldo JSON?")) {
+                  await migrarJsonAFirebase();
+                }
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 shadow-sm transition-colors"
+              title="Restaurar datos desde JSON"
+            >
+              <RefreshCcw className="w-4 h-4" />
+              <span>Restaurar Ficha</span>
+            </button>
+
             <button 
               onClick={handleOpenAttendance}
               className="flex items-center gap-2 px-3.5 py-2 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors"
@@ -689,7 +705,7 @@ export default function App() {
                     ) : (
                       <tr>
                         <td colSpan={7} className="p-8 text-center text-slate-400">
-                          No se encontraron aprendices con los filtros actuales.
+                          No se encontraron aprendices registrados.
                         </td>
                       </tr>
                     )}
@@ -699,46 +715,20 @@ export default function App() {
             </div>
           </>
         )}
+      </main>
 
-        {activeTab === 'ficha' && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <div>
-                <p className="text-xs text-slate-500 font-medium">Programa de Formación</p>
-                <p className="font-semibold text-slate-800 text-base">{courseData.programa}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 font-medium">Denominación</p>
-                <p className="font-semibold text-slate-800 text-base">{courseData.denominacion}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modales generales */}
+      {/* Modales y Componentes de Apoyo */}
+      {isSheetsModalOpen && (
         <SheetsTemplateModal 
-          isOpen={isSheetsModalOpen}
-          onClose={() => setIsSheetsModalOpen(false)}
-          currentFicha={currentFichaId}
-          courseData={courseData}
+          isOpen={isSheetsModalOpen} 
+          onClose={() => setIsSheetsModalOpen(false)} 
+          baseData={courseData}
           onDataLoaded={(newData) => {
             setCourseData(newData);
-            if (newData.ficha_de_caracterizacion) {
-              setCurrentFichaId(String(newData.ficha_de_caracterizacion));
-            }
+            setIsSheetsModalOpen(false);
           }}
         />
-
-        <ExportReportModal 
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          onExport={handleExportConfirm}
-          isPreparing={isPreparingPdf}
-          fichaNumber={courseData.ficha_de_caracterizacion}
-        />
-
-      </main>
+      )}
     </div>
   );
 }
