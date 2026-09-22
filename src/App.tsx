@@ -28,7 +28,8 @@ import {
   Settings,
   Calendar,
   Save,
-  FileText
+  FileText,
+  Layers
 } from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
@@ -51,6 +52,10 @@ const formatDateForDisplay = (dateString: string) => {
 export default function App() {
   const [courseData, setCourseData] = useState(initialCourseData);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Estado para la Ficha Activa (Soporte Multi-Ficha / Grupos)
+  const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
+
   const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -119,13 +124,15 @@ export default function App() {
   });
   const [tempRecords, setTempRecords] = useState<Record<string, string>>({});
 
+  // Suscripción dinámica a Firebase según la Ficha Seleccionada
   useEffect(() => {
+    setIsLoading(true);
     let unsubscribe: () => void;
      
     subscribeToFichaData((data) => {
       setCourseData(data);
       setIsLoading(false);
-    }).then(unsub => {
+    }, currentFichaId).then(unsub => {
       unsubscribe = unsub;
     }).catch(err => {
       console.error("Error loading data from Firestore:", err);
@@ -135,7 +142,7 @@ export default function App() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [currentFichaId]);
 
   const handleOpenAttendance = () => {
     const formattedDate = formatDateForData(attendanceDate);
@@ -180,7 +187,7 @@ export default function App() {
     });
      
     try {
-      await saveAttendanceData(newFechas, newAprendices, newFechasPorInstructor);
+      await saveAttendanceData(newFechas, newAprendices, newFechasPorInstructor, currentFichaId);
       setShowAttendanceModal(false);
       alert("Asistencia guardada correctamente.");
     } catch (error) {
@@ -363,9 +370,24 @@ export default function App() {
             <div className="w-11 h-11 bg-sena rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-emerald-100">
               <span className="text-xs tracking-tighter">SENA</span>
             </div>
-            <span className="font-bold text-slate-800 text-base tracking-tight hidden sm:inline">
-              SENA - Gestión Académica
-            </span>
+            <div>
+              <span className="font-bold text-slate-800 text-base tracking-tight hidden sm:block">
+                SENA - Gestión Académica
+              </span>
+              {/* SELECTOR DE FICHA ACTIVA EN EL HEADER */}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <Layers className="w-3.5 h-3.5 text-sena" />
+                <select 
+                  value={currentFichaId}
+                  onChange={(e) => setCurrentFichaId(e.target.value)}
+                  className="bg-emerald-50 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded border border-emerald-200 focus:outline-none cursor-pointer"
+                >
+                  <option value="3387401">Ficha: 3387401</option>
+                  <option value="3407860">Ficha: 3407860 (Nuevo Grupo)</option>
+                  <option value={courseData.ficha_de_caracterizacion}>{courseData.ficha_de_caracterizacion} (Actual)</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -690,173 +712,33 @@ export default function App() {
                 <p className="text-xs text-slate-500 font-medium">Denominación</p>
                 <p className="font-semibold text-slate-800 text-base">{courseData.denominacion}</p>
               </div>
-              <div>
-                <p className="text-xs text-slate-500 font-medium">Centro de Formación</p>
-                <p className="font-semibold text-slate-800 text-base">{courseData.centro}</p>
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 font-medium">Ficha de Caracterización</p>
-                <p className="font-semibold text-sena text-base">{courseData.ficha_de_caracterizacion}</p>
-              </div>
-            </div>
-
-            <h3 className="text-md font-bold text-slate-800 pt-4 border-b pb-2">Equipo de Instructores Asignados</h3>
-            <div className="space-y-3">
-              {courseData.equipo_instructores.map((inst, index) => (
-                <div key={index} className="p-4 bg-slate-50 rounded-lg border border-slate-200 flex flex-col md:flex-row justify-between gap-2">
-                  <div>
-                    <p className="font-bold text-slate-800">{inst.nombre_del_instructor}</p>
-                    <p className="text-xs text-slate-600 font-medium mt-0.5">{inst.competencia}</p>
-                  </div>
-                  <div className="text-xs text-right text-slate-500 flex flex-col justify-center">
-                    <span>{inst.correo || inst.correo_institucional}</span>
-                    <span className="font-semibold text-sena">{inst.dia} ({inst.fecha_de_inicio} - {inst.fecha_terminacion})</span>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}
 
-        {activeTab === 'alertas' && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6 shadow-sm max-w-2xl mx-auto">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
-              <Settings className="w-5 h-5 text-sena" /> Configuración de Alertas y Reglamento SENA
-            </h2>
-            <div className="space-y-4 text-sm">
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Límite de inasistencias para activar alerta de riesgo:</label>
-                <div className="flex items-center gap-3">
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="20" 
-                    value={limiteInasistencias}
-                    onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="border border-slate-300 rounded-lg px-3 py-2 w-24 text-center font-bold text-slate-800 focus:ring-2 focus:ring-sena"
-                  />
-                  <span className="text-slate-600 font-medium">falta(s) acumulada(s)</span>
-                </div>
-                <p className="text-xs text-slate-400 mt-1">De acuerdo con el Reglamento del Aprendiz SENA, define el umbral a partir del cual se genera el requerimiento de soportes.</p>
-              </div>
+        {/* Modales generales */}
+        <SheetsTemplateModal 
+          isOpen={isSheetsModalOpen}
+          onClose={() => setIsSheetsModalOpen(false)}
+          currentFicha={currentFichaId}
+          courseData={courseData}
+          onDataLoaded={(newData) => {
+            setCourseData(newData);
+            if (newData.ficha_de_caracterizacion) {
+              setCurrentFichaId(String(newData.ficha_de_caracterizacion));
+            }
+          }}
+        />
 
-              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-                <p className="text-xs font-bold text-sena-dark uppercase">Copia de Evidencia (CC)</p>
-                <p className="text-xs text-slate-700 mt-1">Los correos enviados a los aprendices incluirán copia automática institucional al instructor a cargo: <strong>{correoInstructorActual}</strong></p>
-              </div>
-
-              <div className="pt-4 flex justify-end">
-                <button 
-                  onClick={() => { setActiveTab('aprendices'); alert("Configuración guardada correctamente."); }}
-                  className="px-5 py-2.5 bg-sena text-white font-semibold rounded-lg hover:bg-sena-dark transition-colors shadow-sm"
-                >
-                  Guardar Configuración
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'reportes' && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-6 shadow-sm max-w-2xl mx-auto text-center">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Centro de Exportación y Reportes PDF</h2>
-            <p className="text-sm text-slate-600">Genera reportes oficiales de asistencia acumulados o por rangos de fecha para la Ficha {courseData.ficha_de_caracterizacion}.</p>
-            <div className="pt-4">
-              <button 
-                onClick={handleOpenExportModal}
-                className="px-6 py-3 bg-sena text-white font-semibold rounded-lg hover:bg-sena-dark shadow-md transition-colors inline-flex items-center gap-2"
-              >
-                <FileOutput className="w-5 h-5" /> Generar Reporte PDF Oficial
-              </button>
-            </div>
-          </div>
-        )}
+        <ExportReportModal 
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          onExport={handleExportConfirm}
+          isPreparing={isPreparingPdf}
+          fichaNumber={courseData.ficha_de_caracterizacion}
+        />
 
       </main>
-
-      {/* MODAL DE TOMA DE ASISTENCIA */}
-      {showAttendanceModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full overflow-hidden border border-slate-200">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-sena" /> Tomar Asistencia - Ficha {courseData.ficha_de_caracterizacion}
-              </h3>
-              <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-            </div>
-            
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Fecha de la Sesión:</label>
-                <input 
-                  type="date" 
-                  value={attendanceDate}
-                  onChange={(e) => setAttendanceDate(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-sena"
-                />
-              </div>
-
-              <div className="space-y-2 pt-2">
-                <p className="text-xs font-bold text-slate-600 uppercase">Listado de Aprendices:</p>
-                {courseData.asistencias_aprendices.map((student) => (
-                  <div key={student.numero_documento} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border text-sm">
-                    <span className="font-medium text-slate-800">{student.apellidos} {student.nombres}</span>
-                    <select 
-                      value={tempRecords[student.numero_documento] || 'Presente'}
-                      onChange={(e) => setTempRecords({ ...tempRecords, [student.numero_documento]: e.target.value })}
-                      className="border border-slate-300 rounded px-2 py-1 text-xs font-semibold bg-white"
-                    >
-                      <option value="Presente">Presente</option>
-                      <option value="X">Falta (X)</option>
-                      <option value="Tarde">Tarde</option>
-                      <option value="Excusa">Excusa</option>
-                      <option value="Evento">Evento</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-              <button 
-                onClick={() => setShowAttendanceModal(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleSaveAttendance}
-                disabled={isSavingAttendance}
-                className="px-4 py-2 text-sm font-semibold bg-sena text-white rounded-lg hover:bg-sena-dark transition-colors shadow-sm flex items-center gap-2"
-              >
-                {isSavingAttendance ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Guardar Asistencia
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE EXPORTACIÓN PDF MODERNO INTEGRADO */}
-      <ExportReportModal
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        isPreparing={isPreparingPdf}
-        fichaNumber={courseData.ficha_de_caracterizacion}
-        startDate={exportStartDate}
-        endDate={exportEndDate}
-        onExport={handleExportConfirm}
-      />
-
-      {/* FOOTER INSTITUCIONAL */}
-      <footer className="bg-white border-t border-slate-200 py-4 px-6 mt-12 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div>SENA - Centro de Formación Agroindustrial, Pecuario y Turístico</div>
-        <div>Versión 2.0.1 • Módulo de Gestión Académica</div>
-      </footer>
-
-      {/* Modales auxiliares */}
-      {isHelpOpen && <HelpModal onClose={() => setIsHelpOpen(false)} />}
-      {isSheetsModalOpen && <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} courseData={courseData} />}
     </div>
   );
 }
