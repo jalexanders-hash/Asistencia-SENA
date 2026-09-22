@@ -18,10 +18,11 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
-const FICHA_ID = "3387401";
-const docRef = doc(db, "fichas", FICHA_ID);
+// Ficha por defecto inicial
+const DEFAULT_FICHA_ID = "3387401";
 
-export const subscribeToFichaData = async (callback: (data: typeof defaultData) => void) => {
+export const subscribeToFichaData = async (callback: (data: typeof defaultData) => void, fichaId: string = DEFAULT_FICHA_ID) => {
+  const docRef = doc(db, "fichas", fichaId);
   try {
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) {
@@ -41,9 +42,11 @@ export const subscribeToFichaData = async (callback: (data: typeof defaultData) 
 export const saveAttendanceData = async (
   fechas_asistencia: string[],
   asistencias_aprendices: typeof defaultData['asistencias_aprendices'],
-  fechas_por_instructor?: Record<string, string[]>
+  fechas_por_instructor?: Record<string, string[]>,
+  fichaId: string = DEFAULT_FICHA_ID
 ) => {
   try {
+    const docRef = doc(db, "fichas", fichaId);
     await updateDoc(docRef, {
       fechas_asistencia,
       asistencias_aprendices,
@@ -57,7 +60,12 @@ export const saveAttendanceData = async (
 
 export const updateFichaCompleteData = async (newData: typeof defaultData) => {
   try {
-    await updateDoc(docRef, newData);
+    // Extraer dinámicamente el ID de la ficha desde el archivo cargado
+    const fichaId = String(newData.ficha_de_caracterizacion || DEFAULT_FICHA_ID);
+    const docRef = doc(db, "fichas", fichaId);
+    
+    // Usamos setDoc con merge:true para crear la ficha si es nueva o actualizarla si ya existe
+    await setDoc(docRef, newData, { merge: true });
   } catch (error) {
     console.error("Error al actualizar ficha:", error);
     throw error;
