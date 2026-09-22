@@ -5,7 +5,6 @@ import { REPORT_TYPES, generatePDFReport } from './lib/pdfGenerator';
 import { HelpModal } from './components/HelpModal';
 import { SheetsTemplateModal } from './components/SheetsTemplateModal';
 import ExportReportModal from './components/ExportReportModal';
-import EmailTemplate from './components/EmailTemplate';
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
@@ -484,7 +483,7 @@ export default function App() {
             </h1>
           </div>
 
-          {/* Botones de Acción Superior (Se eliminó el botón suelto de Exportar y se unificó en Reportes) */}
+          {/* Botones de Acción Superior */}
           <div className="flex flex-wrap items-center gap-2">
             <button 
               onClick={handleOpenAttendance}
@@ -633,7 +632,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Tabla de Aprendices */}
+            {/* Dashboard / Listado de Aprendices Limpio y Organizado */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="relative w-full sm:w-80">
@@ -670,7 +669,7 @@ export default function App() {
                       <th className="p-3.5 font-semibold text-center">Inasistencias</th>
                       <th className="p-3.5 font-semibold text-center">Retardos</th>
                       <th className="p-3.5 font-semibold text-center">Estado de Riesgo</th>
-                      <th className="p-3.5 font-semibold text-center">Notificación (Acuerdo 09)</th>
+                      <th className="p-3.5 font-semibold">Dashboard de Fechas (Faltas / Tardes)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -678,28 +677,37 @@ export default function App() {
                       filteredStudents.map((student) => {
                         const fechasFaltasStr = student.fechasFalla.length > 0
                           ? student.fechasFalla.map(formatDateForDisplay).join(', ')
-                          : 'Sin inasistencias';
+                          : '';
+
+                        const fechasTardeStr = student.fechasTarde.length > 0
+                          ? student.fechasTarde.map(formatDateForDisplay).join(', ')
+                          : '';
 
                         const estaEnRiesgo = student.fallasAcumuladas >= limiteInasistencias || student.tardanzasAcumuladas >= 3;
 
                         return (
-                          <tr key={student.numero_documento} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="p-3.5 text-center">
+                          <tr key={student.numero_documento} className="hover:bg-slate-50/80 transition-colors align-top">
+                            <td className="p-3.5 text-center pt-4">
                               <input type="checkbox" className="accent-sena rounded" />
                             </td>
-                            <td className="p-3.5 font-medium text-slate-800">
+                            <td className="p-3.5 font-medium text-slate-800 pt-4">
                               {student.apellidos} {student.nombres}
+                              <span className="block text-[11px] text-slate-400 font-normal">{student.correo_electronico || 'Sin correo registrado'}</span>
                             </td>
-                            <td className="p-3.5 text-center text-slate-500 font-mono text-xs">
+                            <td className="p-3.5 text-center text-slate-500 font-mono text-xs pt-4">
                               {student.numero_documento}
                             </td>
-                            <td className="p-3.5 text-center font-bold text-slate-700">
-                              {student.fallasAcumuladas}
+                            <td className="p-3.5 text-center font-bold text-slate-700 pt-4">
+                              <span className={`px-2 py-0.5 rounded ${student.fallasAcumuladas > 0 ? 'bg-red-50 text-red-600' : 'text-slate-600'}`}>
+                                {student.fallasAcumuladas}
+                              </span>
                             </td>
-                            <td className="p-3.5 text-center font-bold text-slate-700">
-                              {student.tardanzasAcumuladas}
+                            <td className="p-3.5 text-center font-bold text-slate-700 pt-4">
+                              <span className={`px-2 py-0.5 rounded ${student.tardanzasAcumuladas > 0 ? 'bg-amber-50 text-amber-600' : 'text-slate-600'}`}>
+                                {student.tardanzasAcumuladas}
+                              </span>
                             </td>
-                            <td className="p-3.5 text-center">
+                            <td className="p-3.5 text-center pt-4">
                               {estaEnRiesgo ? (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700">
                                   ATENCIÓN REQUERIDA
@@ -710,19 +718,30 @@ export default function App() {
                                 </span>
                               )}
                             </td>
-                            <td className="p-3.5 text-center">
-                              {estaEnRiesgo ? (
-                                <EmailTemplate 
-                                  nombreAprendiz={`${student.nombres} ${student.apellidos}`}
-                                  documento={student.numero_documento}
-                                  ficha={courseData.ficha_de_caracterizacion}
-                                  fechasFaltas={fechasFaltasStr}
-                                  correoInstructor={correoInstructorActual}
-                                  correo_electronico={student.correo_electronico}
-                                />
-                              ) : (
-                                <span className="text-slate-400 text-xs italic">Sin faltas críticas</span>
-                              )}
+                            <td className="p-3.5 text-xs text-slate-600 py-3">
+                              <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                                {fechasFaltasStr ? (
+                                  <div>
+                                    <span className="font-semibold text-red-600 flex items-center gap-1">
+                                      <XCircle className="w-3.5 h-3.5" /> Faltas (X):
+                                    </span>
+                                    <span className="text-slate-700 font-mono ml-4 block">{fechasFaltasStr}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-emerald-700 flex items-center gap-1 font-medium">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Sin inasistencias registradas
+                                  </span>
+                                )}
+
+                                {fechasTardeStr && (
+                                  <div className="pt-1 border-t border-slate-200/60">
+                                    <span className="font-semibold text-amber-600 flex items-center gap-1">
+                                      <Clock className="w-3.5 h-3.5" /> Retardos (Tarde):
+                                    </span>
+                                    <span className="text-slate-700 font-mono ml-4 block">{fechasTardeStr}</span>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
