@@ -26,7 +26,7 @@ export function downloadBlankAttendanceTemplate(courseData: any) {
   const wsEquipo = XLSX.utils.json_to_sheet(equipoData);
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-  // 3. Hoja de Aprendices (Con columnas base y columnas de fechas vacías para control)
+  // 3. Hoja de Aprendices (Con columnas base y columnas de fechas para control)
   const aprendicesData = (courseData.asistencias_aprendices || []).map((student: any) => {
     return {
       tipo_documento: student.tipo_documento || "CC",
@@ -35,7 +35,6 @@ export function downloadBlankAttendanceTemplate(courseData: any) {
       apellidos: student.apellidos,
       correo_electronico: student.correo_electronico || "",
       telefono: student.telefono || "",
-      // Ejemplo de columnas de fecha vacías o se pueden dejar libres para que el instructor ponga la fecha de su sesión (Ej: 9/22/2026)
       "M/D/YYYY (Escriba la fecha aquí)": ""
     };
   });
