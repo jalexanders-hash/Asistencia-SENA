@@ -1,0 +1,3351 @@
+{
+  "metadata": {
+    "tipo_archivo": "BACKUP_CONSOLIDADO_INASISTENCIAS_SENA",
+    "version": "1.0",
+    "fecha_generacion": "2026-09-22T04:31:18.292Z",
+    "sistema": "SENA Attendance Management System",
+    "ficha": {
+      "numero": "3387401",
+      "programa": "Tecnología en Gestión Administrativa",
+      "denominacion": "GESTIÓN ADMINISTRATIVA",
+      "centro_formacion": "Complejo Tecnológico Agroindustrial, Pecuario y Turístico",
+      "total_aprendices_matriculados": 28,
+      "total_instructores_equipo": 5
+    },
+    "estadisticas_globales": {
+      "total_inasistencias_acumuladas": 90,
+      "total_retardos_acumulados": 165,
+      "total_justificaciones_registradas": 31,
+      "aprendices_con_inasistencias": 27,
+      "aprendices_en_alerta_comite": 12
+    }
+  },
+  "equipo_instructores_consolidado": [
+    {
+      "instructor": "Xalima De Jesús Ruiz Doria",
+      "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+      "correo_acceso": "xaruiz@sena.edu.co",
+      "correo_institucional": "xaruiz@sena.edu.co",
+      "dia_formacion": "Martes",
+      "sesiones_programadas": 5,
+      "fechas_sesiones": [
+        "7/21/2026",
+        "8/11/2026",
+        "8/18/2026",
+        "8/25/2026",
+        "9/1/2026"
+      ],
+      "total_inasistencias_reportadas": 6
+    },
+    {
+      "instructor": "Alfredo De Jesús Pérez Mendez",
+      "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+      "correo_acceso": "aperezm@sena.edu.co",
+      "correo_institucional": "aperezm@sena.edu.co",
+      "dia_formacion": "Lunes",
+      "sesiones_programadas": 11,
+      "fechas_sesiones": [
+        "4/20/2026",
+        "4/27/2026",
+        "5/4/2026",
+        "5/11/2026",
+        "5/25/2026",
+        "6/22/2026",
+        "7/27/2026",
+        "8/10/2026",
+        "8/24/2026",
+        "8/31/2026",
+        "9/7/2026"
+      ],
+      "total_inasistencias_reportadas": 11
+    },
+    {
+      "instructor": "Leidy Carolina Cano Muñoz",
+      "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+      "correo_acceso": "carolinamunoz901@gmail.com",
+      "correo_institucional": "lccano@sena.edu.co",
+      "dia_formacion": "Viernes",
+      "sesiones_programadas": 22,
+      "fechas_sesiones": [
+        "2/13/2026",
+        "2/20/2026",
+        "3/6/2026",
+        "3/13/2026",
+        "3/20/2026",
+        "3/27/2026",
+        "4/10/2026",
+        "4/24/2026",
+        "5/19/2026",
+        "5/29/2026",
+        "6/5/2026",
+        "6/12/2026",
+        "6/19/2026",
+        "6/26/2026",
+        "7/3/2026",
+        "7/16/2026",
+        "7/24/2026",
+        "7/31/2026",
+        "8/14/2026",
+        "8/21/2026",
+        "9/4/2026",
+        "9/11/2026"
+      ],
+      "total_inasistencias_reportadas": 42
+    },
+    {
+      "instructor": "Jorge Alexander Sepúlveda Vélez",
+      "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+      "correo_acceso": "jalexanders@gmail.com",
+      "correo_institucional": "jasepulveda@sena.edu.co",
+      "dia_formacion": "Jueves",
+      "sesiones_programadas": 25,
+      "fechas_sesiones": [
+        "1/29/2026",
+        "2/19/2026",
+        "2/26/2026",
+        "3/5/2026",
+        "3/12/2026",
+        "3/19/2026",
+        "4/9/2026",
+        "4/16/2026",
+        "5/7/2026",
+        "5/14/2026",
+        "5/21/2026",
+        "5/28/2026",
+        "6/4/2026",
+        "6/11/2026",
+        "6/18/2026",
+        "6/25/2026",
+        "7/2/2026",
+        "7/9/2026",
+        "7/16/2026",
+        "7/23/2026",
+        "7/30/2026",
+        "8/6/2026",
+        "8/20/2026",
+        "9/3/2026",
+        "9/17/2026"
+      ],
+      "total_inasistencias_reportadas": 20
+    },
+    {
+      "instructor": "Dayana Marcela Diaz Dager",
+      "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+      "correo_acceso": "dayanadager@gmail.com",
+      "correo_institucional": "dayanadiaz@sena.edu.co",
+      "dia_formacion": "Miércoles",
+      "sesiones_programadas": 4,
+      "fechas_sesiones": [
+        "7/1/2026",
+        "7/22/2026",
+        "8/5/2026",
+        "9/9/2026"
+      ],
+      "total_inasistencias_reportadas": 11
+    }
+  ],
+  "aprendices": [
+    {
+      "numero_documento": "1038808586",
+      "nombre_completo": "NATALY PEREZ MUENTES",
+      "nombres": "NATALY",
+      "apellidos": "PEREZ MUENTES",
+      "correo_electronico": "NPM34980059@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 11,
+        "total_retardos": 4,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 6,
+          "Dayana Marcela Diaz Dager": 1,
+          "Xalima De Jesús Ruiz Doria": 1,
+          "Jorge Alexander Sepúlveda Vélez": 3
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "8/21/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/1/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/24/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/25/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/4/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/20/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/9/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/5/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/2/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "5/29/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1027951536",
+      "nombre_completo": "NIKOL AGAMEZ PEÑATE",
+      "nombres": "NIKOL",
+      "apellidos": "AGAMEZ PEÑATE",
+      "correo_electronico": "nikol_agamez@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 10,
+        "total_retardos": 3,
+        "total_justificaciones": 3,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 4,
+          "Dayana Marcela Diaz Dager": 2,
+          "Jorge Alexander Sepúlveda Vélez": 3,
+          "Xalima De Jesús Ruiz Doria": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/22/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/17/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/1/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/19/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/20/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/11/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/29/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/12/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "3/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/26/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "3/6/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/19/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/20/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1032177401",
+      "nombre_completo": "YUBER STIVEN BLANDON PALOMEQUE",
+      "nombres": "YUBER STIVEN",
+      "apellidos": "BLANDON PALOMEQUE",
+      "correo_electronico": "YSBP33882105@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 10,
+        "total_retardos": 11,
+        "total_justificaciones": 2,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 4,
+          "Alfredo De Jesús Pérez Mendez": 2,
+          "Dayana Marcela Diaz Dager": 2,
+          "Jorge Alexander Sepúlveda Vélez": 1,
+          "Xalima De Jesús Ruiz Doria": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "5/29/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/5/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/22/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/25/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/5/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/22/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/18/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/26/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/25/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "3/6/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/18/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/21/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/21/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/4/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/27/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "2/26/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/10/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1193580844",
+      "nombre_completo": "KEVIN GAMALIEL PAYARES GOMEZ",
+      "nombres": "KEVIN GAMALIEL",
+      "apellidos": "PAYARES GOMEZ",
+      "correo_electronico": "KGPG27025137@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 8,
+        "total_retardos": 13,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Alfredo De Jesús Pérez Mendez": 2,
+          "Dayana Marcela Diaz Dager": 1,
+          "Jorge Alexander Sepúlveda Vélez": 2,
+          "Leidy Carolina Cano Muñoz": 3
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "6/22/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/1/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/16/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/24/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/7/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/23/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/14/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "8/31/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/27/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/29/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/26/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/6/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/9/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/24/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "4/10/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1035975387",
+      "nombre_completo": "SEBASTIAN PABON BEDOYA",
+      "nombres": "SEBASTIAN",
+      "apellidos": "PABON BEDOYA",
+      "correo_electronico": "SPB33624362@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 5,
+        "total_retardos": 19,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 2,
+          "Jorge Alexander Sepúlveda Vélez": 2,
+          "Alfredo De Jesús Pérez Mendez": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "7/31/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/21/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "1/29/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/27/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "7/9/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/14/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/2/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/18/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/28/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/25/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/23/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/26/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/10/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1037123011",
+      "nombre_completo": "SARA MILENA GARCIA DIAZ",
+      "nombres": "SARA MILENA",
+      "apellidos": "GARCIA DIAZ",
+      "correo_electronico": "SMGD33157931@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 5,
+        "total_retardos": 4,
+        "total_justificaciones": 2,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 2,
+          "Jorge Alexander Sepúlveda Vélez": 1,
+          "Alfredo De Jesús Pérez Mendez": 2
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/20/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/19/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/11/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/22/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "3/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "7/9/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/24/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1040364156",
+      "nombre_completo": "SARA SOFIA POSSO AGUINAGA",
+      "nombres": "SARA SOFIA",
+      "apellidos": "POSSO AGUINAGA",
+      "correo_electronico": "SSPA34847516@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 5,
+        "total_retardos": 6,
+        "total_justificaciones": 2,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 3,
+          "Dayana Marcela Diaz Dager": 1,
+          "Jorge Alexander Sepúlveda Vélez": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "9/4/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/22/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/19/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/9/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "6/4/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/10/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/18/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "8/6/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/25/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1039081463",
+      "nombre_completo": "DAYENIS JARAMILLO ARIZA",
+      "nombres": "DAYENIS",
+      "apellidos": "JARAMILLO ARIZA",
+      "correo_electronico": "dayenis.jaramillo11@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 4,
+        "total_retardos": 10,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Jorge Alexander Sepúlveda Vélez": 2,
+          "Leidy Carolina Cano Muñoz": 2
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "7/30/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/17/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/5/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "6/18/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/21/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/16/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/27/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/18/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/28/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1046529870",
+      "nombre_completo": "LUZ MILEIDI MOYA OROBIO",
+      "nombres": "LUZ MILEIDI",
+      "apellidos": "MOYA OROBIO",
+      "correo_electronico": "LMMO33624396@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 4,
+        "total_retardos": 3,
+        "total_justificaciones": 2,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 2,
+          "Dayana Marcela Diaz Dager": 1,
+          "Jorge Alexander Sepúlveda Vélez": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "4/24/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/9/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/25/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "5/4/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/17/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "9/4/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/14/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1046530432",
+      "nombre_completo": "CLEIDIS YANIRIS BORJA MOSQUERA",
+      "nombres": "CLEIDIS YANIRIS",
+      "apellidos": "BORJA MOSQUERA",
+      "correo_electronico": "CYBM33623962@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 4,
+        "total_retardos": 3,
+        "total_justificaciones": 5,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 2,
+          "Xalima De Jesús Ruiz Doria": 1,
+          "Dayana Marcela Diaz Dager": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/11/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/24/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/9/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "5/4/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/17/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "9/4/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/6/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/2/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/19/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/24/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1011591722",
+      "nombre_completo": "THANIA ALEJANDRA AGUDELO VILLA",
+      "nombres": "THANIA ALEJANDRA",
+      "apellidos": "AGUDELO VILLA",
+      "correo_electronico": "thania_agudelo@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 3,
+        "total_retardos": 5,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 2,
+          "Jorge Alexander Sepúlveda Vélez": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "7/24/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "1/29/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/22/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "4/10/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1032179329",
+      "nombre_completo": "KEVIN MATEO RENDON GARCIA",
+      "nombres": "KEVIN MATEO",
+      "apellidos": "RENDON GARCIA",
+      "correo_electronico": "KMRG34593690@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 3,
+        "total_retardos": 10,
+        "total_justificaciones": 2,
+        "en_riesgo_desercion": true,
+        "inasistencias_por_instructor": {
+          "Alfredo De Jesús Pérez Mendez": 2,
+          "Xalima De Jesús Ruiz Doria": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "7/27/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/22/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/18/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/2/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/10/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/9/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/31/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/16/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "2/20/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/24/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1027961987",
+      "nombre_completo": "VANESA MEJIA AGAMEZ",
+      "nombres": "VANESA",
+      "apellidos": "MEJIA AGAMEZ",
+      "correo_electronico": "VMA36806409@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 2,
+        "total_retardos": 1,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 2
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/20/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "5/29/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1027966782",
+      "nombre_completo": "EDWIN DAVID CASTRO MURCIA",
+      "nombres": "EDWIN DAVID",
+      "apellidos": "CASTRO MURCIA",
+      "correo_electronico": "EDCM33665155@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 2,
+        "total_retardos": 13,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Xalima De Jesús Ruiz Doria": 1,
+          "Jorge Alexander Sepúlveda Vélez": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "9/1/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/5/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "2/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/10/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "2/26/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/24/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/27/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/6/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1032176717",
+      "nombre_completo": "CRISTIAN CAMILO MARTINEZ MORENO",
+      "nombres": "CRISTIAN CAMILO",
+      "apellidos": "MARTINEZ MORENO",
+      "correo_electronico": "CCMM34867383@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 2,
+        "total_retardos": 2,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Jorge Alexander Sepúlveda Vélez": 1,
+          "Alfredo De Jesús Pérez Mendez": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "4/16/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/27/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "4/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1001035388",
+      "nombre_completo": "MARYIS LEIDYS ALMAIRO TAPIAS",
+      "nombres": "MARYIS LEIDYS",
+      "apellidos": "ALMAIRO TAPIAS",
+      "correo_electronico": "MLAT28066845@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 0,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [],
+      "detalle_justificaciones": [
+        {
+          "fecha": "7/24/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1007607693",
+      "nombre_completo": "SONIA YOHANA JARAMILLO SALAS",
+      "nombres": "SONIA YOHANA",
+      "apellidos": "JARAMILLO SALAS",
+      "correo_electronico": "SYJS26738888@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 3,
+        "total_justificaciones": 4,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "4/10/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/25/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "3/12/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/9/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/3/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/20/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1023632789",
+      "nombre_completo": "DARWIN ESTIVEN ROMAÑA MUÑOZ",
+      "nombres": "DARWIN ESTIVEN",
+      "apellidos": "ROMAÑA MUÑOZ",
+      "correo_electronico": "DERM33623923@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 3,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Dayana Marcela Diaz Dager": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "9/9/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "9/11/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1027953282",
+      "nombre_completo": "ASLIC YICED VIDAL CHAVERRA",
+      "nombres": "ASLIC YICED",
+      "apellidos": "VIDAL CHAVERRA",
+      "correo_electronico": "AYVC33824624@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 5,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "7/23/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1027999416",
+      "nombre_completo": "OSCAR URIEL ABREU PIEDRAHITA",
+      "nombres": "OSCAR URIEL",
+      "apellidos": "ABREU PIEDRAHITA",
+      "correo_electronico": "OUAP37002252@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 6,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Alfredo De Jesús Pérez Mendez": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "7/27/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "7/31/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/18/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/18/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "7/24/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1028014128",
+      "nombre_completo": "LIBARDO ANTONIO JIMENEZ HOYOS",
+      "nombres": "LIBARDO ANTONIO",
+      "apellidos": "JIMENEZ HOYOS",
+      "correo_electronico": "libardo.jimenez1@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 5,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "3/13/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/10/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1032177775",
+      "nombre_completo": "CAMILA ESTRELLA ACEVEDO CAICEDO",
+      "nombres": "CAMILA ESTRELLA",
+      "apellidos": "ACEVEDO CAICEDO",
+      "correo_electronico": "CEAC33168028@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 5,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "6/26/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/25/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1032178573",
+      "nombre_completo": "JESUS MATEO MARIN DIAZ",
+      "nombres": "JESUS MATEO",
+      "apellidos": "MARIN DIAZ",
+      "correo_electronico": "JMMD31808541@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 21,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Jorge Alexander Sepúlveda Vélez": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "3/5/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "7/23/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/18/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/26/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/30/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/10/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/14/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/17/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/21/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Xalima De Jesús Ruiz Doria",
+            "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
+            "correo": "xaruiz@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/16/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/14/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/4/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/4/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/21/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/7/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "3/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "9/11/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/24/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "5/29/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/5/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1032182189",
+      "nombre_completo": "ANGELLY BERTEL PASTRANA",
+      "nombres": "ANGELLY",
+      "apellidos": "BERTEL PASTRANA",
+      "correo_electronico": "ABP33517676@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 4,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "2/19/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "8/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "4/10/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "7/31/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1037123665",
+      "nombre_completo": "SANTIAGO CANTERO DORIA",
+      "nombres": "SANTIAGO",
+      "apellidos": "CANTERO DORIA",
+      "correo_electronico": "SCD35940366@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 3,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Dayana Marcela Diaz Dager": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "9/9/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Dayana Marcela Diaz Dager",
+            "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
+            "correo": "dayanadiaz@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "3/12/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/4/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "7/31/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "6/19/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1040352689",
+      "nombre_completo": "SAYDA VANESSA BEJARANO ASPRILLA",
+      "nombres": "SAYDA VANESSA",
+      "apellidos": "BEJARANO ASPRILLA",
+      "correo_electronico": "SVBA7263786@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 1,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "7/3/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": []
+    },
+    {
+      "numero_documento": "1067606300",
+      "nombre_completo": "VALERIN NICOLL LOPEZ BARRIOS",
+      "nombres": "VALERIN NICOLL",
+      "apellidos": "LOPEZ BARRIOS",
+      "correo_electronico": "VNLB37192853@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 1,
+        "total_retardos": 2,
+        "total_justificaciones": 1,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {
+          "Leidy Carolina Cano Muñoz": 1
+        }
+      },
+      "detalle_inasistencias": [
+        {
+          "fecha": "2/13/2026",
+          "estado": "X",
+          "instructor": {
+            "nombre": "Leidy Carolina Cano Muñoz",
+            "competencia": "Comprender textos en inglés en forma escrita y auditiva",
+            "correo": "lccano@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_retardos": [
+        {
+          "fecha": "8/20/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        },
+        {
+          "fecha": "6/22/2026",
+          "estado": "Tarde",
+          "instructor": {
+            "nombre": "Alfredo De Jesús Pérez Mendez",
+            "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
+            "correo": "aperezm@sena.edu.co"
+          }
+        }
+      ],
+      "detalle_justificaciones": [
+        {
+          "fecha": "8/6/2026",
+          "estado": "Excusa",
+          "instructor": {
+            "nombre": "Jorge Alexander Sepúlveda Vélez",
+            "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
+            "correo": "jasepulveda@sena.edu.co"
+          }
+        }
+      ]
+    },
+    {
+      "numero_documento": "1028003208",
+      "nombre_completo": "CAROLL SOFIA ARBELAEZ BARRAGAN",
+      "nombres": "CAROLL SOFIA",
+      "apellidos": "ARBELAEZ BARRAGAN",
+      "correo_electronico": "CSAB34848786@soy.sena.edu.co",
+      "resumen": {
+        "total_inasistencias": 0,
+        "total_retardos": 0,
+        "total_justificaciones": 0,
+        "en_riesgo_desercion": false,
+        "inasistencias_por_instructor": {}
+      },
+      "detalle_inasistencias": [],
+      "detalle_retardos": [],
+      "detalle_justificaciones": []
+    }
+  ]
+}
