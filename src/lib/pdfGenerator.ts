@@ -8,7 +8,17 @@ export const REPORT_TYPES = [
     descripcion: "Consolidado de presentes, ausentes, excusas y llegadas tarde por sesión con porcentaje acumulado."
   },
   {
+    id: "consolidado_general",
+    nombre: "Informe de asistencia diaria y acumulada",
+    descripcion: "Consolidado de presentes, ausentes, excusas y llegadas tarde por sesión con porcentaje acumulado."
+  },
+  {
     id: "alertas_tempranas",
+    nombre: "Reporte de alertas tempranas por inasistencia",
+    descripcion: "Identificación de aprendices que superan los umbrales de inasistencia según la normativa institucional."
+  },
+  {
+    id: "comite_evaluacion",
     nombre: "Reporte de alertas tempranas por inasistencia",
     descripcion: "Identificación de aprendices que superan los umbrales de inasistencia según la normativa institucional."
   },
@@ -18,7 +28,17 @@ export const REPORT_TYPES = [
     descripcion: "Registro y estado de aprobación de inasistencias soportadas con excusas médicas, laborales o institucionales."
   },
   {
+    id: "inasistencias_por_fecha",
+    nombre: "Reporte de justificaciones y novedades",
+    descripcion: "Registro y estado de aprobación de inasistencias soportadas con excusas médicas, laborales o institucionales."
+  },
+  {
     id: "historico_tendencias",
+    nombre: "Informe histórico y de tendencias",
+    descripcion: "Visualización del comportamiento de asistencia por periodos, días u horarios."
+  },
+  {
+    id: "trazabilidad_notificaciones",
     nombre: "Informe histórico y de tendencias",
     descripcion: "Visualización del comportamiento de asistencia por periodos, días u horarios."
   },
@@ -50,14 +70,14 @@ const getLogoDataUrl = async (): Promise<string> => {
 
 export const generatePDFReport = async (reportType: string, courseData: any, studentsWithStats: any[], options?: any) => {
   let isLandscape = reportType === "listado_control";
-  if (reportType === "asistencia_diaria_acumulada" && options?.mode === 'diario') {
+  if ((reportType === "asistencia_diaria_acumulada" || reportType === "consolidado_general") && options?.mode === 'diario') {
     isLandscape = true;
   }
   const doc = new jsPDF({
     orientation: isLandscape ? 'landscape' : 'portrait'
   });
   
-  // Consolidar fechas globales de todos los instructores y fechas generales de la ficha
+  // Recopilar de forma global todas las fechas reportadas por cualquier instructor o ficha
   let globalDates: string[] = [...(courseData.fechas_asistencia || [])];
   if (courseData.fechas_por_instructor) {
     Object.values(courseData.fechas_por_instructor).forEach((dates: any) => {
@@ -80,11 +100,10 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     
-    const drawHeader = (data: any) => {
+    const drawHeader = () => {
       doc.setFont("helvetica");
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.2);
-      
       doc.rect(14, 23, pageWidth - 28, 8);
       doc.rect(14, 31, pageWidth - 28, 9);
 
@@ -95,20 +114,18 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      const tituloFecha = `REGISTRO DE ASISTENCIA / DÍA ${dia} DEL MES DE ${mes} DEL AÑO ${anio}`;
-      doc.text(tituloFecha, pageWidth / 2, 28, { align: "center" });
+      doc.text(`REGISTRO DE ASISTENCIA / DÍA ${dia} DEL MES DE ${mes} DEL AÑO ${anio}`, pageWidth / 2, 28, { align: "center" });
 
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
-      const objetivo = `OBJETIVO(S): ${courseData.programa} - Ficha: ${courseData.ficha_de_caracterizacion}`;
-      doc.text(objetivo, 16, 37);
+      doc.text(`OBJETIVO(S): ${courseData.programa} - Ficha: ${courseData.ficha_de_caracterizacion}`, 16, 37);
     };
 
-    const drawFooter = (data: any) => {
+    const drawFooter = () => {
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(80, 80, 80);
-      const politica = "De acuerdo con La Ley 1581 de 2012, Protección de Datos Personales, el Servicio Nacional de Aprendizaje SENA, se compromete a garantizar la seguridad y protección de los datos personales...";
+      const politica = "De acuerdo con La Ley 1581 de 2012, Protección de Datos Personales, el Servicio Nacional de Aprendizaje SENA...";
       const splitPolicy = doc.splitTextToSize(politica, pageWidth - 28);
       doc.text(splitPolicy, 14, pageHeight - 15);
       doc.setFont("helvetica", "bold");
@@ -132,12 +149,11 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       head: [['No', 'NOMBRES Y APELLIDOS', 'No. DOCUMENTO', 'PLANTA', 'CONTRATISTA', 'OTRO ¿CUAL?', 'DEPENDENCIA/ EMPRESA', 'CORREO ELECTRÓNICO', 'TELÉFONO/EXT.', 'AUTORIZA GRABACIÓN', 'FIRMA O PARTICIPACIÓN VIRTUAL']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], font: 'helvetica', fontSize: 7, halign: 'center', valign: 'middle', lineColor: [0, 0, 0], lineWidth: 0.2 },
-      bodyStyles: { font: 'helvetica', fontSize: 7, valign: 'middle', lineColor: [0, 0, 0], lineWidth: 0.2 },
-      styles: { cellPadding: 1, overflow: 'linebreak' },
-      didDrawPage: function (data) {
-        drawHeader(data);
-        drawFooter(data);
+      headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontSize: 7, halign: 'center', valign: 'middle' },
+      bodyStyles: { fontSize: 7, valign: 'middle' },
+      didDrawPage: () => {
+        drawHeader();
+        drawFooter();
       }
     });
     
@@ -161,125 +177,76 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
     doc.text(`Programa: ${courseData.programa}`, 14, 44);
     doc.text(`Fecha de generación: ${new Date().toLocaleDateString()}`, 14, 50);
 
-    if (reportType === "asistencia_diaria_acumulada") {
+    if (reportType === "asistencia_diaria_acumulada" || reportType === "consolidado_general") {
       let datesToInclude = globalDates;
-      if (options?.startDate && options?.endDate) {
-        const startIdx = datesToInclude.indexOf(options.startDate);
-        const endIdx = datesToInclude.indexOf(options.endDate);
-        if (startIdx !== -1 && endIdx !== -1 && startIdx <= endIdx) {
-          datesToInclude = datesToInclude.slice(startIdx, endIdx + 1);
-        }
-      }
+      
+      const tableData = studentsWithStats.map(s => {
+        let p = 0; let a = 0; let l = 0; let e = 0;
+        datesToInclude.forEach((d: string) => {
+          const status = s.registros?.[d];
+          if (!status || status === 'Presente') p++;
+          else if (status === 'X') a++;
+          else if (status === 'Tarde') l++;
+          else if (status === 'Excusa' || status === 'Evento') e++;
+        });
+        const totalEvaluated = datesToInclude.length > 0 ? datesToInclude.length : 1;
+        const perc = Math.round((p / totalEvaluated) * 100);
+        
+        return [
+          s.numero_documento,
+          `${s.apellidos} ${s.nombres}`,
+          p.toString(),
+          a.toString(),
+          l.toString(),
+          e.toString(),
+          `${perc}%`
+        ];
+      });
+      
+      autoTable(doc, {
+        startY: 62,
+        head: [['Documento', 'Aprendiz', 'Presentes', 'Ausentes', 'Tardes', 'Excusas', '% Asistencia']],
+        body: tableData,
+      });
 
-      if (options?.mode === 'diario') {
-        const head = [['Documento', 'Aprendiz', ...datesToInclude, 'Presentes', '% Asist.']];
-        const tableData = studentsWithStats.map(s => {
-          let presentCount = 0;
-          const dateStatuses = datesToInclude.map((d: string) => {
-            const status = s.registros?.[d];
-            if (!status || status === 'Presente') {
-              presentCount++;
-              return 'P';
-            }
-            if (status === 'X') return 'F';
-            if (status === 'Tarde') return 'T';
-            if (status === 'Excusa') return 'E';
-            if (status === 'Evento') return 'Ev';
-            return '-';
-          });
-          const perc = datesToInclude.length > 0 ? Math.round((presentCount / datesToInclude.length) * 100) : 0;
-          return [
-            s.numero_documento,
-            `${s.nombres} ${s.apellidos}`,
-            ...dateStatuses,
-            presentCount.toString(),
-            `${perc}%`
-          ];
-        });
-        
-        autoTable(doc, {
-          startY: 62,
-          head: head,
-          body: tableData,
-          styles: { fontSize: 7, cellPadding: 1 },
-          headStyles: { fillColor: [230, 230, 230], textColor: [0,0,0], halign: 'center' }
-        });
-      } else {
-        const tableData = studentsWithStats.map(s => {
-          let p = 0; let a = 0; let l = 0; let e = 0;
-          datesToInclude.forEach((d: string) => {
-            const status = s.registros?.[d];
-            if (!status || status === 'Presente') p++;
-            else if (status === 'X') a++;
-            else if (status === 'Tarde') l++;
-            else if (status === 'Excusa' || status === 'Evento') e++;
-          });
-          const perc = datesToInclude.length > 0 ? Math.round((p / datesToInclude.length) * 100) : 0;
-          
-          return [
-            s.numero_documento,
-            `${s.nombres} ${s.apellidos}`,
-            p.toString(),
-            a.toString(),
-            l.toString(),
-            e.toString(),
-            `${perc}%`
-          ];
-        });
-        
-        autoTable(doc, {
-          startY: 62,
-          head: [['Documento', 'Aprendiz', 'Presentes', 'Ausentes', 'Tardes', 'Excusas', '% Asistencia']],
-          body: tableData,
-        });
-      }
-    } else if (reportType === "alertas_tempranas") {
+    } else if (reportType === "alertas_tempranas" || reportType === "comite_evaluacion") {
       const tableData = studentsWithStats
-        .filter(s => s.enRiesgo || s.enRiesgoTarde)
+        .filter(s => s.enRiesgo || s.enRiesgoTarde || (s.fallasAcumuladas > 0))
         .map(s => [
           s.numero_documento,
-          `${s.nombres} ${s.apellidos}`,
-          s.fallasAcumuladas?.toString() || '0',
-          s.tardanzasAcumuladas?.toString() || '0',
-          s.enRiesgo ? "Riesgo Inasistencia" : "Riesgo Retardos"
+          `${s.apellidos} ${s.nombres}`,
+          (s.fallasAcumuladas ?? 0).toString(),
+          (s.tardanzasAcumuladas ?? 0).toString(),
+          s.enRiesgo ? "Riesgo Inasistencia" : "Normal"
         ]);
       
       autoTable(doc, {
         startY: 60,
-        head: [['Documento', 'Aprendiz', 'Ausencias', 'Tardes', 'Tipo Alerta']],
+        head: [['Documento', 'Aprendiz', 'Ausencias', 'Tardes', 'Estado']],
         body: tableData,
       });
-    } else if (reportType === "justificaciones_novedades") {
-      const tableData = studentsWithStats
-        .filter(s => {
-          let hasExcused = false;
-          globalDates.forEach(d => {
-            if (s.registros?.[d] === 'Excusa' || s.registros?.[d] === 'Evento') hasExcused = true;
-          });
-          return hasExcused;
-        })
-        .map(s => {
-          let countExcused = 0;
-          globalDates.forEach(d => {
-            if (s.registros?.[d] === 'Excusa' || s.registros?.[d] === 'Evento') countExcused++;
-          });
-          return [
-            s.numero_documento,
-            `${s.nombres} ${s.apellidos}`,
-            countExcused.toString(),
-            "Excusa presentada"
-          ];
+
+    } else if (reportType === "justificaciones_novedades" || reportType === "inasistencias_por_fecha") {
+      const tableData = studentsWithStats.map(s => {
+        let countExcused = 0;
+        globalDates.forEach(d => {
+          if (s.registros?.[d] === 'Excusa' || s.registros?.[d] === 'Evento') countExcused++;
         });
+        return [
+          s.numero_documento,
+          `${s.apellidos} ${s.nombres}`,
+          countExcused.toString(),
+          countExcused > 0 ? "Con soporte / novedad" : "Sin novedades"
+        ];
+      });
 
       autoTable(doc, {
         startY: 60,
-        head: [['Documento', 'Aprendiz', 'Total Excusas', 'Observación']],
+        head: [['Documento', 'Aprendiz', 'Total Novedades/Excusas', 'Observación']],
         body: tableData,
       });
-      if (tableData.length === 0) {
-        doc.text("No se encontraron aprendices con excusas/novedades.", 14, 70);
-      }
-    } else if (reportType === "historico_tendencias") {
+
+    } else if (reportType === "historico_tendencias" || reportType === "trazabilidad_notificaciones") {
       let totalPresent = 0;
       let totalAbsent = 0;
       let totalLate = 0;
@@ -294,13 +261,13 @@ export const generatePDFReport = async (reportType: string, courseData: any, stu
       });
       
       const tableData = [
-        ["Total Presentes (Global)", totalPresent.toString()],
-        ["Total Ausentes (Global)", totalAbsent.toString()],
-        ["Total Tardes (Global)", totalLate.toString()],
+        ["Total Presentes (Global de Instructores)", totalPresent.toString()],
+        ["Total Ausentes / Fallas (Global)", totalAbsent.toString()],
+        ["Total Llegadas Tarde (Global)", totalLate.toString()],
       ];
       autoTable(doc, {
         startY: 60,
-        head: [['Indicador Global', 'Valor Acumulado (Todos los Instructores)']],
+        head: [['Indicador Global', 'Valor Acumulado']],
         body: tableData,
       });
     }
