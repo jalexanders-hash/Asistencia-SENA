@@ -13,12 +13,12 @@ export interface ParsedTemplateResult {
 
 /**
  * Genera el libro de trabajo oficial para Google Sheets / Excel
- * con todas las hojas y campos requeridos para la carga en el aplicativo.
+ * completamente en blanco para la carga de nuevos grupos.
  */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // 1. Hoja Ficha
+  // 1. Hoja Ficha (En blanco para que el instructor escriba los datos del nuevo grupo)
   const fichaHeaders = [
     "ficha_de_caracterizacion",
     "programa",
@@ -30,18 +30,9 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   ];
   const fichaRows = [
     fichaHeaders,
-    [
-      "3387401",
-      "Tecnología en Gestión Administrativa",
-      "Complejo Tecnológico Agroindustrial, Pecuario y Turístico",
-      "GESTIÓN ADMINISTRATIVA",
-      "20/01/2026",
-      "03/12/2026",
-      "Diurna"
-    ]
+    ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]
   ];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
-  // Auto col widths
   wsFicha['!cols'] = [
     { wch: 25 },
     { wch: 38 },
@@ -53,7 +44,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   ];
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // 2. Hoja Equipo Ejecutor
+  // 2. Hoja Equipo Ejecutor (En blanco)
   const equipoHeaders = [
     "competencia",
     "nombre_del_instructor",
@@ -66,46 +57,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   ];
   const equipoRows = [
     equipoHeaders,
-    [
-      "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
-      "Jorge Alexander Sepúlveda Vélez",
-      "jalexanders@gmail.com",
-      "jasepulveda@sena.edu.co",
-      "Jueves",
-      "20/01/2026",
-      "03/12/2026",
-      "Instructor Técnico"
-    ],
-    [
-      "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
-      "Xalima De Jesús Ruiz Doria",
-      "xaruiz@sena.edu.co",
-      "xaruiz@sena.edu.co",
-      "Martes",
-      "21/07/2026",
-      "01/12/2026",
-      "Líder de Ficha"
-    ],
-    [
-      "Comprender textos en inglés en forma escrita y auditiva",
-      "Leidy Carolina Cano Muñoz",
-      "carolinamunoz901@gmail.com",
-      "lccano@sena.edu.co",
-      "Viernes",
-      "13/02/2026",
-      "04/12/2026",
-      "Instructor Transversal"
-    ],
-    [
-      "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
-      "Dayana Marcela Diaz Dager",
-      "dayanadager@gmail.com",
-      "dayanadiaz@sena.edu.co",
-      "Miércoles",
-      "10/02/2026",
-      "02/12/2026",
-      "Instructor Técnico"
-    ]
+    ["", "", "", "", "", "", "", ""]
   ];
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
   wsEquipo['!cols'] = [
@@ -120,7 +72,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   ];
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-  // 3. Hoja Aprendices
+  // 3. Hoja Aprendices (En blanco)
   const aprendicesHeaders = [
     "tipo_documento",
     "numero_documento",
@@ -132,33 +84,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   ];
   const aprendicesRows = [
     aprendicesHeaders,
-    [
-      "CC",
-      "1001035388",
-      "MARYIS LEIDYS",
-      "ALMAIRO TAPIAS",
-      "MLAT28066845@soy.sena.edu.co",
-      "3105550101",
-      "En Formación"
-    ],
-    [
-      "CC",
-      "1007607693",
-      "SONIA YOHANA",
-      "JARAMILLO SALAS",
-      "SYJS26738888@soy.sena.edu.co",
-      "3125550202",
-      "En Formación"
-    ],
-    [
-      "TI",
-      "1003456789",
-      "JUAN CARLOS",
-      "PEREZ GOMEZ",
-      "jcperez@soy.sena.edu.co",
-      "3205550303",
-      "En Formación"
-    ]
+    ["", "", "", "", "", "", ""]
   ];
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
   wsAprendices['!cols'] = [
@@ -175,12 +101,12 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   // 4. Hoja Guía y Convenciones
   const guiaRows = [
     ["GUÍA Y CONVENCIONES PARA LA CARGA DE DATOS EN EL APLICATIVO SENA"],
-    [""],
+    ["l."],
     ["1. ESTRUCTURA DE HOJAS DEL ARCHIVO:"],
     ["- Ficha:", "Contiene los datos generales del programa, centro y número de ficha."],
     ["- Equipo_Ejecutor:", "Listado de instructores responsables de cada competencia formativa."],
     ["- Aprendices:", "Listado oficial de aprendices matriculados en la ficha."],
-    [""],
+    ["l."],
     ["2. CONVENCIONES DE ESTADO DE ASISTENCIA:"],
     ["Símbolo / Texto", "Significado", "Impacto en Alertas"],
     ["•", "Presente (Asistencia normal)", "Ninguno"],
@@ -188,11 +114,11 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
     ["Tarde", "Retardo / Llegada tarde", "Genera llamado de atención escrito al 3er retardo"],
     ["Excusa", "Falla justificada con incapacidad o soporte", "No computa para deserción injustificada"],
     ["Evento", "Actividad o evento institucional autorizado", "No computa como falla"],
-    [""],
+    ["l."],
     ["3. INSTRUCCIONES PARA GOOGLE SHEETS:"],
     ["Paso 1:", "Sube este archivo a tu Google Drive ( drive.google.com )."],
     ["Paso 2:", "Haz doble clic y ábrelo con Google Sheets."],
-    ["Paso 3:", "Diligencia la información de tu ficha y guarda los cambios."],
+    ["Paso 3:", "Diligencia la información de tu nueva ficha y guarda los cambios."],
     ["Paso 4:", "Descárgalo en Archivo > Descargar > Microsoft Excel (.xlsx) y cárgalo en el aplicativo."]
   ];
   const wsGuia = XLSX.utils.aoa_to_sheet(guiaRows);
@@ -203,15 +129,15 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
 }
 
 /**
- * Descarga directamente el archivo .xlsx en el navegador del usuario
+ * Descarga directamente el archivo .xlsx en blanco en el navegador del usuario
  */
-export function downloadGoogleSheetsTemplate(fichaNumber = "3387401") {
+export function downloadGoogleSheetsTemplate(fichaNumber = "Nueva_Ficha") {
   const data = generateGoogleSheetsTemplate();
   const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Formato_Carga_GoogleSheets_Ficha_${fichaNumber}.xlsx`;
+  a.download = `Plantilla_En_Blanco_Ficha_${fichaNumber}.xlsx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -219,19 +145,16 @@ export function downloadGoogleSheetsTemplate(fichaNumber = "3387401") {
 }
 
 /**
- * Descarga una plantilla CSV rápida de Aprendices
+ * Descarga una plantilla CSV rápida de Aprendices en blanco
  */
 export function downloadAprendicesCSVTemplate() {
-  const csvContent = "tipo_documento,numero_documento,nombres,apellidos,correo_electronico,telefono,estado\n" +
-    "CC,1001035388,MARYIS LEIDYS,ALMAIRO TAPIAS,MLAT28066845@soy.sena.edu.co,3105550101,En Formación\n" +
-    "CC,1007607693,SONIA YOHANA,JARAMILLO SALAS,SYJS26738888@soy.sena.edu.co,3125550202,En Formación\n" +
-    "TI,1003456789,JUAN CARLOS,PEREZ GOMEZ,jcperez@soy.sena.edu.co,3205550303,En Formación\n";
+  const csvContent = "tipo_documento,numero_documento,nombres,apellidos,correo_electronico,telefono,estado\n";
 
   const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = "Plantilla_Aprendices_SENA.csv";
+  a.download = "Plantilla_Aprendices_En_Blanco.csv";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -246,7 +169,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
     const arrayBuffer = await file.arrayBuffer();
     const wb = XLSX.read(arrayBuffer, { type: 'array' });
 
-    // Buscar nombres de hojas flexibles
     const sheetNames = wb.SheetNames;
     const findSheet = (keywords: string[]) => {
       return sheetNames.find(s => keywords.some(k => s.toLowerCase().includes(k.toLowerCase())));
@@ -271,8 +193,9 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (rows.length > 0) {
         const first = rows[0];
-        if (first.ficha_de_caracterizacion || first.ficha) {
-          updatedData.ficha_de_caracterizacion = String(first.ficha_de_caracterizacion || first.ficha).trim();
+        const fichaDetectada = first.ficha_de_caracterizacion || first.ficha || first.numero_ficha;
+        if (fichaDetectada) {
+          updatedData.ficha_de_caracterizacion = String(fichaDetectada).trim();
         }
         if (first.programa) updatedData.programa = String(first.programa).trim();
         if (first.centro) updatedData.centro = String(first.centro).trim();
@@ -314,7 +237,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           .filter(r => (r.numero_documento || r.documento) && (r.nombres || r.nombre))
           .map(r => {
             const docNum = String(r.numero_documento || r.documento).trim();
-            // Preservar asistencias previas si ya existía el aprendiz
             const existing = baseData.asistencias_aprendices.find(a => a.numero_documento === docNum);
             return {
               numero_documento: docNum,
