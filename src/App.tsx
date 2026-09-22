@@ -10,7 +10,6 @@ import { auth } from "./lib/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
 import { LogOut } from "lucide-react";
-import { migrarJsonAFirebase } from './lib/restoreBackup'; // <-- Importación del script de restauración
 import { 
   Users, 
   BookOpen, 
@@ -30,8 +29,7 @@ import {
   Calendar,
   Save,
   FileText,
-  Layers,
-  RefreshCcw
+  Layers
 } from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
@@ -488,20 +486,6 @@ export default function App() {
 
           {/* Botones de Acción Superior */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* BOTÓN TEMPORAL DE RESTAURACIÓN DESDE JSON */}
-            <button
-              onClick={async () => {
-                if (confirm("¿Deseas restaurar todas las inasistencias de la Ficha 3387401 desde el respaldo JSON?")) {
-                  await migrarJsonAFirebase();
-                }
-              }}
-              className="flex items-center gap-2 px-3.5 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 shadow-sm transition-colors"
-              title="Restaurar datos desde JSON"
-            >
-              <RefreshCcw className="w-4 h-4" />
-              <span>Restaurar Ficha</span>
-            </button>
-
             <button 
               onClick={handleOpenAttendance}
               className="flex items-center gap-2 px-3.5 py-2 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors"
@@ -519,6 +503,7 @@ export default function App() {
             <button 
               onClick={() => setIsSheetsModalOpen(true)}
               className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 shadow-sm transition-colors"
+              title="Cargar o actualizar formato con inasistencias en Excel"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
               <span className="hidden sm:inline">Formato Google Sheets</span>
@@ -563,6 +548,54 @@ export default function App() {
         </div>
 
         {/* CONTENIDO SEGÚN PESTAÑA ACTIVA */}
+        {activeTab === 'ficha' && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+              <div>
+                <span className="block font-semibold text-slate-500">Número de Ficha</span>
+                <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.ficha_de_caracterizacion}</p>
+              </div>
+              <div>
+                <span className="block font-semibold text-slate-500">Programa de Formación</span>
+                <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.programa}</p>
+              </div>
+              <div>
+                <span className="block font-semibold text-slate-500">Denominación</span>
+                <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.denominacion}</p>
+              </div>
+              <div>
+                <span className="block font-semibold text-slate-500">Centro de Formación</span>
+                <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.centro}</p>
+              </div>
+            </div>
+
+            <h3 className="text-md font-bold text-slate-800 border-t pt-4 mt-6">Equipo Ejecutor de Instructores</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 uppercase">
+                    <th className="p-3">Competencia</th>
+                    <th className="p-3">Instructor</th>
+                    <th className="p-3">Correo</th>
+                    <th className="p-3">Día</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {courseData.equipo_instructores?.map((inst: any, idx: number) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="p-3 font-medium text-slate-800">{inst.competencia}</td>
+                      <td className="p-3">{inst.nombre_del_instructor}</td>
+                      <td className="p-3 text-slate-500">{inst.correo_institucional_sena || inst.correo_google}</td>
+                      <td className="p-3">{inst.dia}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'aprendices' && (
           <>
             {/* Tarjetas KPI */}
@@ -715,6 +748,49 @@ export default function App() {
             </div>
           </>
         )}
+
+        {activeTab === 'alertas' && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6 max-w-2xl">
+            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Configuración de Umbrales de Alertas</h2>
+            <div className="space-y-4 text-sm">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Límite de Inasistencias para Alerta de Deserción:</label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="15" 
+                    value={limiteInasistencias}
+                    onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-24 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold bg-white"
+                  />
+                  <span className="text-slate-500">faltas acumuladas (Aplica para Acuerdo 09 de 2024).</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 text-emerald-900 text-xs space-y-1">
+                <p className="font-bold">Información de Notificación Automática:</p>
+                <p>Las alertas enviadas por correo electrónico incluirán en copia al instructor responsable actual: <strong>{correoInstructorActual}</strong>.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'reportes' && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Generación de Reportes Académicos</h2>
+            <p className="text-sm text-slate-600">Selecciona el tipo de informe oficial que deseas exportar en formato PDF para el seguimiento de la ficha.</p>
+            <div className="flex gap-4">
+              <button 
+                onClick={handleOpenExportModal}
+                className="px-4 py-2.5 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors flex items-center gap-2"
+              >
+                <FileOutput className="w-4 h-4" />
+                Exportar Reporte Consolidado PDF
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modales y Componentes de Apoyo */}
@@ -728,6 +804,71 @@ export default function App() {
             setIsSheetsModalOpen(false);
           }}
         />
+      )}
+
+      {showExportModal && (
+        <ExportReportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          onConfirm={handleExportConfirm}
+          availableDates={currentInstructorDates}
+        />
+      )}
+
+      {showAttendanceModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-lg font-bold text-slate-800">Registro de Asistencia</h3>
+              <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de la Sesión:</label>
+                <input 
+                  type="date" 
+                  value={attendanceDate}
+                  onChange={(e) => setAttendanceDate(e.target.value)}
+                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full"
+                />
+              </div>
+              <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3">
+                {courseData.asistencias_aprendices.map((student) => (
+                  <div key={student.numero_documento} className="flex items-center justify-between py-1.5 border-b last:border-0 text-sm">
+                    <span className="font-medium text-slate-700">{student.apellidos} {student.nombres}</span>
+                    <select
+                      value={tempRecords[student.numero_documento] || 'Presente'}
+                      onChange={(e) => setTempRecords({ ...tempRecords, [student.numero_documento]: e.target.value })}
+                      className="border rounded px-2 py-1 text-xs font-semibold bg-slate-50"
+                    >
+                      <option value="Presente">Presente (•)</option>
+                      <option value="X">Inasistencia (X)</option>
+                      <option value="Tarde">Retardo (Tarde)</option>
+                      <option value="Excusa">Excusa / Incapacidad</option>
+                      <option value="Evento">Evento Institucional</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-3 border-t">
+              <button 
+                onClick={() => setShowAttendanceModal(false)}
+                className="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-50 font-medium"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSaveAttendance}
+                disabled={isSavingAttendance}
+                className="px-4 py-2 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark flex items-center gap-2"
+              >
+                {isSavingAttendance && <Loader2 className="w-4 h-4 animate-spin" />}
+                Guardar Asistencia
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
