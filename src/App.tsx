@@ -28,7 +28,10 @@ import {
   Calendar,
   Save,
   FileText,
-  Layers
+  Layers,
+  Send,
+  Copy,
+  Check
 } from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
@@ -65,6 +68,13 @@ export default function App() {
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
+  // Estados de Filtro Interactivo del KPI Dashboard
+  const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
+
+  // Estado para el Modal de Notificaciones Masivas / Centralizadas
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [copiedDoc, setCopiedDoc] = useState<string | null>(null);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -96,7 +106,6 @@ export default function App() {
     
   const [searchTerm, setSearchTerm] = useState('');
   const [showRiskOnly, setShowRiskOnly] = useState(false);
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
     
   const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
@@ -112,8 +121,6 @@ export default function App() {
   // Modales de acciones
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportStartDate, setExportStartDate] = useState('');
-  const [exportEndDate, setExportEndDate] = useState('');
 
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [isSavingAttendance, setIsSavingAttendance] = useState(false);
@@ -198,10 +205,6 @@ export default function App() {
   };
 
   const handleOpenExportModal = () => {
-    if (currentInstructorDates.length > 0) {
-      setExportStartDate(currentInstructorDates[0]);
-      setExportEndDate(currentInstructorDates[currentInstructorDates.length - 1]);
-    }
     setShowExportModal(true);
   };
 
@@ -295,9 +298,21 @@ export default function App() {
     };
   }, [courseData, currentInstructorDates, limiteInasistencias]);
 
+  // Filtrado avanzado combinando KPIs y barra de búsqueda
   const filteredStudents = useMemo(() => {
     let filtered = studentsWithStats;
      
+    // Filtro por KPI interactivo
+    if (kpiFilter === 'absent') {
+      filtered = filtered.filter(s => s.fallasAcumuladas > 0);
+    } else if (kpiFilter === 'late') {
+      filtered = filtered.filter(s => s.tardanzasAcumuladas > 0);
+    } else if (kpiFilter === 'risk') {
+      filtered = filtered.filter(s => s.enRiesgo || s.enRiesgoTarde);
+    } else if (kpiFilter === 'present') {
+      filtered = filtered.filter(s => s.fallasAcumuladas === 0 && s.tardanzasAcumuladas === 0);
+    }
+
     if (showRiskOnly) {
       filtered = filtered.filter(s => s.enRiesgo || s.enRiesgoTarde);
     }
@@ -312,7 +327,7 @@ export default function App() {
     }
      
     return filtered;
-  }, [searchTerm, showRiskOnly, studentsWithStats]);
+  }, [searchTerm, showRiskOnly, studentsWithStats, kpiFilter]);
 
   const correoInstructorActual = (currentInstructor as any)?.correo_institucional_sena || (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || user?.email || '';
 
@@ -493,7 +508,7 @@ export default function App() {
               Tomar Asistencia
             </button>
             <button 
-              onClick={() => setActiveTab('alertas')}
+              onClick={() => setShowNotificationModal(true)}
               className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
             >
               <Mail className="w-4 h-4 text-slate-500" />
@@ -589,62 +604,93 @@ export default function App() {
 
         {activeTab === 'aprendices' && (
           <>
-            {/* Tarjetas KPI */}
+            {/* Tarjetas KPI Interactivas / Dinámicas */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+              <div 
+                onClick={() => setKpiFilter('all')}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
                   <div className="p-2 bg-emerald-50 rounded-lg text-sena"><Users className="w-4 h-4" /></div>
                 </div>
                 <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
+                <span className="text-[10px] text-slate-400 mt-1">Clic para mostrar todos</span>
               </div>
               
-              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+              <div 
+                onClick={() => setKpiFilter('present')}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
                   <div className="p-2 bg-emerald-50 rounded-lg text-sena"><CheckCircle2 className="w-4 h-4" /></div>
                 </div>
                 <span className="text-2xl font-bold text-sena mt-3">{stats.attendanceRate}%</span>
+                <span className="text-[10px] text-slate-400 mt-1">Sin inasistencias</span>
               </div>
 
-              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+              <div 
+                onClick={() => setKpiFilter('absent')}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'absent' ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-semibold text-slate-500">Total Inasistencias</span>
                   <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
                 </div>
                 <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
+                <span className="text-[10px] text-slate-400 mt-1">Clic para filtrar faltas</span>
               </div>
 
-              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
+              <div 
+                onClick={() => setKpiFilter('late')}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'late' ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-slate-500">Llegadas Tarde (&ge; 3)</span>
+                  <span className="text-xs font-semibold text-slate-500">Llegadas Tarde</span>
                   <div className="p-2 bg-amber-50 rounded-lg text-amber-500"><Clock className="w-4 h-4" /></div>
                 </div>
                 <span className="text-2xl font-bold text-amber-600 mt-3">{stats.enRiesgoTarde}</span>
+                <span className="text-[10px] text-slate-400 mt-1">Clic para filtrar retardos</span>
               </div>
 
-              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between col-span-2 md:col-span-1">
+              <div 
+                onClick={() => setKpiFilter('risk')}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all col-span-2 md:col-span-1 ${kpiFilter === 'risk' ? 'border-red-600 ring-2 ring-red-600/20 bg-red-50/30' : 'border-slate-200 hover:border-slate-300'}`}
+              >
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-semibold text-slate-500">En Riesgo (&ge; {limiteInasistencias})</span>
                   <div className="p-2 bg-red-50 rounded-lg text-red-600"><AlertTriangle className="w-4 h-4" /></div>
                 </div>
                 <span className="text-2xl font-bold text-red-600 mt-3">{stats.enRiesgo}</span>
+                <span className="text-[10px] text-red-500 mt-1 font-medium">Acuerdo 09 de 2024</span>
               </div>
             </div>
 
-            {/* Dashboard / Listado de Aprendices Limpio y Organizado */}
+            {/* Dashboard / Listado de Aprendices */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="relative w-full sm:w-80">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar por nombre o documento..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena"
-                  />
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input 
+                      type="text" 
+                      placeholder="Buscar por nombre o documento..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena"
+                    />
+                  </div>
+                  {kpiFilter !== 'all' && (
+                    <button
+                      onClick={() => setKpiFilter('all')}
+                      className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-medium whitespace-nowrap transition-colors"
+                    >
+                      Limpiar Filtro (KPI)
+                    </button>
+                  )}
                 </div>
+
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   <button
                     onClick={() => setShowRiskOnly(!showRiskOnly)}
@@ -749,7 +795,7 @@ export default function App() {
                     ) : (
                       <tr>
                         <td colSpan={7} className="p-8 text-center text-slate-400">
-                          No se encontraron aprendices registrados.
+                          No se encontraron aprendices con los filtros seleccionados.
                         </td>
                       </tr>
                     )}
@@ -804,6 +850,97 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* MODAL DE NOTIFICACIONES / CENTRO DE ALERTAS (ACUERDO 09) */}
+      {showNotificationModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Centro de Notificaciones - Reglamento SENA</h3>
+                  <p className="text-xs text-slate-500">Aprendices que superan el límite de inasistencias ({limiteInasistencias} faltas)</p>
+                </div>
+              </div>
+              <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+            </div>
+
+            <div className="space-y-4">
+              {studentsWithStats.filter(s => s.enRiesgo).length > 0 ? (
+                studentsWithStats.filter(s => s.enRiesgo).map(student => {
+                  const fechasFaltasStr = student.fechasFalla.length > 0
+                    ? student.fechasFalla.map(formatDateForDisplay).join(', ')
+                    : 'Fechas no especificadas';
+
+                  const emailSubject = `Notificación de Inasistencia y Requerimiento de Soportes - Ficha ${courseData.ficha_de_caracterizacion}`;
+                  const emailBody = `Estimado(a) ${student.nombres} ${student.apellidos},\n\nLe informamos que registra ${student.fallasAcumuladas} inasistencia(s) en la ficha ${courseData.ficha_de_caracterizacion} en las siguientes fechas: ${fechasFaltasStr}.\n\nDe acuerdo con el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), por favor presentar los soportes o justificaciones correspondientes.\n\nAtentamente,\n${currentInstructor?.nombre_del_instructor || 'Instructor SENA'}\nCC: ${correoInstructorActual}`;
+
+                  return (
+                    <div key={student.numero_documento} className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                        <div>
+                          <p className="font-bold text-slate-800 text-sm">{student.apellidos} {student.nombres}</p>
+                          <p className="text-xs text-slate-500">Doc: {student.numero_documento} • <strong className="text-red-600">{student.fallasAcumuladas} Faltas</strong></p>
+                        </div>
+                        <span className="text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-md font-semibold self-start sm:self-auto">
+                          Requiere Notificación
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-100 space-y-1">
+                        <p><strong>Destinatario:</strong> {student.correo_electronico || 'Sin correo electrónico registrado'}</p>
+                        <p><strong>Copia (CC):</strong> {correoInstructorActual}</p>
+                        <p><strong>Asunto:</strong> {emailSubject}</p>
+                        <hr className="my-1 border-slate-100" />
+                        <p className="whitespace-pre-line text-slate-700">{emailBody}</p>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(emailBody);
+                            setCopiedDoc(student.numero_documento);
+                            setTimeout(() => setCopiedDoc(null), 2500);
+                          }}
+                          className="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                        >
+                          {copiedDoc === student.numero_documento ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                          {copiedDoc === student.numero_documento ? '¡Copiado al portapapeles!' : 'Copiar Plantilla de Correo'}
+                        </button>
+                        <a
+                          href={`mailto:${student.correo_electronico || ''}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
+                          className="px-3.5 py-2 bg-sena hover:bg-sena-dark text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                        >
+                          <Send className="w-4 h-4" />
+                          Abrir Cliente de Correo
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                  <p className="font-semibold text-slate-700">No hay aprendices en riesgo de inasistencia</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Ningún aprendiz supera el límite configurado de {limiteInasistencias} falta(s).</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t">
+              <button 
+                onClick={() => setShowNotificationModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                Cerrar Ventana
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modales y Componentes de Apoyo */}
       {isSheetsModalOpen && (
