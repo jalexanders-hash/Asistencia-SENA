@@ -12,8 +12,7 @@ import {
   Briefcase, 
   BookOpen, 
   Loader2,
-  Table,
-  ArrowRight
+  Table
 } from 'lucide-react';
 import { 
   downloadGoogleSheetsTemplate, 
@@ -324,18 +323,6 @@ export function SheetsTemplateModal({
                         <td className="px-4 py-2 text-slate-400">Opcional</td>
                         <td className="px-4 py-2 text-slate-600">GESTIÓN ADMINISTRATIVA</td>
                       </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">fecha_inicio</td>
-                        <td className="px-4 py-2 text-slate-500">Fecha (DD/MM/AAAA)</td>
-                        <td className="px-4 py-2 text-slate-400">Opcional</td>
-                        <td className="px-4 py-2 text-slate-600">20/01/2026</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">fecha_terminacion</td>
-                        <td className="px-4 py-2 text-slate-500">Fecha (DD/MM/AAAA)</td>
-                        <td className="px-4 py-2 text-slate-400">Opcional</td>
-                        <td className="px-4 py-2 text-slate-600">03/12/2026</td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -384,18 +371,6 @@ export function SheetsTemplateModal({
                         <td className="px-4 py-2 text-red-600 font-semibold">Sí (notificaciones)</td>
                         <td className="px-4 py-2 text-slate-600">jasepulveda@sena.edu.co</td>
                       </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">dia</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-slate-400">Opcional</td>
-                        <td className="px-4 py-2 text-slate-600">Jueves</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">rol</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-slate-400">Opcional</td>
-                        <td className="px-4 py-2 text-slate-600">Instructor Técnico / Líder de Ficha</td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -421,12 +396,6 @@ export function SheetsTemplateModal({
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
                       <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">tipo_documento</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-slate-400">Opcional</td>
-                        <td className="px-4 py-2 text-slate-600">CC, TI, CE, PPT</td>
-                      </tr>
-                      <tr>
                         <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">numero_documento</td>
                         <td className="px-4 py-2 text-slate-500">Texto / Número</td>
                         <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
@@ -443,18 +412,6 @@ export function SheetsTemplateModal({
                         <td className="px-4 py-2 text-slate-500">Texto</td>
                         <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
                         <td className="px-4 py-2 text-slate-600">ALMAIRO TAPIAS</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">correo_electronico</td>
-                        <td className="px-4 py-2 text-slate-500">Correo Electrónico</td>
-                        <td className="px-4 py-2 text-slate-400">Recomendado</td>
-                        <td className="px-4 py-2 text-slate-600">MLAT28066845@soy.sena.edu.co</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">telefono</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-slate-400">Opcional</td>
-                        <td className="px-4 py-2 text-slate-600">3105550101</td>
                       </tr>
                     </tbody>
                   </table>
