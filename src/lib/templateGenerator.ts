@@ -101,12 +101,12 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   // 4. Hoja Guía y Convenciones
   const guiaRows = [
     ["GUÍA Y CONVENCIONES PARA LA CARGA DE DATOS EN EL APLICATIVO SENA"],
-    ["l."],
+    [""],
     ["1. ESTRUCTURA DE HOJAS DEL ARCHIVO:"],
     ["- Ficha:", "Contiene los datos generales del programa, centro y número de ficha."],
     ["- Equipo_Ejecutor:", "Listado de instructores responsables de cada competencia formativa."],
     ["- Aprendices:", "Listado oficial de aprendices matriculados en la ficha."],
-    ["l."],
+    [""],
     ["2. CONVENCIONES DE ESTADO DE ASISTENCIA:"],
     ["Símbolo / Texto", "Significado", "Impacto en Alertas"],
     ["•", "Presente (Asistencia normal)", "Ninguno"],
@@ -114,7 +114,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
     ["Tarde", "Retardo / Llegada tarde", "Genera llamado de atención escrito al 3er retardo"],
     ["Excusa", "Falla justificada con incapacidad o soporte", "No computa para deserción injustificada"],
     ["Evento", "Actividad o evento institucional autorizado", "No computa como falla"],
-    ["l."],
+    [""],
     ["3. INSTRUCCIONES PARA GOOGLE SHEETS:"],
     ["Paso 1:", "Sube este archivo a tu Google Drive ( drive.google.com )."],
     ["Paso 2:", "Haz doble clic y ábrelo con Google Sheets."],
@@ -129,15 +129,15 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
 }
 
 /**
- * Descarga directamente el archivo .xlsx en blanco en el navegador del usuario
+ * Descarga directamente el archivo .xlsx en blanco en el navegador del usuario con nombre limpio
  */
-export function downloadGoogleSheetsTemplate(fichaNumber = "Nueva_Ficha") {
+export function downloadGoogleSheetsTemplate() {
   const data = generateGoogleSheetsTemplate();
   const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Plantilla_En_Blanco_Ficha_${fichaNumber}.xlsx`;
+  a.download = `Plantilla_Oficial_Asistencia_SENA.xlsx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
