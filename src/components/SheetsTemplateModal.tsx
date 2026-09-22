@@ -20,6 +20,7 @@ import {
   parseUploadedTemplate,
   ParsedTemplateResult
 } from '../lib/templateGenerator';
+import { downloadBlankAttendanceTemplate } from '../lib/blankTemplateGenerator';
 import { updateFichaCompleteData } from '../lib/firebase';
 import { courseData as initialCourseData } from '../data';
 
@@ -164,113 +165,58 @@ export function SheetsTemplateModal({
                     Formato oficial compatible con Google Sheets y Microsoft Excel (.xlsx)
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Este archivo contiene 4 hojas preconfiguradas (<strong>Ficha</strong>, <strong>Equipo_Ejecutor</strong>, <strong>Aprendices</strong> y <strong>Guia_y_Convenciones</strong>) con los anchos de columna, nombres técnicos y ejemplos exactos que requiere la base de datos del aplicativo.
+                    Este archivo contiene las hojas preconfiguradas con los datos de la ficha, instructores y el listado de aprendices listos para el registro de inasistencias.
                   </p>
                 </div>
               </div>
 
               {/* Action Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Opción 1: Descarga XLSX */}
+                {/* Opción 1: Descarga Plantilla en Blanco para Inasistencias */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition-all group">
                   <div>
                     <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
                       <FileSpreadsheet className="w-5 h-5" />
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">
-                      Descargar Plantilla (.xlsx)
+                      Plantilla para Inasistencias (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga el archivo completo de Excel listo para abrir en Microsoft Excel o subir a tu cuenta de Google Drive para editarlo en Google Sheets.
+                      Descarga el archivo con el listado actual de aprendices para marcar fallas o tardanzas y volver a cargarlo.
                     </p>
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadGoogleSheetsTemplate(currentFicha)}
+                      onClick={() => downloadBlankAttendanceTemplate(courseData)}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
                     >
                       <Download className="w-4 h-4" />
-                      Descargar Formato Completo (.xlsx)
+                      Descargar Plantilla en Blanco
                     </button>
                   </div>
                 </div>
 
-                {/* Opción 2: Google Sheets en la nube */}
+                {/* Opción 2: Descargar Formato Completo Estructurado */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-300 transition-all group">
                   <div>
                     <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center mb-3">
                       <ExternalLink className="w-5 h-5" />
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">
-                      Trabajar en Google Sheets
+                      Formato Completo de Configuración
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Abre una hoja en blanco de Google Sheets o sube el archivo .xlsx a tu Google Drive para editar colaborativamente con tu equipo de instructores.
+                      Descarga la estructura completa de múltiples hojas para la configuración inicial de fichas e instructores.
                     </p>
                   </div>
-                  <div className="mt-5 space-y-2">
-                    <a
-                      href="https://sheets.new"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  <div className="mt-5">
+                    <button
+                      onClick={() => downloadGoogleSheetsTemplate(currentFicha)}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
                     >
-                      <ExternalLink className="w-4 h-4" />
-                      Crear nueva hoja en Google Sheets
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Opción adicional: Plantilla rápida CSV */}
-              <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-800">
-                      ¿Solo necesitas importar el listado de aprendices?
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      Descarga una plantilla simple en formato CSV con las columnas de documento, nombres y correo.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={downloadAprendicesCSVTemplate}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Descargar CSV Aprendices
-                </button>
-              </div>
-
-              {/* Pasos de uso */}
-              <div className="bg-white p-5 rounded-xl border border-slate-200 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Flujo recomendado de trabajo
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <span className="w-5 h-5 rounded-full bg-sena text-white inline-flex items-center justify-center font-bold text-[10px] mb-1.5">1</span>
-                    <p className="font-semibold text-slate-800">Descarga la plantilla</p>
-                    <p className="text-slate-500 mt-1">Obtén el archivo .xlsx con las 4 hojas estructuradas.</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <span className="w-5 h-5 rounded-full bg-sena text-white inline-flex items-center justify-center font-bold text-[10px] mb-1.5">2</span>
-                    <p className="font-semibold text-slate-800">Sube a Google Drive</p>
-                    <p className="text-slate-500 mt-1">Ábrelo con Google Sheets para edición colaborativa.</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <span className="w-5 h-5 rounded-full bg-sena text-white inline-flex items-center justify-center font-bold text-[10px] mb-1.5">3</span>
-                    <p className="font-semibold text-slate-800">Diligencia los datos</p>
-                    <p className="text-slate-500 mt-1">Registra la ficha, los instructores y los aprendices.</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                    <span className="w-5 h-5 rounded-full bg-sena text-white inline-flex items-center justify-center font-bold text-[10px] mb-1.5">4</span>
-                    <p className="font-semibold text-slate-800">Carga al aplicativo</p>
-                    <p className="text-slate-500 mt-1">Usa la pestaña 'Cargar al Aplicativo' para sincronizar.</p>
+                      <Download className="w-4 h-4" />
+                      Descargar Formato Completo
+                    </button>
                   </div>
                 </div>
               </div>
@@ -280,142 +226,11 @@ export function SheetsTemplateModal({
           {/* TAB 2: ESTRUCTURA DE CAMPOS */}
           {activeTab === 'estructura' && (
             <div className="space-y-6">
-              {/* Hoja Ficha */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-                <div className="px-4 py-3 bg-slate-100/70 border-b border-slate-200 flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-emerald-600" />
-                  <h4 className="font-bold text-sm text-slate-800">
-                    Hoja 1: Ficha (Datos Generales del Programa)
-                  </h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-2.5">Nombre de Columna</th>
-                        <th className="px-4 py-2.5">Tipo de Dato</th>
-                        <th className="px-4 py-2.5">Requerido</th>
-                        <th className="px-4 py-2.5">Ejemplo / Descripción</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">ficha_de_caracterizacion</td>
-                        <td className="px-4 py-2 text-slate-500">Texto / Número</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
-                        <td className="px-4 py-2 text-slate-600">3387401</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">programa</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
-                        <td className="px-4 py-2 text-slate-600">Tecnología en Gestión Administrativa</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">centro</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
-                        <td className="px-4 py-2 text-slate-600">Complejo Tecnológico Agroindustrial, Pecuario y Turístico</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">denominacion</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-slate-400">Opcional</td>
-                        <td className="px-4 py-2 text-slate-600">GESTIÓN ADMINISTRATIVA</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Hoja Equipo Ejecutor */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-                <div className="px-4 py-3 bg-slate-100/70 border-b border-slate-200 flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-emerald-600" />
-                  <h4 className="font-bold text-sm text-slate-800">
-                    Hoja 2: Equipo_Ejecutor (Instructores y Competencias)
-                  </h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-2.5">Nombre de Columna</th>
-                        <th className="px-4 py-2.5">Tipo de Dato</th>
-                        <th className="px-4 py-2.5">Requerido</th>
-                        <th className="px-4 py-2.5">Ejemplo / Descripción</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">competencia</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
-                        <td className="px-4 py-2 text-slate-600">Producir los documentos que se originen...</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">nombre_del_instructor</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
-                        <td className="px-4 py-2 text-slate-600">Jorge Alexander Sepúlveda Vélez</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">correo_google</td>
-                        <td className="px-4 py-2 text-slate-500">Correo Electrónico</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí (para login)</td>
-                        <td className="px-4 py-2 text-slate-600">jalexanders@gmail.com</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">correo_institucional_sena</td>
-                        <td className="px-4 py-2 text-slate-500">Correo Electrónico</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí (notificaciones)</td>
-                        <td className="px-4 py-2 text-slate-600">jasepulveda@sena.edu.co</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Hoja Aprendices */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-                <div className="px-4 py-3 bg-slate-100/70 border-b border-slate-200 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-emerald-600" />
-                  <h4 className="font-bold text-sm text-slate-800">
-                    Hoja 3: Aprendices (Listado de Matriculados)
-                  </h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-2.5">Nombre de Columna</th>
-                        <th className="px-4 py-2.5">Tipo de Dato</th>
-                        <th className="px-4 py-2.5">Requerido</th>
-                        <th className="px-4 py-2.5">Ejemplo / Descripción</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">numero_documento</td>
-                        <td className="px-4 py-2 text-slate-500">Texto / Número</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
-                        <td className="px-4 py-2 text-slate-600">1001035388</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">nombres</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
-                        <td className="px-4 py-2 text-slate-600">MARYIS LEIDYS</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-2 font-mono text-emerald-700 font-semibold">apellidos</td>
-                        <td className="px-4 py-2 text-slate-500">Texto</td>
-                        <td className="px-4 py-2 text-red-600 font-semibold">Sí</td>
-                        <td className="px-4 py-2 text-slate-600">ALMAIRO TAPIAS</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-3">
+                <h4 className="font-bold text-sm text-slate-800">Guía para el cargue de inasistencias</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Asegúrate de conservar las columnas principales de identificación del aprendiz (<code>numero_documento</code>, <code>nombres</code>, <code>apellidos</code>) y registra las novedades de asistencia en las columnas correspondientes a las fechas.
+                </p>
               </div>
             </div>
           )}
@@ -429,10 +244,10 @@ export function SheetsTemplateModal({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-800">
-                    Selecciona tu archivo de Google Sheets o Excel
+                    Selecciona tu archivo de Google Sheets o Excel diligenciado
                   </h3>
                   <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                    Carga el archivo <code>.xlsx</code> diligenciado. El sistema validará la estructura de las hojas y te mostrará una vista previa antes de sincronizar.
+                    Carga el archivo <code>.xlsx</code> con las inasistencias marcadas. El sistema actualizará automáticamente la base de datos.
                   </p>
                 </div>
 
