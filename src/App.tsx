@@ -63,8 +63,10 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Estados de navegación y configuración
+  // Estados de navegación y configuración (Vista principal restaurada)
   const [activeTab, setActiveTab] = useState<'ficha' | 'aprendices' | 'alertas' | 'reportes'>('aprendices');
+  const [showGlobalAttendanceView, setShowGlobalAttendanceView] = useState(false);
+
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -397,7 +399,7 @@ export default function App() {
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-3 z-50">
                   <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Centro de Notificaciones</span>
-                    <span className="text-[11px] text-sena font-semibold cursor-pointer hover:underline" onClick={() => { setActiveTab('alertas'); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
+                    <span className="text-[11px] text-sena font-semibold cursor-pointer hover:underline" onClick={() => { setActiveTab('alertas'); setShowGlobalAttendanceView(false); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
                   </div>
 
                   <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -473,190 +475,58 @@ export default function App() {
           </div>
         </div>
 
-        {/* Pestañas de Navegación */}
+        {/* Pestañas de Navegación Originales */}
         <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
           <button 
-            onClick={() => setActiveTab('ficha')}
-            className={`pb-3 transition-colors ${activeTab === 'ficha' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+            onClick={() => { setActiveTab('ficha'); setShowGlobalAttendanceView(false); }}
+            className={`pb-3 transition-colors ${!showGlobalAttendanceView && activeTab === 'ficha' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Datos de la Ficha
           </button>
           <button 
-            onClick={() => setActiveTab('aprendices')}
-            className={`pb-3 transition-colors ${activeTab === 'aprendices' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+            onClick={() => { setActiveTab('aprendices'); setShowGlobalAttendanceView(false); }}
+            className={`pb-3 transition-colors ${!showGlobalAttendanceView && activeTab === 'aprendices' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Listado de Aprendices
           </button>
           <button 
-            onClick={() => setActiveTab('alertas')}
-            className={`pb-3 transition-colors ${activeTab === 'alertas' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+            onClick={() => { setShowGlobalAttendanceView(true); }}
+            className={`pb-3 transition-colors ${showGlobalAttendanceView ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            Asistencia Global
+          </button>
+          <button 
+            onClick={() => { setActiveTab('alertas'); setShowGlobalAttendanceView(false); }}
+            className={`pb-3 transition-colors ${!showGlobalAttendanceView && activeTab === 'alertas' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Configuración de Alertas
           </button>
           <button 
-            onClick={() => setActiveTab('reportes')}
-            className={`pb-3 transition-colors ${activeTab === 'reportes' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+            onClick={() => { setActiveTab('reportes'); setShowGlobalAttendanceView(false); }}
+            className={`pb-3 transition-colors ${!showGlobalAttendanceView && activeTab === 'reportes' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Reportes y Exportación
           </button>
         </div>
 
-        {activeTab === 'ficha' && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <div>
-                <span className="block font-semibold text-slate-500">Número de Ficha</span>
-                <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.ficha_de_caracterizacion}</p>
-              </div>
-              <div>
-                <span className="block font-semibold text-slate-500">Programa de Formación</span>
-                <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.programa}</p>
-              </div>
-              <div>
-                <span className="block font-semibold text-slate-500">Denominación</span>
-                <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.denominacion}</p>
-              </div>
-              <div>
-                <span className="block font-semibold text-slate-500">Centro de Formación</span>
-                <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.centro}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'aprendices' && (
-          <>
-            {/* Tarjetas KPI Interactivas */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div 
-                onClick={() => setKpiFilter('all')}
-                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
-                  <div className="p-2 bg-emerald-50 rounded-lg text-sena"><Users className="w-4 h-4" /></div>
-                </div>
-                <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
-                <span className="text-[10px] text-slate-400 mt-1">Clic para mostrar todos</span>
-              </div>
-              
-              <div 
-                onClick={() => setKpiFilter('present')}
-                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
-                  <div className="p-2 bg-emerald-50 rounded-lg text-sena"><CheckCircle2 className="w-4 h-4" /></div>
-                </div>
-                <span className="text-2xl font-bold text-sena mt-3">{stats.attendanceRate}%</span>
-                <span className="text-[10px] text-slate-400 mt-1">Sin inasistencias</span>
-              </div>
-
-              <div 
-                onClick={() => setKpiFilter('absent')}
-                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'absent' ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-slate-500">Total Inasistencias</span>
-                  <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
-                </div>
-                <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
-                <span className="text-[10px] text-slate-400 mt-1">Aprendices con fallas</span>
-              </div>
-
-              <div 
-                onClick={() => setKpiFilter('late')}
-                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'late' ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-slate-500">Llegadas Tarde</span>
-                  <div className="p-2 bg-amber-50 rounded-lg text-amber-500"><Clock className="w-4 h-4" /></div>
-                </div>
-                <span className="text-2xl font-bold text-amber-600 mt-3">{stats.enRiesgoTarde}</span>
-                <span className="text-[10px] text-slate-400 mt-1">Retardos acumulados</span>
-              </div>
-
-              <div 
-                onClick={() => setKpiFilter('risk')}
-                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all col-span-2 md:col-span-1 ${kpiFilter === 'risk' ? 'border-red-600 ring-2 ring-red-600/20 bg-red-50/30' : 'border-slate-200 hover:border-slate-300'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-slate-500">En Riesgo (&ge; {limiteInasistencias})</span>
-                  <div className="p-2 bg-red-50 rounded-lg text-red-600"><AlertTriangle className="w-4 h-4" /></div>
-                </div>
-                <span className="text-2xl font-bold text-red-600 mt-3">{stats.enRiesgo}</span>
-                <span className="text-[10px] text-red-500 mt-1 font-medium">Acuerdo 09 de 2024</span>
-              </div>
-            </div>
-
-            {/* Listado de Aprendices con Matriz Temporal de Asistencia */}
+        {/* VISTA DE ASISTENCIA GLOBAL (Matriz Temporal de Fechas) */}
+        {showGlobalAttendanceView ? (
+          <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3 w-full sm:w-auto relative">
-                  
-                  {/* Buscador Desplegable Interactivo */}
-                  <div className="relative w-full sm:w-96">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
-                    <input 
-                      type="text" 
-                      placeholder="Buscar o seleccionar aprendiz por nombre o documento..." 
-                      value={searchTerm}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setShowDropdown(true);
-                      }}
-                      onFocus={() => setShowDropdown(true)}
-                      className="w-full pl-9 pr-10 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena bg-white"
-                    />
-                    <button 
-                      onClick={() => setShowDropdown(!showDropdown)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-
-                    {showDropdown && (
-                      <div className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 max-h-60 overflow-y-auto z-50 divide-y divide-slate-100">
-                        <div 
-                          className="px-4 py-2 text-xs text-slate-400 hover:bg-slate-50 cursor-pointer font-semibold"
-                          onClick={() => { setSearchTerm(''); setShowDropdown(false); }}
-                        >
-                          -- Mostrar todos los aprendices --
-                        </div>
-                        {studentsWithStats
-                          .filter(s => 
-                            `${s.nombres} ${s.apellidos} ${s.numero_documento}`.toLowerCase().includes(searchTerm.toLowerCase())
-                          )
-                          .map(student => (
-                            <div
-                              key={student.numero_documento}
-                              onClick={() => {
-                                setSearchTerm(`${student.apellidos} ${student.nombres}`);
-                                setShowDropdown(false);
-                              }}
-                              className="px-4 py-2.5 text-xs hover:bg-emerald-50/60 cursor-pointer flex justify-between items-center transition-colors"
-                            >
-                              <span className="font-bold text-slate-800">{student.apellidos} {student.nombres}</span>
-                              <span className="font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{student.numero_documento}</span>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {kpiFilter !== 'all' || searchTerm ? (
-                    <button
-                      onClick={() => { setKpiFilter('all'); setSearchTerm(''); }}
-                      className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-medium whitespace-nowrap transition-colors"
-                    >
-                      Limpiar Filtros
-                    </button>
-                  ) : null}
+                <h3 className="text-base font-bold text-slate-800">Matriz Consolidada de Asistencia a lo largo del Tiempo</h3>
+                <div className="w-full sm:w-80 relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input 
+                    type="text" 
+                    placeholder="Filtrar aprendiz..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena bg-white"
+                  />
                 </div>
               </div>
 
-              {/* Matriz Completa Estilo Cuadro Temporal */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
@@ -674,7 +544,6 @@ export default function App() {
                     {filteredStudents.length > 0 ? (
                       filteredStudents.map((student) => (
                         <tr key={student.numero_documento} className="hover:bg-slate-50/80">
-                          {/* Columna de Nombre y Documento fija a la izquierda */}
                           <td className="p-3 sticky left-0 bg-white z-10 shadow-sm border-r border-slate-100">
                             <div className="flex items-center gap-2">
                               {student.enRiesgo && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="En Riesgo" />}
@@ -684,19 +553,15 @@ export default function App() {
                               </div>
                             </div>
                           </td>
-
-                          {/* Conteo de Fallas Acumuladas */}
                           <td className={`p-3 text-center font-bold border-r border-slate-200 ${student.fallasAcumuladas > 0 ? 'text-red-600 bg-red-50/40' : 'text-slate-600'}`}>
                             {student.fallasAcumuladas}
                           </td>
-
-                          {/* Celdas de Fechas con el Estado de Asistencia */}
                           {currentInstructorDates.map((date, dIdx) => {
                             const status = student.registros[date as keyof typeof student.registros];
                             return (
                               <td key={dIdx} className="p-2 text-center border-r border-slate-100 font-medium">
                                 {status === 'X' ? (
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-red-100 text-red-700 font-bold text-xs" title="Inasistencia (Falla)">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-red-100 text-red-700 font-bold text-xs" title="Inasistencia">
                                     X
                                   </span>
                                 ) : status === 'Tarde' ? (
@@ -704,7 +569,7 @@ export default function App() {
                                     <Clock className="w-3.5 h-3.5" />
                                   </span>
                                 ) : status === 'Excusa' || status === 'Evento' ? (
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-700" title="Excusa / Evento">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-700" title="Excusa">
                                     E
                                   </span>
                                 ) : (
@@ -720,7 +585,7 @@ export default function App() {
                     ) : (
                       <tr>
                         <td colSpan={currentInstructorDates.length + 2} className="p-8 text-center text-slate-400">
-                          No se encontraron aprendices con los filtros seleccionados.
+                          No se encontraron aprendices.
                         </td>
                       </tr>
                     )}
@@ -728,40 +593,202 @@ export default function App() {
                 </table>
               </div>
             </div>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'ficha' && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                  <div>
+                    <span className="block font-semibold text-slate-500">Número de Ficha</span>
+                    <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.ficha_de_caracterizacion}</p>
+                  </div>
+                  <div>
+                    <span className="block font-semibold text-slate-500">Programa de Formación</span>
+                    <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.programa}</p>
+                  </div>
+                  <div>
+                    <span className="block font-semibold text-slate-500">Denominación</span>
+                    <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.denominacion}</p>
+                  </div>
+                  <div>
+                    <span className="block font-semibold text-slate-500">Centro de Formación</span>
+                    <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.centro}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'aprendices' && (
+              <>
+                {/* Tarjetas KPI Interactivas */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div 
+                    onClick={() => setKpiFilter('all')}
+                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
+                      <div className="p-2 bg-emerald-50 rounded-lg text-sena"><Users className="w-4 h-4" /></div>
+                    </div>
+                    <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
+                    <span className="text-[10px] text-slate-400 mt-1">Clic para mostrar todos</span>
+                  </div>
+                  
+                  <div 
+                    onClick={() => setKpiFilter('present')}
+                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
+                      <div className="p-2 bg-emerald-50 rounded-lg text-sena"><CheckCircle2 className="w-4 h-4" /></div>
+                    </div>
+                    <span className="text-2xl font-bold text-sena mt-3">{stats.attendanceRate}%</span>
+                    <span className="text-[10px] text-slate-400 mt-1">Sin inasistencias</span>
+                  </div>
+
+                  <div 
+                    onClick={() => setKpiFilter('absent')}
+                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'absent' ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-semibold text-slate-500">Total Inasistencias</span>
+                      <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
+                    </div>
+                    <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
+                    <span className="text-[10px] text-slate-400 mt-1">Aprendices con fallas</span>
+                  </div>
+
+                  <div 
+                    onClick={() => setKpiFilter('late')}
+                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'late' ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-semibold text-slate-500">Llegadas Tarde</span>
+                      <div className="p-2 bg-amber-50 rounded-lg text-amber-500"><Clock className="w-4 h-4" /></div>
+                    </div>
+                    <span className="text-2xl font-bold text-amber-600 mt-3">{stats.enRiesgoTarde}</span>
+                    <span className="text-[10px] text-slate-400 mt-1">Retardos acumulados</span>
+                  </div>
+
+                  <div 
+                    onClick={() => setKpiFilter('risk')}
+                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all col-span-2 md:col-span-1 ${kpiFilter === 'risk' ? 'border-red-600 ring-2 ring-red-600/20 bg-red-50/30' : 'border-slate-200 hover:border-slate-300'}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-semibold text-slate-500">En Riesgo (&ge; {limiteInasistencias})</span>
+                      <div className="p-2 bg-red-50 rounded-lg text-red-600"><AlertTriangle className="w-4 h-4" /></div>
+                    </div>
+                    <span className="text-2xl font-bold text-red-600 mt-3">{stats.enRiesgo}</span>
+                    <span className="text-[10px] text-red-500 mt-1 font-medium">Acuerdo 09 de 2024</span>
+                  </div>
+                </div>
+
+                {/* Listado Original de Aprendices */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 w-full sm:w-auto relative">
+                      <div className="relative w-full sm:w-96">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
+                        <input 
+                          type="text" 
+                          placeholder="Buscar aprendiz por nombre o documento..." 
+                          value={searchTerm}
+                          onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setShowDropdown(true);
+                          }}
+                          onFocus={() => setShowDropdown(true)}
+                          className="w-full pl-9 pr-10 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                        <tr>
+                          <th className="p-3">APRENDIZ</th>
+                          <th className="p-3 text-center">DOCUMENTO</th>
+                          <th className="p-3 text-center">FALLAS</th>
+                          <th className="p-3 text-center">ESTADO</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {filteredStudents.length > 0 ? (
+                          filteredStudents.map((student) => (
+                            <tr key={student.numero_documento} className="hover:bg-slate-50/80">
+                              <td className="p-3 font-bold text-slate-800">
+                                {student.apellidos} {student.nombres}
+                              </td>
+                              <td className="p-3 text-center font-mono text-slate-500">
+                                {student.numero_documento}
+                              </td>
+                              <td className={`p-3 text-center font-bold ${student.fallasAcumuladas > 0 ? 'text-red-600' : 'text-slate-600'}`}>
+                                {student.fallasAcumuladas}
+                              </td>
+                              <td className="p-3 text-center">
+                                {student.enRiesgo ? (
+                                  <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full font-semibold text-[10px]">
+                                    En Riesgo
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full font-semibold text-[10px]">
+                                    Normal
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="p-8 text-center text-slate-400">
+                              No se encontraron aprendices.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'alertas' && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Configuración de Alertas y Reglamento</h2>
+                <div className="flex items-center gap-4 pt-2">
+                  <label className="text-sm font-semibold text-slate-700">Límite de inasistencias para alerta de riesgo:</label>
+                  <input 
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={limiteInasistencias}
+                    onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-center"
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'reportes' && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Generación de Reportes Académicos y Exportación</h2>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setShowExportModal(true)}
+                    disabled={isPreparingPdf}
+                    className="px-5 py-3 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors flex items-center gap-2"
+                  >
+                    <FileOutput className="w-5 h-5" />
+                    <span>Exportar Reporte Consolidado PDF</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </>
-        )}
-
-        {activeTab === 'alertas' && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Configuración de Alertas y Reglamento</h2>
-            <div className="flex items-center gap-4 pt-2">
-              <label className="text-sm font-semibold text-slate-700">Límite de inasistencias para alerta de riesgo:</label>
-              <input 
-                type="number"
-                min="1"
-                max="20"
-                value={limiteInasistencias}
-                onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-20 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-center"
-              />
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'reportes' && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Generación de Reportes Académicos y Exportación</h2>
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setShowExportModal(true)}
-                disabled={isPreparingPdf}
-                className="px-5 py-3 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors flex items-center gap-2"
-              >
-                <FileOutput className="w-5 h-5" />
-                <span>Exportar Reporte Consolidado PDF</span>
-              </button>
-            </div>
-          </div>
         )}
       </main>
 
