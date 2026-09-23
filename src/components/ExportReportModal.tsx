@@ -10,6 +10,31 @@ interface ExportReportModalProps {
   availableDates: string[];
 }
 
+// Función auxiliar para convertir formato 'DD/MM/YYYY' o 'M/D/YYYY' a 'YYYY-MM-DD' para el input date
+const convertToInputDate = (dateStr: string) => {
+  if (!dateStr) return '2026-02-01';
+  if (dateStr.includes('-')) return dateStr; // Ya está en YYYY-MM-DD
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const month = parts[0].padStart(2, '0');
+    const day = parts[1].padStart(2, '0');
+    let year = parts[2];
+    if (year.length === 2) year = '20' + year;
+    return `${year}-${month}-${day}`;
+  }
+  return '2026-02-01';
+};
+
+// Función para volver a formatear de 'YYYY-MM-DD' a 'M/D/YYYY' al enviar al generador
+const formatOutputDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  if (year && month && day) {
+    return `${parseInt(month)}/${parseInt(day)}/${year}`;
+  }
+  return dateStr;
+};
+
 export default function ExportReportModal({
   isOpen,
   onClose,
@@ -18,8 +43,10 @@ export default function ExportReportModal({
   availableDates
 }: ExportReportModalProps) {
   const [reportType, setReportType] = useState(REPORT_TYPES.CONSOLIDADO);
-  const [startDate, setStartDate] = useState(availableDates[0] || '01/02/2026');
-  const [endDate, setEndDate] = useState(availableDates[availableDates.length - 1] || '21/09/2026');
+  
+  // Convertir las fechas iniciales al formato YYYY-MM-DD compatible con el input date
+  const [startDate, setStartDate] = useState(() => convertToInputDate(availableDates[0] || '01/02/2026'));
+  const [endDate, setEndDate] = useState(() => convertToInputDate(availableDates[availableDates.length - 1] || '21/09/2026'));
   const [isGenerating, setIsGenerating] = useState(false);
 
   if (!isOpen) return null;
@@ -27,9 +54,10 @@ export default function ExportReportModal({
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
+      // Formatear las fechas al estándar esperado por el generador de PDF (M/D/YYYY)
       await generatePDFReport(reportType, courseData, studentsWithStats, {
-        startDate,
-        endDate,
+        startDate: formatOutputDate(startDate),
+        endDate: formatOutputDate(endDate),
         mode: 'acumulado',
         instructor: 'all'
       });
@@ -87,24 +115,22 @@ export default function ExportReportModal({
               <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Inicio:</label>
               <div className="relative">
                 <input
-                  type="text"
+                  type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50 font-mono"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-mono cursor-pointer"
                 />
-                <Calendar className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Cierre:</label>
               <div className="relative">
                 <input
-                  type="text"
+                  type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50 font-mono"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-mono cursor-pointer"
                 />
-                <Calendar className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
           </div>
