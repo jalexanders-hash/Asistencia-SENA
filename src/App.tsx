@@ -208,25 +208,6 @@ export default function App() {
     setShowExportModal(true);
   };
 
-  const handleExportConfirm = (selectedReportType: string, dateRange: { start: string; end: string }) => {
-    setIsPreparingPdf(true);
-    setTimeout(async () => {
-      try {
-        await generatePDFReport(selectedReportType, courseData, studentsWithStats, {
-          startDate: dateRange.start,
-          endDate: dateRange.end,
-          mode: 'acumulado',
-          instructor: 'all'
-        });
-      } catch (err) {
-        console.error("Error generating PDF", err);
-        alert("Hubo un error al generar el PDF.");
-      }
-      setIsPreparingPdf(false);
-      setShowExportModal(false);
-    }, 100);
-  };
-
   const { stats, studentsWithStats } = useMemo(() => {
     let present = 0;
     let absent = 0;
@@ -302,7 +283,6 @@ export default function App() {
   const filteredStudents = useMemo(() => {
     let filtered = studentsWithStats;
      
-    // Filtro por KPI interactivo
     if (kpiFilter === 'absent') {
       filtered = filtered.filter(s => s.fallasAcumuladas > 0);
     } else if (kpiFilter === 'late') {
@@ -388,7 +368,6 @@ export default function App() {
               <span className="font-bold text-slate-800 text-base tracking-tight hidden sm:block">
                 SENA - Gestión Académica
               </span>
-              {/* SELECTOR DE FICHA ACTIVA EN EL HEADER */}
               <div className="flex items-center gap-1.5 mt-0.5">
                 <Layers className="w-3.5 h-3.5 text-sena" />
                 <select 
@@ -405,7 +384,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Campana de Notificaciones con Dropdown Interactiva */}
             <div className="relative">
               <button 
                 onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
@@ -448,21 +426,7 @@ export default function App() {
                       <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium text-slate-800">{stats.enRiesgo} aprendices superan el límite de inasistencia.</p>
-                        <span className="text-[10px] text-slate-400">Hace 10 minutos • Ficha {courseData.ficha_de_caracterizacion}</span>
-                      </div>
-                    </div>
-                    <div className="px-4 py-2.5 hover:bg-slate-50 flex gap-3 text-xs border-l-4 border-sena">
-                      <Mail className="w-4 h-4 text-sena flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-slate-800">Plantilla Acuerdo 09 de 2024 activa.</p>
-                        <span className="text-[10px] text-slate-400">Hace 45 minutos • Sistema automático</span>
-                      </div>
-                    </div>
-                    <div className="px-4 py-2.5 hover:bg-slate-50 flex gap-3 text-xs">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-slate-800">Sincronización con Firebase exitosa.</p>
-                        <span className="text-[10px] text-slate-400">Base de datos en tiempo real</span>
+                        <span className="text-[10px] text-slate-400">Ficha {courseData.ficha_de_caracterizacion}</span>
                       </div>
                     </div>
                   </div>
@@ -470,14 +434,13 @@ export default function App() {
               )}
             </div>
 
-            {/* Perfil de Usuario */}
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs border-2 border-emerald-100">
                 JS
               </div>
               <div className="hidden md:block text-left leading-tight">
                 <p className="text-xs font-bold text-slate-800">Jorge Alexander Sepúlveda Vélez</p>
-                <p className="text-[11px] text-slate-500">{user.email || 'j.sepulveda@email.com'}</p>
+                <p className="text-[11px] text-slate-500">{user.email}</p>
               </div>
             </div>
           </div>
@@ -498,7 +461,6 @@ export default function App() {
             </h1>
           </div>
 
-          {/* Botones de Acción Superior */}
           <div className="flex flex-wrap items-center gap-2">
             <button 
               onClick={handleOpenAttendance}
@@ -517,7 +479,6 @@ export default function App() {
             <button 
               onClick={() => setIsSheetsModalOpen(true)}
               className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 shadow-sm transition-colors"
-              title="Cargar o actualizar formato con inasistencias en Excel"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
               <span className="hidden sm:inline">Formato Google Sheets</span>
@@ -604,7 +565,7 @@ export default function App() {
 
         {activeTab === 'aprendices' && (
           <>
-            {/* Tarjetas KPI Interactivas / Dinámicas */}
+            {/* Tarjetas KPI Interactivas */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
                 onClick={() => setKpiFilter('all')}
@@ -667,7 +628,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Dashboard / Listado de Aprendices */}
+            {/* Listado de Aprendices */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -686,115 +647,49 @@ export default function App() {
                       onClick={() => setKpiFilter('all')}
                       className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-medium whitespace-nowrap transition-colors"
                     >
-                      Limpiar Filtro (KPI)
+                      Limpiar Filtro
                     </button>
                   )}
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  <button
-                    onClick={() => setShowRiskOnly(!showRiskOnly)}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
-                      showRiskOnly 
-                        ? 'bg-red-50 text-red-700 border-red-200' 
-                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {showRiskOnly ? 'Mostrando solo en riesgo' : 'Filtrar en riesgo'}
-                  </button>
                 </div>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-slate-700 text-white uppercase text-xs tracking-wider border-b border-slate-800">
-                      <th className="p-3.5 font-semibold w-12 text-center"><input type="checkbox" className="accent-sena rounded" /></th>
-                      <th className="p-3.5 font-semibold">Aprendiz</th>
-                      <th className="p-3.5 font-semibold text-center">Documento</th>
-                      <th className="p-3.5 font-semibold text-center">Inasistencias</th>
-                      <th className="p-3.5 font-semibold text-center">Retardos</th>
-                      <th className="p-3.5 font-semibold text-center">Estado de Riesgo</th>
-                      <th className="p-3.5 font-semibold">Dashboard de Fechas (Faltas / Tardes)</th>
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">No.</th>
+                      <th className="p-3">Documento</th>
+                      <th className="p-3">Apellidos y Nombres</th>
+                      <th className="p-3 text-center">Faltas</th>
+                      <th className="p-3 text-center">Tardanzas</th>
+                      <th className="p-3 text-center">Estado Académico</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
                     {filteredStudents.length > 0 ? (
-                      filteredStudents.map((student) => {
-                        const fechasFaltasStr = student.fechasFalla.length > 0
-                          ? student.fechasFalla.map(formatDateForDisplay).join(', ')
-                          : '';
-
-                        const fechasTardeStr = student.fechasTarde.length > 0
-                          ? student.fechasTarde.map(formatDateForDisplay).join(', ')
-                          : '';
-
-                        const estaEnRiesgo = student.fallasAcumuladas >= limiteInasistencias || student.tardanzasAcumuladas >= 3;
-
-                        return (
-                          <tr key={student.numero_documento} className="hover:bg-slate-50/80 transition-colors align-top">
-                            <td className="p-3.5 text-center pt-4">
-                              <input type="checkbox" className="accent-sena rounded" />
-                            </td>
-                            <td className="p-3.5 font-medium text-slate-800 pt-4">
-                              {student.apellidos} {student.nombres}
-                              <span className="block text-[11px] text-slate-400 font-normal">{student.correo_electronico || 'Sin correo registrado'}</span>
-                            </td>
-                            <td className="p-3.5 text-center text-slate-500 font-mono text-xs pt-4">
-                              {student.numero_documento}
-                            </td>
-                            <td className="p-3.5 text-center font-bold text-slate-700 pt-4">
-                              <span className={`px-2 py-0.5 rounded ${student.fallasAcumuladas > 0 ? 'bg-red-50 text-red-600' : 'text-slate-600'}`}>
-                                {student.fallasAcumuladas}
+                      filteredStudents.map((student, idx) => (
+                        <tr key={student.numero_documento} className="hover:bg-slate-50">
+                          <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
+                          <td className="p-3 font-mono">{student.numero_documento}</td>
+                          <td className="p-3 font-bold text-slate-800">{student.apellidos} {student.nombres}</td>
+                          <td className="p-3 text-center font-bold text-red-600">{student.fallasAcumuladas}</td>
+                          <td className="p-3 text-center font-semibold text-amber-600">{student.tardanzasAcumuladas}</td>
+                          <td className="p-3 text-center">
+                            {student.enRiesgo ? (
+                              <span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-[10px] font-bold">
+                                EN RIESGO
                               </span>
-                            </td>
-                            <td className="p-3.5 text-center font-bold text-slate-700 pt-4">
-                              <span className={`px-2 py-0.5 rounded ${student.tardanzasAcumuladas > 0 ? 'bg-amber-50 text-amber-600' : 'text-slate-600'}`}>
-                                {student.tardanzasAcumuladas}
+                            ) : (
+                              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
+                                NORMAL
                               </span>
-                            </td>
-                            <td className="p-3.5 text-center pt-4">
-                              {estaEnRiesgo ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700">
-                                  ATENCIÓN REQUERIDA
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-sena-dark">
-                                  Normal
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-3.5 text-xs text-slate-600 py-3">
-                              <div className="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                                {fechasFaltasStr ? (
-                                  <div>
-                                    <span className="font-semibold text-red-600 flex items-center gap-1">
-                                      <XCircle className="w-3.5 h-3.5" /> Faltas (X):
-                                    </span>
-                                    <span className="text-slate-700 font-mono ml-4 block">{fechasFaltasStr}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-emerald-700 flex items-center gap-1 font-medium">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Sin inasistencias registradas
-                                  </span>
-                                )}
-
-                                {fechasTardeStr && (
-                                  <div className="pt-1 border-t border-slate-200/60">
-                                    <span className="font-semibold text-amber-600 flex items-center gap-1">
-                                      <Clock className="w-3.5 h-3.5" /> Retardos (Tarde):
-                                    </span>
-                                    <span className="text-slate-700 font-mono ml-4 block">{fechasTardeStr}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
+                            )}
+                          </td>
+                        </tr>
+                      ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-slate-400">
+                        <td colSpan={6} className="p-8 text-center text-slate-400">
                           No se encontraron aprendices con los filtros seleccionados.
                         </td>
                       </tr>
@@ -807,28 +702,19 @@ export default function App() {
         )}
 
         {activeTab === 'alertas' && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6 max-w-2xl">
-            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Configuración de Umbrales de Alertas</h2>
-            <div className="space-y-4 text-sm">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Límite de Inasistencias para Alerta de Deserción:</label>
-                <div className="flex items-center gap-3">
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="15" 
-                    value={limiteInasistencias}
-                    onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-24 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold bg-white"
-                  />
-                  <span className="text-slate-500">faltas acumuladas (Aplica para Acuerdo 09 de 2024).</span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 text-emerald-900 text-xs space-y-1">
-                <p className="font-bold">Información de Notificación Automática:</p>
-                <p>Las alertas enviadas por correo electrónico incluirán en copia al instructor responsable actual: <strong>{correoInstructorActual}</strong>.</p>
-              </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Configuración de Alertas y Reglamento</h2>
+            <p className="text-sm text-slate-600">Ajusta los parámetros normativos de inasistencias basados en el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024).</p>
+            <div className="flex items-center gap-4 pt-2">
+              <label className="text-sm font-semibold text-slate-700">Límite de inasistencias para alerta de riesgo:</label>
+              <input 
+                type="number"
+                min="1"
+                max="20"
+                value={limiteInasistencias}
+                onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-20 border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-center"
+              />
             </div>
           </div>
         )}
@@ -844,14 +730,14 @@ export default function App() {
                 className="px-5 py-3 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors flex items-center gap-2 disabled:opacity-70"
               >
                 {isPreparingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileOutput className="w-5 h-5" />}
-                <span>{isPreparingPdf ? 'Generando Reporte PDF...' : 'Exportar Reporte Consolidado PDF'}</span>
+                <span>Exportar Reporte Consolidado PDF</span>
               </button>
             </div>
           </div>
         )}
       </main>
 
-      {/* MODAL DE NOTIFICACIONES / CENTRO DE ALERTAS (ACUERDO 09) */}
+      {/* MODAL DE NOTIFICACIONES */}
       {showNotificationModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
@@ -960,7 +846,8 @@ export default function App() {
         <ExportReportModal
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
-          onConfirm={handleExportConfirm}
+          courseData={courseData}
+          studentsWithStats={studentsWithStats}
           availableDates={currentInstructorDates}
         />
       )}
