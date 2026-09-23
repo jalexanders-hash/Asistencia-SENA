@@ -31,7 +31,8 @@ import {
   Send,
   Copy,
   Check,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
@@ -597,17 +598,17 @@ export default function App() {
               </div>
             </div>
 
-            {/* Listado de Aprendices con Buscador y Filtro Funcional */}
+            {/* Listado de Aprendices con Buscador y Autocompletado Funcional */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 w-full sm:w-auto relative">
                   
-                  {/* Buscador Desplegable Interactivo */}
+                  {/* Buscador Desplegable Corregido */}
                   <div className="relative w-full sm:w-96">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
                     <input 
                       type="text" 
-                      placeholder="Buscar o seleccionar aprendiz por nombre o documento..." 
+                      placeholder="Buscar o seleccionar aprendiz..." 
                       value={searchTerm}
                       onChange={(e) => {
                         setSearchTerm(e.target.value);
@@ -616,6 +617,15 @@ export default function App() {
                       onFocus={() => setShowDropdown(true)}
                       className="w-full pl-9 pr-10 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena bg-white"
                     />
+                    {searchTerm && (
+                      <button 
+                        onClick={() => { setSearchTerm(''); setShowDropdown(false); }}
+                        className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        title="Limpiar búsqueda"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                     <button 
                       onClick={() => setShowDropdown(!showDropdown)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
@@ -639,7 +649,7 @@ export default function App() {
                             <div
                               key={student.numero_documento}
                               onClick={() => {
-                                setSearchTerm(`${student.apellidos} ${student.nombres}`);
+                                setSearchTerm(student.nombres); // Buscar por nombre directo para filtrar correctamente
                                 setShowDropdown(false);
                               }}
                               className="px-4 py-2.5 text-xs hover:bg-emerald-50/60 cursor-pointer flex justify-between items-center transition-colors"
