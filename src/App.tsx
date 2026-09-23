@@ -8,7 +8,6 @@ import ExportReportModal from './components/ExportReportModal';
 import { auth } from "./lib/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
-import { LogOut } from "lucide-react";
 import { 
   Users, 
   BookOpen, 
@@ -47,7 +46,7 @@ const formatDateForDisplay = (dateString: string) => {
     const d = parts[1].padStart(2, '0');
     const m = parts[0].padStart(2, '0');
     const y = parts[2].slice(-2);
-    return `${d}/${m}/${y}`;
+    return `${d}/${m}`;
   }
   return dateString;
 };
@@ -74,7 +73,6 @@ export default function App() {
 
   // Estado para el Modal de Notificaciones Masivas / Centralizadas
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  const [copiedDoc, setCopiedDoc] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -280,20 +278,16 @@ export default function App() {
     };
   }, [courseData, currentInstructorDates, limiteInasistencias]);
 
-  // Filtrado avanzado mejorado para los KPIs corregidos
   const filteredStudents = useMemo(() => {
     let filtered = studentsWithStats;
      
     if (kpiFilter === 'present') {
-      // Asistencia Global / Sin Inasistencias (Aprendices con 0 fallas)
       filtered = filtered.filter(s => s.fallasAcumuladas === 0);
     } else if (kpiFilter === 'absent') {
-      // Total Inasistencias (Aprendices que tienen al menos 1 falla)
       filtered = filtered.filter(s => s.fallasAcumuladas > 0);
     } else if (kpiFilter === 'late') {
       filtered = filtered.filter(s => s.tardanzasAcumuladas > 0);
     } else if (kpiFilter === 'risk') {
-      // En Riesgo: Aprendices que superan el límite de inasistencia configurado
       filtered = filtered.filter(s => s.enRiesgo);
     }
 
@@ -349,7 +343,6 @@ export default function App() {
             onClick={() => signOut(auth)}
             className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
           >
-            <LogOut className="w-4 h-4" />
             Cerrar Sesión
           </button>
         </div>
@@ -444,7 +437,7 @@ export default function App() {
       {/* CONTENIDO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
         
-        {/* Breadcrumb & Título Principal */}
+        {/* Título y Acciones */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-xs text-slate-500 mb-1">
@@ -508,7 +501,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* CONTENIDO SEGÚN PESTAÑA ACTIVA */}
         {activeTab === 'ficha' && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
             <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
@@ -535,7 +527,7 @@ export default function App() {
 
         {activeTab === 'aprendices' && (
           <>
-            {/* Tarjetas KPI Interactivas Corregidas */}
+            {/* Tarjetas KPI Interactivas */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
                 onClick={() => setKpiFilter('all')}
@@ -598,12 +590,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Listado de Aprendices con Buscador Desplegable Interactivo */}
+            {/* Listado de Aprendices con Matriz Temporal de Asistencia */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 w-full sm:w-auto relative">
                   
-                  {/* Buscador con Lista Desplegable de Aprendices */}
+                  {/* Buscador Desplegable Interactivo */}
                   <div className="relative w-full sm:w-96">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
                     <input 
@@ -624,7 +616,6 @@ export default function App() {
                       <ChevronDown className="w-4 h-4" />
                     </button>
 
-                    {/* Lista desplegable automática */}
                     {showDropdown && (
                       <div className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 max-h-60 overflow-y-auto z-50 divide-y divide-slate-100">
                         <div 
@@ -665,43 +656,70 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Matriz Completa Estilo Cuadro Temporal */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                     <tr>
-                      <th className="p-3">No.</th>
-                      <th className="p-3">Documento</th>
-                      <th className="p-3">Apellidos y Nombres</th>
-                      <th className="p-3 text-center">Faltas</th>
-                      <th className="p-3 text-center">Tardanzas</th>
-                      <th className="p-3 text-center">Estado Académico</th>
+                      <th className="p-3 sticky left-0 bg-slate-50 z-20 min-w-[220px] shadow-sm">APRENDIZ</th>
+                      <th className="p-3 text-center bg-slate-50 z-20 min-w-[70px] border-r border-slate-200">FALLAS</th>
+                      {currentInstructorDates.map((date, idx) => (
+                        <th key={idx} className="p-2 text-center font-mono text-[11px] min-w-[65px] border-r border-slate-100 whitespace-nowrap">
+                          {formatDateForDisplay(date)}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     {filteredStudents.length > 0 ? (
-                      filteredStudents.map((student, idx) => (
-                        <tr key={student.numero_documento} className="hover:bg-slate-50">
-                          <td className="p-3 font-medium text-slate-400">{idx + 1}</td>
-                          <td className="p-3 font-mono">{student.numero_documento}</td>
-                          <td className="p-3 font-bold text-slate-800">{student.apellidos} {student.nombres}</td>
-                          <td className="p-3 text-center font-bold text-red-600">{student.fallasAcumuladas}</td>
-                          <td className="p-3 text-center font-semibold text-amber-600">{student.tardanzasAcumuladas}</td>
-                          <td className="p-3 text-center">
-                            {student.enRiesgo ? (
-                              <span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-[10px] font-bold">
-                                EN RIESGO
-                              </span>
-                            ) : (
-                              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
-                                NORMAL
-                              </span>
-                            )}
+                      filteredStudents.map((student) => (
+                        <tr key={student.numero_documento} className="hover:bg-slate-50/80">
+                          {/* Columna de Nombre y Documento fija a la izquierda */}
+                          <td className="p-3 sticky left-0 bg-white z-10 shadow-sm border-r border-slate-100">
+                            <div className="flex items-center gap-2">
+                              {student.enRiesgo && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="En Riesgo" />}
+                              <div>
+                                <p className="font-bold text-slate-800 leading-tight">{student.apellidos} {student.nombres}</p>
+                                <p className="font-mono text-[11px] text-slate-400">{student.numero_documento}</p>
+                              </div>
+                            </div>
                           </td>
+
+                          {/* Conteo de Fallas Acumuladas */}
+                          <td className={`p-3 text-center font-bold border-r border-slate-200 ${student.fallasAcumuladas > 0 ? 'text-red-600 bg-red-50/40' : 'text-slate-600'}`}>
+                            {student.fallasAcumuladas}
+                          </td>
+
+                          {/* Celdas de Fechas con el Estado de Asistencia */}
+                          {currentInstructorDates.map((date, dIdx) => {
+                            const status = student.registros[date as keyof typeof student.registros];
+                            return (
+                              <td key={dIdx} className="p-2 text-center border-r border-slate-100 font-medium">
+                                {status === 'X' ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-red-100 text-red-700 font-bold text-xs" title="Inasistencia (Falla)">
+                                    X
+                                  </span>
+                                ) : status === 'Tarde' ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-amber-100 text-amber-700" title="Llegada Tarde">
+                                    <Clock className="w-3.5 h-3.5" />
+                                  </span>
+                                ) : status === 'Excusa' || status === 'Evento' ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-700" title="Excusa / Evento">
+                                    E
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center justify-center text-slate-300" title="Presente">
+                                    ⊙
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-slate-400">
+                        <td colSpan={currentInstructorDates.length + 2} className="p-8 text-center text-slate-400">
                           No se encontraron aprendices con los filtros seleccionados.
                         </td>
                       </tr>
