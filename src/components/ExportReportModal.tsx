@@ -72,12 +72,13 @@ export default function ExportReportModal({
               className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-medium focus:ring-2 focus:ring-sena focus:outline-none"
             >
               <option value={REPORT_TYPES.CONSOLIDADO}>Consolidado de Asistencia y Alertas Tempranas</option>
-              <option value={REPORT_TYPES.RIESGO}>Listado Exclusivo de Aprendices en Riesgo</option>
+              <option value={REPORT_TYPES.RIESGO}>Listado Exclusivo de Aprendices en Riesgo (Deserción)</option>
+              <option value={REPORT_TYPES.DETALLADO}>Reporte Detallado de Inasistencias por Fechas</option>
             </select>
             <p className="text-xs text-slate-500 mt-1">
-              {reportType === REPORT_TYPES.CONSOLIDADO 
-                ? 'Resumen global de asistencia y aprendices en riesgo por inasistencias.' 
-                : 'Filtra únicamente a los aprendices que superan el umbral establecido.'}
+              {reportType === REPORT_TYPES.CONSOLIDADO && 'Resumen global de asistencia, inasistencias y retardos de todos los aprendices.'}
+              {reportType === REPORT_TYPES.RIESGO && 'Filtra únicamente a los aprendices que superan el umbral establecido.'}
+              {reportType === REPORT_TYPES.DETALLADO && 'Informe analítico detallado con trazabilidad de fechas específicas.'}
             </p>
           </div>
 
