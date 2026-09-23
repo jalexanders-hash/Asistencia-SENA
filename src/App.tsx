@@ -105,6 +105,7 @@ export default function App() {
   }, [user, courseData]);
     
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
@@ -282,6 +283,10 @@ export default function App() {
   const filteredStudents = useMemo(() => {
     let filtered = studentsWithStats;
      
+    if (selectedStudentDoc) {
+      return filtered.filter(s => s.numero_documento === selectedStudentDoc);
+    }
+
     if (kpiFilter === 'present') {
       filtered = filtered.filter(s => s.fallasAcumuladas === 0);
     } else if (kpiFilter === 'absent') {
@@ -306,7 +311,7 @@ export default function App() {
     }
      
     return filtered;
-  }, [searchTerm, showRiskOnly, studentsWithStats, kpiFilter]);
+  }, [searchTerm, selectedStudentDoc, showRiskOnly, studentsWithStats, kpiFilter]);
 
   const correoInstructorActual = (currentInstructor as any)?.correo_institucional_sena || (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || user?.email || '';
 
@@ -538,8 +543,8 @@ export default function App() {
             {/* Tarjetas KPI Interactivas */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
-                onClick={() => setKpiFilter('all')}
-                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' && !selectedStudentDoc ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
               >
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
@@ -550,7 +555,7 @@ export default function App() {
               </div>
               
               <div 
-                onClick={() => setKpiFilter('present')}
+                onClick={() => { setKpiFilter('present'); setSelectedStudentDoc(null); }}
                 className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
               >
                 <div className="flex justify-between items-start">
@@ -562,7 +567,7 @@ export default function App() {
               </div>
 
               <div 
-                onClick={() => setKpiFilter('absent')}
+                onClick={() => { setKpiFilter('absent'); setSelectedStudentDoc(null); }}
                 className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'absent' ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'}`}
               >
                 <div className="flex justify-between items-start">
@@ -574,7 +579,7 @@ export default function App() {
               </div>
 
               <div 
-                onClick={() => setKpiFilter('late')}
+                onClick={() => { setKpiFilter('late'); setSelectedStudentDoc(null); }}
                 className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'late' ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'}`}
               >
                 <div className="flex justify-between items-start">
@@ -586,7 +591,7 @@ export default function App() {
               </div>
 
               <div 
-                onClick={() => setKpiFilter('risk')}
+                onClick={() => { setKpiFilter('risk'); setSelectedStudentDoc(null); }}
                 className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all col-span-2 md:col-span-1 ${kpiFilter === 'risk' ? 'border-red-600 ring-2 ring-red-600/20 bg-red-50/30' : 'border-slate-200 hover:border-slate-300'}`}
               >
                 <div className="flex justify-between items-start">
@@ -598,7 +603,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Listado de Aprendices con Buscador y Autocompletado Funcional */}
+            {/* Listado de Aprendices con Buscador y Autocompletado Corregido */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 w-full sm:w-auto relative">
@@ -612,14 +617,15 @@ export default function App() {
                       value={searchTerm}
                       onChange={(e) => {
                         setSearchTerm(e.target.value);
+                        setSelectedStudentDoc(null);
                         setShowDropdown(true);
                       }}
                       onFocus={() => setShowDropdown(true)}
                       className="w-full pl-9 pr-10 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena bg-white"
                     />
-                    {searchTerm && (
+                    {(searchTerm || selectedStudentDoc) && (
                       <button 
-                        onClick={() => { setSearchTerm(''); setShowDropdown(false); }}
+                        onClick={() => { setSearchTerm(''); setSelectedStudentDoc(null); setShowDropdown(false); }}
                         className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                         title="Limpiar búsqueda"
                       >
@@ -637,7 +643,7 @@ export default function App() {
                       <div className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 max-h-60 overflow-y-auto z-50 divide-y divide-slate-100">
                         <div 
                           className="px-4 py-2 text-xs text-slate-400 hover:bg-slate-50 cursor-pointer font-semibold"
-                          onClick={() => { setSearchTerm(''); setShowDropdown(false); }}
+                          onClick={() => { setSearchTerm(''); setSelectedStudentDoc(null); setShowDropdown(false); }}
                         >
                           -- Mostrar todos los aprendices --
                         </div>
@@ -649,7 +655,8 @@ export default function App() {
                             <div
                               key={student.numero_documento}
                               onClick={() => {
-                                setSearchTerm(student.nombres); // Buscar por nombre directo para filtrar correctamente
+                                setSearchTerm(`${student.apellidos} ${student.nombres}`);
+                                setSelectedStudentDoc(student.numero_documento);
                                 setShowDropdown(false);
                               }}
                               className="px-4 py-2.5 text-xs hover:bg-emerald-50/60 cursor-pointer flex justify-between items-center transition-colors"
@@ -662,9 +669,9 @@ export default function App() {
                     )}
                   </div>
 
-                  {(kpiFilter !== 'all' || searchTerm) && (
+                  {(kpiFilter !== 'all' || searchTerm || selectedStudentDoc) && (
                     <button
-                      onClick={() => { setKpiFilter('all'); setSearchTerm(''); }}
+                      onClick={() => { setKpiFilter('all'); setSearchTerm(''); setSelectedStudentDoc(null); }}
                       className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-medium whitespace-nowrap transition-colors"
                     >
                       Limpiar Filtros
@@ -725,14 +732,78 @@ export default function App() {
 
         {activeTab === 'asistencia_global' && (
           <div className="space-y-6">
+            {/* Tarjetas KPI Interactivas idénticas en la Pestaña Asistencia Global */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div 
+                onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' && !selectedStudentDoc ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
+                  <div className="p-2 bg-emerald-50 rounded-lg text-sena"><Users className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
+                <span className="text-[10px] text-slate-400 mt-1">Clic para mostrar todos</span>
+              </div>
+              
+              <div 
+                onClick={() => { setKpiFilter('present'); setSelectedStudentDoc(null); }}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
+                  <div className="p-2 bg-emerald-50 rounded-lg text-sena"><CheckCircle2 className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-sena mt-3">{stats.attendanceRate}%</span>
+                <span className="text-[10px] text-slate-400 mt-1">Sin inasistencias</span>
+              </div>
+
+              <div 
+                onClick={() => { setKpiFilter('absent'); setSelectedStudentDoc(null); }}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'absent' ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">Total Inasistencias</span>
+                  <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
+                <span className="text-[10px] text-slate-400 mt-1">Aprendices con fallas</span>
+              </div>
+
+              <div 
+                onClick={() => { setKpiFilter('late'); setSelectedStudentDoc(null); }}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'late' ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">Llegadas Tarde</span>
+                  <div className="p-2 bg-amber-50 rounded-lg text-amber-500"><Clock className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-amber-600 mt-3">{stats.enRiesgoTarde}</span>
+                <span className="text-[10px] text-slate-400 mt-1">Retardos acumulados</span>
+              </div>
+
+              <div 
+                onClick={() => { setKpiFilter('risk'); setSelectedStudentDoc(null); }}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all col-span-2 md:col-span-1 ${kpiFilter === 'risk' ? 'border-red-600 ring-2 ring-red-600/20 bg-red-50/30' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500">En Riesgo (&ge; {limiteInasistencias})</span>
+                  <div className="p-2 bg-red-50 rounded-lg text-red-600"><AlertTriangle className="w-4 h-4" /></div>
+                </div>
+                <span className="text-2xl font-bold text-red-600 mt-3">{stats.enRiesgo}</span>
+                <span className="text-[10px] text-red-500 mt-1 font-medium">Acuerdo 09 de 2024</span>
+              </div>
+            </div>
+
+            {/* Matriz Completa de Asistencia a lo largo del Tiempo */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <h3 className="text-base font-bold text-slate-800">Matriz Consolidada de Asistencia a lo largo del Tiempo</h3>
+                <h3 className="text-base font-bold text-slate-800">Matriz Consolidada de Asistencia por Fechas</h3>
                 <div className="w-full sm:w-80 relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input 
                     type="text" 
-                    placeholder="Filtrar en matriz..." 
+                    placeholder="Filtrar aprendiz en matriz..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-4 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena bg-white"
