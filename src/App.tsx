@@ -31,7 +31,8 @@ import {
   Layers,
   Send,
   Copy,
-  Check
+  Check,
+  ChevronDown
 } from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
@@ -105,6 +106,7 @@ export default function App() {
   }, [user, courseData]);
     
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
     
@@ -204,10 +206,6 @@ export default function App() {
     }
   };
 
-  const handleOpenExportModal = () => {
-    setShowExportModal(true);
-  };
-
   const { stats, studentsWithStats } = useMemo(() => {
     let present = 0;
     let absent = 0;
@@ -244,8 +242,11 @@ export default function App() {
         }
       });
 
-      if (fallasAcumuladas >= limiteInasistencias) enRiesgo++;
-      if (tardanzasAcumuladas >= 3) enRiesgoTarde++;
+      const isRisk = fallasAcumuladas >= limiteInasistencias;
+      const isLateRisk = tardanzasAcumuladas >= 3;
+
+      if (isRisk) enRiesgo++;
+      if (isLateRisk) enRiesgoTarde++;
 
       return {
         ...student,
@@ -253,8 +254,8 @@ export default function App() {
         tardanzasAcumuladas,
         fechasTarde,
         fechasFalla,
-        enRiesgo: fallasAcumuladas >= limiteInasistencias,
-        enRiesgoTarde: tardanzasAcumuladas >= 3
+        enRiesgo: isRisk,
+        enRiesgoTarde: isLateRisk
       };
     });
 
@@ -279,18 +280,21 @@ export default function App() {
     };
   }, [courseData, currentInstructorDates, limiteInasistencias]);
 
-  // Filtrado avanzado combinando KPIs y barra de búsqueda
+  // Filtrado avanzado mejorado para los KPIs corregidos
   const filteredStudents = useMemo(() => {
     let filtered = studentsWithStats;
      
-    if (kpiFilter === 'absent') {
+    if (kpiFilter === 'present') {
+      // Asistencia Global / Sin Inasistencias (Aprendices con 0 fallas)
+      filtered = filtered.filter(s => s.fallasAcumuladas === 0);
+    } else if (kpiFilter === 'absent') {
+      // Total Inasistencias (Aprendices que tienen al menos 1 falla)
       filtered = filtered.filter(s => s.fallasAcumuladas > 0);
     } else if (kpiFilter === 'late') {
       filtered = filtered.filter(s => s.tardanzasAcumuladas > 0);
     } else if (kpiFilter === 'risk') {
-      filtered = filtered.filter(s => s.enRiesgo || s.enRiesgoTarde);
-    } else if (kpiFilter === 'present') {
-      filtered = filtered.filter(s => s.fallasAcumuladas === 0 && s.tardanzasAcumuladas === 0);
+      // En Riesgo: Aprendices que superan el límite de inasistencia configurado
+      filtered = filtered.filter(s => s.enRiesgo);
     }
 
     if (showRiskOnly) {
@@ -420,16 +424,6 @@ export default function App() {
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">CC Automática: <strong>{correoInstructorActual}</strong></p>
                   </div>
-
-                  <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
-                    <div className="px-4 py-2.5 hover:bg-slate-50 flex gap-3 text-xs border-l-4 border-red-500 bg-red-50/20">
-                      <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-slate-800">{stats.enRiesgo} aprendices superan el límite de inasistencia.</p>
-                        <span className="text-[10px] text-slate-400">Ficha {courseData.ficha_de_caracterizacion}</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -536,36 +530,12 @@ export default function App() {
                 <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.centro}</p>
               </div>
             </div>
-
-            <h3 className="text-md font-bold text-slate-800 border-t pt-4 mt-6">Equipo Ejecutor de Instructores</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-100 text-slate-700 uppercase">
-                    <th className="p-3">Competencia</th>
-                    <th className="p-3">Instructor</th>
-                    <th className="p-3">Correo</th>
-                    <th className="p-3">Día</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {courseData.equipo_instructores?.map((inst: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-3 font-medium text-slate-800">{inst.competencia}</td>
-                      <td className="p-3">{inst.nombre_del_instructor}</td>
-                      <td className="p-3 text-slate-500">{inst.correo_institucional_sena || inst.correo_google}</td>
-                      <td className="p-3">{inst.dia}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
         )}
 
         {activeTab === 'aprendices' && (
           <>
-            {/* Tarjetas KPI Interactivas */}
+            {/* Tarjetas KPI Interactivas Corregidas */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
                 onClick={() => setKpiFilter('all')}
@@ -600,7 +570,7 @@ export default function App() {
                   <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
                 </div>
                 <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
-                <span className="text-[10px] text-slate-400 mt-1">Clic para filtrar faltas</span>
+                <span className="text-[10px] text-slate-400 mt-1">Aprendices con fallas</span>
               </div>
 
               <div 
@@ -612,7 +582,7 @@ export default function App() {
                   <div className="p-2 bg-amber-50 rounded-lg text-amber-500"><Clock className="w-4 h-4" /></div>
                 </div>
                 <span className="text-2xl font-bold text-amber-600 mt-3">{stats.enRiesgoTarde}</span>
-                <span className="text-[10px] text-slate-400 mt-1">Clic para filtrar retardos</span>
+                <span className="text-[10px] text-slate-400 mt-1">Retardos acumulados</span>
               </div>
 
               <div 
@@ -628,28 +598,70 @@ export default function App() {
               </div>
             </div>
 
-            {/* Listado de Aprendices */}
+            {/* Listado de Aprendices con Buscador Desplegable Interactivo */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div className="relative w-full sm:w-80">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <div className="flex items-center gap-3 w-full sm:w-auto relative">
+                  
+                  {/* Buscador con Lista Desplegable de Aprendices */}
+                  <div className="relative w-full sm:w-96">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
                     <input 
                       type="text" 
-                      placeholder="Buscar por nombre o documento..." 
+                      placeholder="Buscar o seleccionar aprendiz por nombre o documento..." 
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena"
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setShowDropdown(true);
+                      }}
+                      onFocus={() => setShowDropdown(true)}
+                      className="w-full pl-9 pr-10 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena bg-white"
                     />
+                    <button 
+                      onClick={() => setShowDropdown(!showDropdown)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+
+                    {/* Lista desplegable automática */}
+                    {showDropdown && (
+                      <div className="absolute left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 max-h-60 overflow-y-auto z-50 divide-y divide-slate-100">
+                        <div 
+                          className="px-4 py-2 text-xs text-slate-400 hover:bg-slate-50 cursor-pointer font-semibold"
+                          onClick={() => { setSearchTerm(''); setShowDropdown(false); }}
+                        >
+                          -- Mostrar todos los aprendices --
+                        </div>
+                        {studentsWithStats
+                          .filter(s => 
+                            `${s.nombres} ${s.apellidos} ${s.numero_documento}`.toLowerCase().includes(searchTerm.toLowerCase())
+                          )
+                          .map(student => (
+                            <div
+                              key={student.numero_documento}
+                              onClick={() => {
+                                setSearchTerm(`${student.apellidos} ${student.nombres}`);
+                                setShowDropdown(false);
+                              }}
+                              className="px-4 py-2.5 text-xs hover:bg-emerald-50/60 cursor-pointer flex justify-between items-center transition-colors"
+                            >
+                              <span className="font-bold text-slate-800">{student.apellidos} {student.nombres}</span>
+                              <span className="font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{student.numero_documento}</span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
-                  {kpiFilter !== 'all' && (
+
+                  {kpiFilter !== 'all' || searchTerm ? (
                     <button
-                      onClick={() => setKpiFilter('all')}
+                      onClick={() => { setKpiFilter('all'); setSearchTerm(''); }}
                       className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-medium whitespace-nowrap transition-colors"
                     >
-                      Limpiar Filtro
+                      Limpiar Filtros
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -704,7 +716,6 @@ export default function App() {
         {activeTab === 'alertas' && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
             <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Configuración de Alertas y Reglamento</h2>
-            <p className="text-sm text-slate-600">Ajusta los parámetros normativos de inasistencias basados en el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024).</p>
             <div className="flex items-center gap-4 pt-2">
               <label className="text-sm font-semibold text-slate-700">Límite de inasistencias para alerta de riesgo:</label>
               <input 
@@ -722,14 +733,13 @@ export default function App() {
         {activeTab === 'reportes' && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
             <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Generación de Reportes Académicos y Exportación</h2>
-            <p className="text-sm text-slate-600">Desde este panel central puedes generar, previsualizar y exportar los informes oficiales consolidados de inasistencia en formato PDF.</p>
             <div className="flex gap-4">
               <button 
-                onClick={handleOpenExportModal}
+                onClick={() => setShowExportModal(true)}
                 disabled={isPreparingPdf}
-                className="px-5 py-3 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors flex items-center gap-2 disabled:opacity-70"
+                className="px-5 py-3 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors flex items-center gap-2"
               >
-                {isPreparingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileOutput className="w-5 h-5" />}
+                <FileOutput className="w-5 h-5" />
                 <span>Exportar Reporte Consolidado PDF</span>
               </button>
             </div>
@@ -737,98 +747,17 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL DE NOTIFICACIONES */}
-      {showNotificationModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
-                  <Mail className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">Centro de Notificaciones - Reglamento SENA</h3>
-                  <p className="text-xs text-slate-500">Aprendices que superan el límite de inasistencias ({limiteInasistencias} faltas)</p>
-                </div>
-              </div>
-              <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
-            </div>
-
-            <div className="space-y-4">
-              {studentsWithStats.filter(s => s.enRiesgo).length > 0 ? (
-                studentsWithStats.filter(s => s.enRiesgo).map(student => {
-                  const fechasFaltasStr = student.fechasFalla.length > 0
-                    ? student.fechasFalla.map(formatDateForDisplay).join(', ')
-                    : 'Fechas no especificadas';
-
-                  const emailSubject = `Notificación de Inasistencia y Requerimiento de Soportes - Ficha ${courseData.ficha_de_caracterizacion}`;
-                  const emailBody = `Estimado(a) ${student.nombres} ${student.apellidos},\n\nLe informamos que registra ${student.fallasAcumuladas} inasistencia(s) en la ficha ${courseData.ficha_de_caracterizacion} en las siguientes fechas: ${fechasFaltasStr}.\n\nDe acuerdo con el Reglamento del Aprendiz SENA (Acuerdo 09 de 2024), por favor presentar los soportes o justificaciones correspondientes.\n\nAtentamente,\n${currentInstructor?.nombre_del_instructor || 'Instructor SENA'}\nCC: ${correoInstructorActual}`;
-
-                  return (
-                    <div key={student.numero_documento} className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                        <div>
-                          <p className="font-bold text-slate-800 text-sm">{student.apellidos} {student.nombres}</p>
-                          <p className="text-xs text-slate-500">Doc: {student.numero_documento} • <strong className="text-red-600">{student.fallasAcumuladas} Faltas</strong></p>
-                        </div>
-                        <span className="text-xs bg-red-100 text-red-700 px-2.5 py-1 rounded-md font-semibold self-start sm:self-auto">
-                          Requiere Notificación
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-100 space-y-1">
-                        <p><strong>Destinatario:</strong> {student.correo_electronico || 'Sin correo electrónico registrado'}</p>
-                        <p><strong>Copia (CC):</strong> {correoInstructorActual}</p>
-                        <p><strong>Asunto:</strong> {emailSubject}</p>
-                        <hr className="my-1 border-slate-100" />
-                        <p className="whitespace-pre-line text-slate-700">{emailBody}</p>
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-1">
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(emailBody);
-                            setCopiedDoc(student.numero_documento);
-                            setTimeout(() => setCopiedDoc(null), 2500);
-                          }}
-                          className="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-                        >
-                          {copiedDoc === student.numero_documento ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
-                          {copiedDoc === student.numero_documento ? '¡Copiado al portapapeles!' : 'Copiar Plantilla de Correo'}
-                        </button>
-                        <a
-                          href={`mailto:${student.correo_electronico || ''}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
-                          className="px-3.5 py-2 bg-sena hover:bg-sena-dark text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-                        >
-                          <Send className="w-4 h-4" />
-                          Abrir Cliente de Correo
-                        </a>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
-                  <p className="font-semibold text-slate-700">No hay aprendices en riesgo de inasistencia</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Ningún aprendiz supera el límite configurado de {limiteInasistencias} falta(s).</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end pt-3 border-t">
-              <button 
-                onClick={() => setShowNotificationModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition-colors"
-              >
-                Cerrar Ventana
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Modales */}
+      {showExportModal && (
+        <ExportReportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          courseData={courseData}
+          studentsWithStats={studentsWithStats}
+          availableDates={currentInstructorDates}
+        />
       )}
 
-      {/* Modales y Componentes de Apoyo */}
       {isSheetsModalOpen && (
         <SheetsTemplateModal 
           isOpen={isSheetsModalOpen} 
@@ -840,72 +769,6 @@ export default function App() {
             setIsSheetsModalOpen(false);
           }}
         />
-      )}
-
-      {showExportModal && (
-        <ExportReportModal
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          courseData={courseData}
-          studentsWithStats={studentsWithStats}
-          availableDates={currentInstructorDates}
-        />
-      )}
-
-      {showAttendanceModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-800">Registro de Asistencia</h3>
-              <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de la Sesión:</label>
-                <input 
-                  type="date" 
-                  value={attendanceDate}
-                  onChange={(e) => setAttendanceDate(e.target.value)}
-                  className="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full"
-                />
-              </div>
-              <div className="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3">
-                {courseData.asistencias_aprendices.map((student) => (
-                  <div key={student.numero_documento} className="flex items-center justify-between py-1.5 border-b last:border-0 text-sm">
-                    <span className="font-medium text-slate-700">{student.apellidos} {student.nombres}</span>
-                    <select
-                      value={tempRecords[student.numero_documento] || 'Presente'}
-                      onChange={(e) => setTempRecords({ ...tempRecords, [student.numero_documento]: e.target.value })}
-                      className="border rounded px-2 py-1 text-xs font-semibold bg-slate-50"
-                    >
-                      <option value="Presente">Presente (•)</option>
-                      <option value="X">Inasistencia (X)</option>
-                      <option value="Tarde">Retardo (Tarde)</option>
-                      <option value="Excusa">Excusa / Incapacidad</option>
-                      <option value="Evento">Evento Institucional</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-3 border-t">
-              <button 
-                onClick={() => setShowAttendanceModal(false)}
-                className="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-50 font-medium"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleSaveAttendance}
-                disabled={isSavingAttendance}
-                className="px-4 py-2 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark flex items-center gap-2"
-              >
-                {isSavingAttendance && <Loader2 className="w-4 h-4 animate-spin" />}
-                Guardar Asistencia
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
