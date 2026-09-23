@@ -603,12 +603,12 @@ export default function App() {
               </div>
             </div>
 
-            {/* Listado de Aprendices con Buscador y Autocompletado Corregido */}
+            {/* Listado de Aprendices con Buscador y Autocompletado */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 w-full sm:w-auto relative">
                   
-                  {/* Buscador Desplegable Corregido */}
+                  {/* Buscador Desplegable */}
                   <div className="relative w-full sm:w-96">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
                     <input 
@@ -732,7 +732,7 @@ export default function App() {
 
         {activeTab === 'asistencia_global' && (
           <div className="space-y-6">
-            {/* Tarjetas KPI Interactivas idénticas en la Pestaña Asistencia Global */}
+            {/* Tarjetas KPI Interactivas */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
                 onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
@@ -795,7 +795,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Matriz Completa de Asistencia a lo largo del Tiempo */}
+            {/* Matriz Completa Estilo Cuadro Temporal */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <h3 className="text-base font-bold text-slate-800">Matriz Consolidada de Asistencia por Fechas</h3>
