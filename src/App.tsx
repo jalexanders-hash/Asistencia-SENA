@@ -526,7 +526,7 @@ export default function App() {
         )}
 
         {activeTab === 'aprendices' && (
-          <>
+          <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
                 onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
@@ -711,7 +711,7 @@ export default function App() {
                 </table>
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {activeTab === 'asistencia_global' && (
