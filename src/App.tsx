@@ -1,16 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { courseData as initialCourseData } from './data';[cite: 4]
-import { subscribeToFichaData, saveAttendanceData } from './lib/firebase';[cite: 4]
-import { REPORT_TYPES, generatePDFReport } from './lib/pdfGenerator';[cite: 4]
-import { HelpModal } from './components/HelpModal';[cite: 4]
-import { SheetsTemplateModal } from './components/SheetsTemplateModal';[cite: 4]
-import ExportReportModal from './components/ExportReportModal';[cite: 4]
-import { auth } from "./lib/firebase";[cite: 4]
-import { onAuthStateChanged, signOut, User } from "firebase/auth";[cite: 4]
-import { Login } from "./components/Login";[cite: 4]
+import { courseData as initialCourseData } from './data';
+import { subscribeToFichaData, saveAttendanceData } from './lib/firebase';
+import { SheetsTemplateModal } from './components/SheetsTemplateModal';
+import ExportReportModal from './components/ExportReportModal';
+import { auth } from "./lib/firebase";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { Login } from "./components/Login";
 import { 
   Users, 
-  BookOpen, 
   XCircle,
   Clock,
   AlertCircle,
@@ -19,21 +16,14 @@ import {
   AlertTriangle,
   Loader2,
   ClipboardList,
-  FileOutput,
   FileSpreadsheet,
   Bell,
   CheckCircle2,
-  Settings,
-  Calendar,
-  Save,
-  FileText,
   Layers,
-  Send,
-  Copy,
-  Check,
-  ChevronDown,
-  X
-} from 'lucide-react';[cite: 4]
+  FileText,
+  X,
+  ChevronDown
+} from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
   const [year, month, day] = dateString.split('-');
@@ -53,21 +43,21 @@ const formatDateForDisplay = (dateString: string) => {
 };
 
 export default function App() {
-  const [courseData, setCourseData] = useState(initialCourseData);[cite: 4]
-  const [isLoading, setIsLoading] = useState(true);[cite: 4]
+  const [courseData, setCourseData] = useState(initialCourseData);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");[cite: 4]
-  const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);[cite: 4]
-  const [user, setUser] = useState<User | null>(null);[cite: 4]
-  const [authReady, setAuthReady] = useState(false);[cite: 4]
-  const [authError, setAuthError] = useState('');[cite: 4]
+  const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
+  const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');[cite: 4]
-  const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);[cite: 4]
-  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);[cite: 4]
+  const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');
+  const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
-  const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');[cite: 4]
-  const [showNotificationModal, setShowNotificationModal] = useState(false);[cite: 4]
+  const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -98,13 +88,13 @@ export default function App() {
     }
   }, [user, courseData]);
     
-  const [searchTerm, setSearchTerm] = useState('');[cite: 4]
-  const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);[cite: 4]
-  const [showDropdown, setShowDropdown] = useState(false);[cite: 4]
-  const [showRiskOnly, setShowRiskOnly] = useState(false);[cite: 4]
-  const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);[cite: 4]
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showRiskOnly, setShowRiskOnly] = useState(false);
+  const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
     
-  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;[cite: 4]
+  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
 
   const currentInstructorDates = useMemo(() => {
     if (!currentInstructor) return [];
@@ -114,16 +104,15 @@ export default function App() {
     return courseData.fechas_asistencia;
   }, [currentInstructor, courseData]);
     
-  const [isPreparingPdf, setIsPreparingPdf] = useState(false);[cite: 4]
-  const [showExportModal, setShowExportModal] = useState(false);[cite: 4]
+  const [showExportModal, setShowExportModal] = useState(false);
 
-  const [showAttendanceModal, setShowAttendanceModal] = useState(false);[cite: 4]
-  const [isSavingAttendance, setIsSavingAttendance] = useState(false);[cite: 4]
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [isSavingAttendance, setIsSavingAttendance] = useState(false);
   const [attendanceDate, setAttendanceDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
-  const [tempRecords, setTempRecords] = useState<Record<string, string>>({});[cite: 4]
+  const [tempRecords, setTempRecords] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setIsLoading(true);
@@ -311,7 +300,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-sena" />
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
           <p className="text-slate-500 font-medium">Cargando plataforma académica...</p>
         </div>
       </div>
@@ -319,7 +308,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <Login />;[cite: 4]
+    return <Login />;
   }
 
   if (currentInstructorIdx === null || currentInstructor === null) {
@@ -355,7 +344,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-3">
           
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-sena rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-emerald-100">
+            <div className="w-11 h-11 bg-emerald-700 rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-emerald-100">
               <span className="text-xs tracking-tighter">SENA</span>
             </div>
             <div>
@@ -363,7 +352,7 @@ export default function App() {
                 SENA - Gestión Académica
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <Layers className="w-3.5 h-3.5 text-sena" />
+                <Layers className="w-3.5 h-3.5 text-emerald-600" />
                 <select 
                   value={currentFichaId}
                   onChange={(e) => setCurrentFichaId(e.target.value)}
@@ -394,7 +383,7 @@ export default function App() {
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-3 z-50">
                   <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Centro de Notificaciones</span>
-                    <span className="text-[11px] text-sena font-semibold cursor-pointer hover:underline" onClick={() => { setActiveTab('alertas'); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
+                    <span className="text-[11px] text-emerald-600 font-semibold cursor-pointer hover:underline" onClick={() => { setActiveTab('alertas'); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
                   </div>
 
                   <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -446,7 +435,7 @@ export default function App() {
           <div className="flex flex-wrap items-center gap-2">
             <button 
               onClick={handleOpenAttendance}
-              className="flex items-center gap-2 px-3.5 py-2 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 shadow-sm transition-colors"
             >
               <ClipboardList className="w-4 h-4" />
               Tomar Asistencia
@@ -471,25 +460,25 @@ export default function App() {
         <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
           <button 
             onClick={() => setActiveTab('asistencia')}
-            className={`pb-3 transition-colors ${activeTab === 'asistencia' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`pb-3 transition-colors ${activeTab === 'asistencia' ? 'text-emerald-700 border-b-2 border-emerald-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Tablero y Matriz de Asistencia
           </button>
           <button 
             onClick={() => setActiveTab('ficha')}
-            className={`pb-3 transition-colors ${activeTab === 'ficha' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`pb-3 transition-colors ${activeTab === 'ficha' ? 'text-emerald-700 border-b-2 border-emerald-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Datos de la Ficha
           </button>
           <button 
             onClick={() => setActiveTab('alertas')}
-            className={`pb-3 transition-colors ${activeTab === 'alertas' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`pb-3 transition-colors ${activeTab === 'alertas' ? 'text-emerald-700 border-b-2 border-emerald-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Configuración de Alertas
           </button>
           <button 
             onClick={() => setActiveTab('reportes')}
-            className={`pb-3 transition-colors ${activeTab === 'reportes' ? 'text-sena border-b-2 border-sena font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`pb-3 transition-colors ${activeTab === 'reportes' ? 'text-emerald-700 border-b-2 border-emerald-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
           >
             Reportes y Exportación
           </button>
@@ -524,11 +513,11 @@ export default function App() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
                 onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
-                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' && !selectedStudentDoc ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' && !selectedStudentDoc ? 'border-emerald-700 ring-2 ring-emerald-700/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
               >
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
-                  <div className="p-2 bg-emerald-50 rounded-lg text-sena"><Users className="w-4 h-4" /></div>
+                  <div className="p-2 bg-emerald-50 rounded-lg text-emerald-700"><Users className="w-4 h-4" /></div>
                 </div>
                 <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
                 <span className="text-[10px] text-slate-400 mt-1">Clic para mostrar todos</span>
@@ -536,13 +525,13 @@ export default function App() {
               
               <div 
                 onClick={() => { setKpiFilter('present'); setSelectedStudentDoc(null); }}
-                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-sena ring-2 ring-sena/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-emerald-700 ring-2 ring-emerald-700/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
               >
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
-                  <div className="p-2 bg-emerald-50 rounded-lg text-sena"><CheckCircle2 className="w-4 h-4" /></div>
+                  <div className="p-2 bg-emerald-50 rounded-lg text-emerald-700"><CheckCircle2 className="w-4 h-4" /></div>
                 </div>
-                <span className="text-2xl font-bold text-sena mt-3">{stats.attendanceRate}%</span>
+                <span className="text-2xl font-bold text-emerald-700 mt-3">{stats.attendanceRate}%</span>
                 <span className="text-[10px] text-slate-400 mt-1">Sin inasistencias</span>
               </div>
 
@@ -599,7 +588,7 @@ export default function App() {
                         setShowDropdown(true);
                       }}
                       onFocus={() => setShowDropdown(true)}
-                      className="w-full pl-9 pr-10 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sena bg-white"
+                      className="w-full pl-9 pr-10 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
                     />
                     {(searchTerm || selectedStudentDoc) && (
                       <button 
@@ -679,7 +668,7 @@ export default function App() {
                             <span className="font-normal text-slate-500 block text-[11px]">{student.numero_documento}</span>
                           </td>
                           <td className="p-3 text-center font-bold border-r border-slate-200 bg-slate-50/50">
-                            <span className={`px-2 py-0.5 rounded-full text-xs ${student.fallasAcumuladas >= limiteInasistencias ? 'bg-red-100 text-red-700' : 'bg-emerald-50 text-sena'}`}>
+                            <span className={`px-2 py-0.5 rounded-full text-xs ${student.fallasAcumuladas >= limiteInasistencias ? 'bg-red-100 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
                               {student.fallasAcumuladas}
                             </span>
                           </td>
@@ -751,7 +740,7 @@ export default function App() {
             <div className="flex flex-wrap gap-4">
               <button 
                 onClick={() => setShowExportModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-sena text-white rounded-xl text-sm font-semibold hover:bg-sena-dark shadow-sm transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-700 text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 shadow-sm transition-colors"
               >
                 <FileText className="w-4 h-4" /> Generar Reporte PDF / Excel
               </button>
@@ -766,7 +755,7 @@ export default function App() {
       </footer>
 
       {isSheetsModalOpen && (
-        <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} />[cite: 4]
+        <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} />
       )}
 
       {showExportModal && (
@@ -837,7 +826,7 @@ export default function App() {
               <button 
                 onClick={handleSaveAttendance}
                 disabled={isSavingAttendance}
-                className="px-4 py-2 bg-sena text-white rounded-lg text-sm font-semibold hover:bg-sena-dark flex items-center gap-2"
+                className="px-4 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 flex items-center gap-2"
               >
                 {isSavingAttendance && <Loader2 className="w-4 h-4 animate-spin" />}
                 Guardar Asistencia
