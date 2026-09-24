@@ -1,159 +1,195 @@
 import React, { useState } from 'react';
-import { FileText, Calendar, X, Loader2, Download } from 'lucide-react';
-import { REPORT_TYPES, generatePDFReport } from '../lib/pdfGenerator';
+import { X, Printer, FileText, Filter } from 'lucide-react';
 
 interface ExportReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   courseData: any;
-  studentsWithStats: any[];
-  availableDates: string[];
+  students: any[];
 }
 
-// Función auxiliar para convertir formato 'DD/MM/YYYY' o 'M/D/YYYY' a 'YYYY-MM-DD' para el input date
-const convertToInputDate = (dateStr: string) => {
-  if (!dateStr) return '2026-02-01';
-  if (dateStr.includes('-')) return dateStr; // Ya está en YYYY-MM-DD
-  const parts = dateStr.split('/');
-  if (parts.length === 3) {
-    const month = parts[0].padStart(2, '0');
-    const day = parts[1].padStart(2, '0');
-    let year = parts[2];
-    if (year.length === 2) year = '20' + year;
-    return `${year}-${month}-${day}`;
-  }
-  return '2026-02-01';
-};
-
-// Función para volver a formatear de 'YYYY-MM-DD' a 'M/D/YYYY' al enviar al generador
-const formatOutputDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  const [year, month, day] = dateStr.split('-');
-  if (year && month && day) {
-    return `${parseInt(month)}/${parseInt(day)}/${year}`;
-  }
-  return dateStr;
-};
-
-export default function ExportReportModal({
-  isOpen,
-  onClose,
-  courseData,
-  studentsWithStats,
-  availableDates
-}: ExportReportModalProps) {
-  const [reportType, setReportType] = useState(REPORT_TYPES.CONSOLIDADO);
-  
-  // Convertir las fechas iniciales al formato YYYY-MM-DD compatible con el input date
-  const [startDate, setStartDate] = useState(() => convertToInputDate(availableDates[0] || '01/02/2026'));
-  const [endDate, setEndDate] = useState(() => convertToInputDate(availableDates[availableDates.length - 1] || '21/09/2026'));
-  const [isGenerating, setIsGenerating] = useState(false);
+export default function ExportReportModal({ isOpen, onClose, courseData, students }: ExportReportModalProps) {
+  const [reportType, setReportType] = useState<'inasistencias' | 'tardanzas'>('inasistencias');
+  const [selectedInstructorFilter, setSelectedInstructorFilter] = useState<string>('todos');
 
   if (!isOpen) return null;
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    try {
-      // Formatear las fechas al estándar esperado por el generador de PDF (M/D/YYYY)
-      await generatePDFReport(reportType, courseData, studentsWithStats, {
-        startDate: formatOutputDate(startDate),
-        endDate: formatOutputDate(endDate),
-        mode: 'acumulado',
-        instructor: 'all'
-      });
-      onClose();
-    } catch (error) {
-      console.error("Error al exportar:", error);
-      alert("Hubo un error al generar el reporte.");
-    } finally {
-      setIsGenerating(false);
+  const instructores = courseData.equipo_instructores || [];
+
+  // Obtener fechas según el instructor seleccionado
+  const getDatesForFilter = () => {
+    if (selectedInstructorFilter === 'todos') {
+      let allDates: string[] = [];
+      if (courseData.fechas_por_instructor) {
+        Object.values(courseData.fechas_por_instructor).forEach((dates: any) => {
+          allDates = [...allDates, ...dates];
+        });
+      }
+      return Array.from(new Set([...courseData.fechas_asistencia, ...allDates]));
+    } else {
+      const inst = instructores.find((i: any) => i.nombre_del_instructor === selectedInstructorFilter);
+      if (inst && courseData.fechas_por_instructor?.[selectedInstructorFilter]) {
+        return courseData.fechas_por_instructor[selectedInstructorFilter];
+      }
+      return courseData.fechas_asistencia;
     }
   };
 
+  const activeDates = getDatesForFilter();
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 space-y-6 overflow-hidden border border-slate-100">
-        
-        {/* Header */}
-        <div className="flex justify-between items-center border-b pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-sena flex items-center justify-center font-bold">
-              <FileText className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-800">Generar Reporte Oficial PDF</h3>
-              <p className="text-xs text-slate-500">Ficha: {courseData?.ficha_de_caracterizacion || '3387401'}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors p-1">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center print:hidden">
+          <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+            <FileText className="w-5 h-5 text-emerald-600" /> Generador de Reportes Académicos (PDF / Impresión)
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Contenido del Formulario */}
-        <div className="space-y-4 text-sm">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1.5">Seleccionar Tipo de Informe Académico:</label>
-            <select
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-medium focus:ring-2 focus:ring-sena focus:outline-none"
-            >
-              <option value={REPORT_TYPES.CONSOLIDADO}>Consolidado de Asistencia y Alertas Tempranas</option>
-              <option value={REPORT_TYPES.RIESGO}>Listado Exclusivo de Aprendices en Riesgo (Deserción)</option>
-              <option value={REPORT_TYPES.DETALLADO}>Reporte Detallado de Inasistencias por Fechas</option>
-            </select>
-            <p className="text-xs text-slate-500 mt-1">
-              {reportType === REPORT_TYPES.CONSOLIDADO && 'Resumen global de asistencia, inasistencias y retardos de todos los aprendices.'}
-              {reportType === REPORT_TYPES.RIESGO && 'Filtra únicamente a los aprendices que superan el umbral establecido.'}
-              {reportType === REPORT_TYPES.DETALLADO && 'Informe analítico detallado con trazabilidad de fechas específicas.'}
-            </p>
+        <div className="p-6 space-y-6 overflow-y-auto flex-grow">
+          {/* Controles de Filtrado (Ocultos al imprimir) */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 print:hidden">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <label className="text-xs font-bold text-slate-700">Tipo de Reporte:</label>
+              <select 
+                value={reportType}
+                onChange={(e: any) => setReportType(e.target.value)}
+                className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold bg-white text-slate-800"
+              >
+                <option value="inasistencias">Inasistencias (Con / Sin Excusa) por Fecha</option>
+                <option value="tardanzas">Reporte de Llegadas Tarde por Fecha</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5 text-emerald-600" /> Instructor:
+              </span>
+              <select 
+                value={selectedInstructorFilter}
+                onChange={(e) => setSelectedInstructorFilter(e.target.value)}
+                className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold bg-white text-slate-800"
+              >
+                <option value="todos">Todos los Instructores</option>
+                {instructores.map((inst: any, idx: number) => (
+                  <option key={idx} value={inst.nombre_del_instructor}>
+                    {inst.nombre_del_instructor}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-2">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Inicio:</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-mono cursor-pointer"
-                />
-              </div>
+          {/* DOCUMENTO VISTA PREVIA LISTO PARA IMPRIMIR O GUARDAR COMO PDF */}
+          <div className="p-8 bg-white border border-slate-300 rounded-xl space-y-6 shadow-sm print:border-none print:shadow-none print:p-0">
+            <div className="text-center border-b pb-4 space-y-1">
+              <div className="font-bold text-sm text-emerald-800">SERVICIO NACIONAL DE APRENDIZAJE SENA</div>
+              <h2 className="text-lg font-bold text-slate-900">{courseData.denominacion}</h2>
+              <p className="text-xs text-slate-600">Ficha de Caracterización: <strong>{courseData.ficha_de_caracterizacion}</strong> | Centro: {courseData.centro}</p>
+              <p className="text-xs text-emerald-700 font-semibold pt-1">
+                Reporte: {reportType === 'inasistencias' ? 'Inasistencias y Excusas por Fecha' : 'Control de Llegadas Tarde'} 
+                {selectedInstructorFilter !== 'todos' ? ` | Instructor: ${selectedInstructorFilter}` : ''}
+              </p>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Cierre:</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white font-mono cursor-pointer"
-                />
+
+            {reportType === 'inasistencias' ? (
+              <div className="space-y-6">
+                {activeDates.map((date: string) => {
+                  const ausentesFecha = students.filter(s => s.registros[date] === 'X');
+                  const excusadosFecha = students.filter(s => s.registros[date] === 'Excusa' || s.registros[date] === 'Evento');
+                  
+                  if (ausentesFecha.length === 0 && excusadosFecha.length === 0) return null;
+
+                  return (
+                    <div key={date} className="border border-slate-200 rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-2 text-xs font-bold text-slate-800 border-b border-slate-200 flex justify-between">
+                        <span>Fecha de Sesión: {date}</span>
+                        <span className="text-red-600">Faltas: {ausentesFecha.length} | Excusas: {excusadosFecha.length}</span>
+                      </div>
+                      <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div>
+                          <span className="font-bold text-red-700 block mb-1">Sin Excusa (Inasistencias):</span>
+                          {ausentesFecha.length > 0 ? (
+                            <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                              {ausentesFecha.map(s => (
+                                <li key={s.numero_documento}>{s.apellidos} {s.nombres} ({s.numero_documento})</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-slate-400 italic">Ninguna inasistencia sin excusa.</p>
+                          )}
+                        </div>
+                        <div>
+                          <span className="font-bold text-blue-700 block mb-1">Con Excusa / Justificadas:</span>
+                          {excusadosFecha.length > 0 ? (
+                            <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                              {excusadosFecha.map(s => (
+                                <li key={s.numero_documento}>{s.apellidos} {s.nombres} ({s.numero_documento})</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-slate-400 italic">Ninguna excusa registrada.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
+                      <th className="p-2.5">Fecha</th>
+                      <th className="p-2.5">Aprendiz</th>
+                      <th className="p-2.5 text-center">Documento</th>
+                      <th className="p-2.5 text-center">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {activeDates.flatMap((date: string) => 
+                      students
+                        .filter(s => s.registros[date] === 'Tarde')
+                        .map(s => ({ date, student: s }))
+                    ).map(({ date, student }, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-2.5 font-mono font-bold text-slate-700">{date}</td>
+                        <td className="p-2.5 font-bold text-slate-800">{student.apellidos} {student.nombres}</td>
+                        <td className="p-2.5 text-center font-mono text-slate-500">{student.numero_documento}</td>
+                        <td className="p-2.5 text-center">
+                          <span className="bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded">Llegada Tarde</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Botones de Acción */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <button
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 print:hidden">
+          <button 
             onClick={onClose}
-            className="px-4 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100"
           >
-            Cancelar
+            Cerrar
           </button>
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="px-5 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors disabled:opacity-70"
+          <button 
+            onClick={handlePrint}
+            className="px-5 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 flex items-center gap-2 shadow-sm transition-colors"
           >
-            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            <span>{isGenerating ? 'Generando PDF...' : 'Descargar PDF'}</span>
+            <Printer className="w-4 h-4" /> Imprimir / Guardar PDF
           </button>
         </div>
-
       </div>
     </div>
   );
