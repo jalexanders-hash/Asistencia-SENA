@@ -1,13 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { courseData as initialCourseData } from './data';
-import { subscribeToFichaData, saveAttendanceData } from './lib/firebase';
-import { REPORT_TYPES, generatePDFReport } from './lib/pdfGenerator';
-import { HelpModal } from './components/HelpModal';
-import { SheetsTemplateModal } from './components/SheetsTemplateModal';
-import ExportReportModal from './components/ExportReportModal';
-import { auth } from "./lib/firebase";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { Login } from "./components/Login";
+import { courseData as initialCourseData } from './data';[cite: 4]
+import { subscribeToFichaData, saveAttendanceData } from './lib/firebase';[cite: 4]
+import { REPORT_TYPES, generatePDFReport } from './lib/pdfGenerator';[cite: 4]
+import { HelpModal } from './components/HelpModal';[cite: 4]
+import { SheetsTemplateModal } from './components/SheetsTemplateModal';[cite: 4]
+import ExportReportModal from './components/ExportReportModal';[cite: 4]
+import { auth } from "./lib/firebase";[cite: 4]
+import { onAuthStateChanged, signOut, User } from "firebase/auth";[cite: 4]
+import { Login } from "./components/Login";[cite: 4]
 import { 
   Users, 
   BookOpen, 
@@ -33,7 +33,7 @@ import {
   Check,
   ChevronDown,
   X
-} from 'lucide-react';
+} from 'lucide-react';[cite: 4]
 
 const formatDateForData = (dateString: string) => {
   const [year, month, day] = dateString.split('-');
@@ -53,21 +53,21 @@ const formatDateForDisplay = (dateString: string) => {
 };
 
 export default function App() {
-  const [courseData, setCourseData] = useState(initialCourseData);
-  const [isLoading, setIsLoading] = useState(true);
+  const [courseData, setCourseData] = useState(initialCourseData);[cite: 4]
+  const [isLoading, setIsLoading] = useState(true);[cite: 4]
   
-  const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
-  const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [authError, setAuthError] = useState('');
+  const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");[cite: 4]
+  const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);[cite: 4]
+  const [user, setUser] = useState<User | null>(null);[cite: 4]
+  const [authReady, setAuthReady] = useState(false);[cite: 4]
+  const [authError, setAuthError] = useState('');[cite: 4]
 
-  const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');
-  const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
-  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');[cite: 4]
+  const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);[cite: 4]
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);[cite: 4]
 
-  const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
-  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');[cite: 4]
+  const [showNotificationModal, setShowNotificationModal] = useState(false);[cite: 4]
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -98,13 +98,13 @@ export default function App() {
     }
   }, [user, courseData]);
     
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showRiskOnly, setShowRiskOnly] = useState(false);
-  const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');[cite: 4]
+  const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);[cite: 4]
+  const [showDropdown, setShowDropdown] = useState(false);[cite: 4]
+  const [showRiskOnly, setShowRiskOnly] = useState(false);[cite: 4]
+  const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);[cite: 4]
     
-  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
+  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;[cite: 4]
 
   const currentInstructorDates = useMemo(() => {
     if (!currentInstructor) return [];
@@ -114,16 +114,16 @@ export default function App() {
     return courseData.fechas_asistencia;
   }, [currentInstructor, courseData]);
     
-  const [isPreparingPdf, setIsPreparingPdf] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
+  const [isPreparingPdf, setIsPreparingPdf] = useState(false);[cite: 4]
+  const [showExportModal, setShowExportModal] = useState(false);[cite: 4]
 
-  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [isSavingAttendance, setIsSavingAttendance] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);[cite: 4]
+  const [isSavingAttendance, setIsSavingAttendance] = useState(false);[cite: 4]
   const [attendanceDate, setAttendanceDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
-  const [tempRecords, setTempRecords] = useState<Record<string, string>>({});
+  const [tempRecords, setTempRecords] = useState<Record<string, string>>({});[cite: 4]
 
   useEffect(() => {
     setIsLoading(true);
@@ -319,7 +319,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <Login />;
+    return <Login />;[cite: 4]
   }
 
   if (currentInstructorIdx === null || currentInstructor === null) {
@@ -766,7 +766,7 @@ export default function App() {
       </footer>
 
       {isSheetsModalOpen && (
-        <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} />
+        <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} />[cite: 4]
       )}
 
       {showExportModal && (
