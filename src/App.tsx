@@ -24,7 +24,7 @@ import {
   X,
   ChevronDown,
   LayoutDashboard,
-  Send,
+  Printer,
   Copy,
   Check
 } from 'lucide-react';
@@ -51,7 +51,7 @@ export default function App() {
 
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
-  // Estados para el sistema y plantillas de notificaciones
+  // Estados para plantillas de notificaciones con reglamento SENA
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedStudentForNotification, setSelectedStudentForNotification] = useState<any>(null);
   const [notificationTemplateType, setNotificationTemplateType] = useState<'inasistencia' | 'llamado_atencion' | 'citacion'>('inasistencia');
@@ -294,19 +294,18 @@ export default function App() {
 
   const correoInstructorActual = (currentInstructor as any)?.correo_institucional_sena || (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || user?.email || '';
 
-  // Lista de aprendices en riesgo para el centro de notificaciones
   const riskStudentsList = useMemo(() => {
-    return studentsWithStats.filter(s => s.enRiesgo);
+    return studentsWithStats.filter(s => s.enRiesgo || s.enRiesgoTarde);
   }, [studentsWithStats]);
 
   const getNotificationTemplateText = (student: any) => {
     const instructorName = currentInstructor?.nombre_del_instructor || "Instructor SENA";
     if (notificationTemplateType === 'inasistencia') {
-      return `Asunto: Notificación por Inasistencia - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),\n\nLe informamos que presenta un acumulado de ${student.fallasAcumuladas} inasistencias en el programa ${courseData.denominacion}, superando el límite establecido (${limiteInasistencias}).\n\nPor favor acérquese con su instructor o coordinador para justificar las novedades correspondientes.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+      return `Asunto: Notificación por Inasistencia y Presunto Incumplimiento - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),\n\nDe conformidad con el Reglamento del Aprendiz SENA (Acuerdo 07 de 2012 / Acuerdo Actualizado), le informamos que presenta un acumulado de ${student.fallasAcumuladas} inasistencias injustificadas en la competencia del programa ${courseData.denominacion}.\n\nLe recordamos el deber de asistencia puntual a las actividades de formación. Por favor acérquese con su instructor para presentar las justificaciones pertinentes.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
     } else if (notificationTemplateType === 'llamado_atencion') {
-      return `Asunto: Llamado de Atención por Inasistencias Reiteradas - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nEl presente correo constituye un llamado de atención formal debido a sus fallas continuas (${student.fallasAcumuladas} faltas). Recordamos que la asistencia es obligatoria según el reglamento del aprendiz SENA.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+      return `Asunto: Llamado de Atención Formal por Inasistencias Reiteradas - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nEl presente correo constituye un LLAMADO DE ATENCIÓN FORMAL debido a sus fallas continuas (${student.fallasAcumuladas} faltas), vulnerando los deberes y compromisos establecidos en la normativa institucional sobre la asistencia obligatoria a los procesos de formación.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
     } else {
-      return `Asunto: Citación a Descargos / Comité - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nDado el incumplimiento reiterado en las normas de asistencia (${student.fallasAcumuladas} inasistencias), se le cita formalmente para revisión de su caso.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+      return `Asunto: Citación a Comité / Descargos por Inasistencia - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nDado el incumplimiento reiterado en las normas de asistencia (${student.fallasAcumuladas} inasistencias), se le cita formalmente a reunión de seguimiento académico para revisión de su caso y emisión de descargos.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
     }
   };
 
@@ -465,7 +464,6 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
         
-        {/* Selector de Menú Principal (Listado de Aprendices vs Vista de Tablero) */}
         <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
@@ -511,7 +509,6 @@ export default function App() {
           </h1>
         </div>
 
-        {/* CONTENIDO 1: LISTADO DE APRENDICES */}
         {mainView === 'listado' && (
           <div className="space-y-6">
             <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
@@ -541,6 +538,7 @@ export default function App() {
               </button>
             </div>
 
+            {/* DATOS DE LA FICHA ACTUALIZADOS CON INSTRUCTORES, COMPETENCIAS Y DÍAS */}
             {activeTab === 'ficha' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
                 <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
@@ -560,6 +558,35 @@ export default function App() {
                   <div>
                     <span className="block font-semibold text-slate-500">Centro de Formación</span>
                     <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.centro}</p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6 space-y-4">
+                  <h3 className="text-base font-bold text-slate-800">Equipo de Instructores y Días de Formación</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {courseData.equipo_instructores?.map((inst: any, idx: number) => {
+                      const diasInst = courseData.fechas_por_instructor?.[inst.nombre_del_instructor] || courseData.fechas_asistencia;
+                      return (
+                        <div key={idx} className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div>
+                            <h4 className="font-bold text-slate-800 text-sm">{inst.nombre_del_instructor}</h4>
+                            <p className="text-xs text-slate-500 mt-0.5">Correo: {inst.correo || inst.correo_institucional || 'No registrado'}</p>
+                          </div>
+                          <div className="text-xs space-y-1 text-right md:text-left">
+                            <span className="font-semibold text-emerald-700 block">Días de formación programados:</span>
+                            <span className="text-slate-700 font-mono font-bold">{diasInst.length} sesiones ({diasInst.slice(0, 3).join(', ')}{diasInst.length > 3 ? '...' : ''})</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="border-t pt-6 space-y-3">
+                  <h3 className="text-base font-bold text-slate-800">Competencias del Programa</h3>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2">
+                    <p className="font-semibold text-slate-900">Competencia activa en gestión documental y académica:</p>
+                    <p className="font-mono bg-white p-2 rounded border border-slate-200">Producir documentos de acuerdo con normatividad técnica.</p>
                   </div>
                 </div>
               </div>
@@ -625,7 +652,7 @@ export default function App() {
                       <div className="p-2 bg-red-50 rounded-lg text-red-600"><AlertTriangle className="w-4 h-4" /></div>
                     </div>
                     <span className="text-2xl font-bold text-red-600 mt-3">{stats.enRiesgo}</span>
-                    <span className="text-[10px] text-red-500 mt-1 font-medium">Acuerdo 09 de 2024</span>
+                    <span className="text-[10px] text-red-500 mt-1 font-medium">Reglamento SENA</span>
                   </div>
                 </div>
 
@@ -787,13 +814,19 @@ export default function App() {
             {activeTab === 'reportes' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
                 <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Reportes y Exportación de Datos</h2>
-                <p className="text-sm text-slate-600">Genera reportes formales en formato PDF listos para impresión o gestión administrativa con Coordinación Académica.</p>
+                <p className="text-sm text-slate-600">Genera reportes formales listos para impresión en PDF o gestión administrativa con Coordinación Académica.</p>
                 <div className="flex flex-wrap gap-4">
                   <button 
-                    onClick={() => setShowExportModal(true)}
+                    onClick={() => window.print()}
                     className="flex items-center gap-2 px-4 py-2.5 bg-emerald-700 text-white rounded-xl text-sm font-semibold hover:bg-emerald-800 shadow-sm transition-colors"
                   >
-                    <FileText className="w-4 h-4" /> Generar Reporte PDF / Excel
+                    <Printer className="w-4 h-4" /> Generar e Imprimir Reporte PDF
+                  </button>
+                  <button 
+                    onClick={() => setShowExportModal(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-50 shadow-sm transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-emerald-600" /> Opciones Avanzadas de Exportación
                   </button>
                 </div>
               </div>
@@ -801,7 +834,6 @@ export default function App() {
           </div>
         )}
 
-        {/* CONTENIDO 2: VISTA DE TABLERO */}
         {mainView === 'tablero' && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-4">
             <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -882,13 +914,13 @@ export default function App() {
         />
       )}
 
-      {/* MODAL DE PLANTILLAS DE NOTIFICACIÓN */}
+      {/* MODAL DE PLANTILLAS DE NOTIFICACIÓN CON REGLAMENTO SENA */}
       {showNotificationModal && selectedStudentForNotification && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                <Mail className="w-4 h-4 text-emerald-600" /> Plantilla de Notificación
+                <Mail className="w-4 h-4 text-emerald-600" /> Plantilla con Reglamento SENA
               </h3>
               <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -902,13 +934,13 @@ export default function App() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Tipo de Plantilla:</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Tipo de Plantilla Normativa:</label>
                 <select 
                   value={notificationTemplateType}
                   onChange={(e: any) => setNotificationTemplateType(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium bg-white"
                 >
-                  <option value="inasistencia">Aviso de Inasistencia</option>
+                  <option value="inasistencia">Aviso de Inasistencia (Reglamento)</option>
                   <option value="llamado_atencion">Llamado de Atención Formal</option>
                   <option value="citacion">Citación a Comité / Descargos</option>
                 </select>
