@@ -56,23 +56,17 @@ export default function App() {
   const [courseData, setCourseData] = useState(initialCourseData);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Estado para la Ficha Activa (Soporte Multi-Ficha / Grupos)
   const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
-
   const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Estados de navegación
   const [activeTab, setActiveTab] = useState<'ficha' | 'aprendices' | 'asistencia_global' | 'alertas' | 'reportes'>('aprendices');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
-  // Estados de Filtro Interactivo del KPI Dashboard
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
-
-  // Estado para el Modal de Notificaciones
   const [showNotificationModal, setShowNotificationModal] = useState(false);
 
   useEffect(() => {
@@ -120,7 +114,6 @@ export default function App() {
     return courseData.fechas_asistencia;
   }, [currentInstructor, courseData]);
     
-  // Modales de acciones
   const [isPreparingPdf, setIsPreparingPdf] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
@@ -132,7 +125,6 @@ export default function App() {
   });
   const [tempRecords, setTempRecords] = useState<Record<string, string>>({});
 
-  // Suscripción dinámica a Firebase según la Ficha Seleccionada
   useEffect(() => {
     setIsLoading(true);
     let unsubscribe: () => void;
@@ -359,7 +351,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12 flex flex-col justify-between">
       
-      {/* HEADER INSTITUCIONAL */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-3">
           
@@ -440,10 +431,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
         
-        {/* Título y Acciones */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-xs text-slate-500 mb-1">
@@ -479,7 +468,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Pestañas de Navegación */}
         <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
           <button 
             onClick={() => setActiveTab('ficha')}
@@ -513,7 +501,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* CONTENIDO DE LAS PESTAÑAS */}
         {activeTab === 'ficha' && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
             <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
@@ -540,7 +527,6 @@ export default function App() {
 
         {activeTab === 'aprendices' && (
           <>
-            {/* Tarjetas KPI Interactivas */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
                 onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
@@ -603,12 +589,10 @@ export default function App() {
               </div>
             </div>
 
-            {/* Listado de Aprendices con Buscador y Autocompletado */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3 w-full sm:w-auto relative">
                   
-                  {/* Buscador Desplegable */}
                   <div className="relative w-full sm:w-96">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 z-10" />
                     <input 
@@ -732,7 +716,6 @@ export default function App() {
 
         {activeTab === 'asistencia_global' && (
           <div className="space-y-6">
-            {/* Tarjetas KPI Interactivas */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div 
                 onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
@@ -795,7 +778,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Matriz Completa Estilo Cuadro Temporal */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <h3 className="text-base font-bold text-slate-800">Matriz Consolidada de Asistencia por Fechas</h3>
@@ -914,7 +896,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Modales */}
       {showExportModal && (
         <ExportReportModal
           isOpen={showExportModal}
