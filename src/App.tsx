@@ -1049,3 +1049,49 @@ export default function App() {
     </div>
   );
 }
+{activeTab === 'ficha' && (
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+                <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                  <div>
+                    <span className="block font-semibold text-slate-500">Número de Ficha</span>
+                    <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.ficha_de_caracterizacion}</p>
+                  </div>
+                  <div>
+                    <span className="block font-semibold text-slate-500">Programa de Formación</span>
+                    <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.programa}</p>
+                  </div>
+                  <div>
+                    <span className="block font-semibold text-slate-500">Denominación</span>
+                    <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.denominacion}</p>
+                  </div>
+                  <div>
+                    <span className="block font-semibold text-slate-500">Centro de Formación</span>
+                    <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.centro}</p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6 space-y-4">
+                  <h3 className="text-base font-bold text-slate-800">Equipo de Instructores, Competencias y Días de Formación</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {courseData.equipo_instructores?.map((inst: any, idx: number) => {
+                      const diasInst = courseData.fechas_por_instructor?.[inst.nombre_del_instructor] || courseData.fechas_asistencia;
+                      return (
+                        <div key={idx} className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div className="space-y-1">
+                            <h4 className="font-bold text-slate-800 text-sm">Instructor: {inst.nombre_del_instructor}</h4>
+                            <p className="text-xs text-slate-600">Correo: {inst.correo || inst.correo_institucional || 'No registrado'}</p>
+                            <p className="text-xs font-semibold text-emerald-700">Competencia: Producir documentos de acuerdo con normatividad técnica.</p>
+                          </div>
+                          <div className="text-xs space-y-1 text-right md:text-left bg-white p-3 rounded-lg border border-slate-200">
+                            <span className="font-bold text-slate-700 block">Días de formación programados:</span>
+                            <span className="text-emerald-800 font-mono font-bold">Lunes, Miércoles y Viernes</span>
+                            <span className="block text-[10px] text-slate-400">Total sesiones: {diasInst.length}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
