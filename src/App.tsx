@@ -23,7 +23,10 @@ import {
   FileText,
   X,
   ChevronDown,
-  LayoutDashboard
+  LayoutDashboard,
+  Send,
+  Copy,
+  Check
 } from 'lucide-react';
 
 const formatDateForData = (dateString: string) => {
@@ -41,14 +44,18 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Menús principales solicitados: 'listado' o 'tablero'
   const [mainView, setMainView] = useState<'listado' | 'tablero'>('listado');
   const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
+  
+  // Estados para el sistema y plantillas de notificaciones
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [selectedStudentForNotification, setSelectedStudentForNotification] = useState<any>(null);
+  const [notificationTemplateType, setNotificationTemplateType] = useState<'inasistencia' | 'llamado_atencion' | 'citacion'>('inasistencia');
+  const [copiedNotification, setCopiedNotification] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -287,6 +294,22 @@ export default function App() {
 
   const correoInstructorActual = (currentInstructor as any)?.correo_institucional_sena || (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || user?.email || '';
 
+  // Lista de aprendices en riesgo para el centro de notificaciones
+  const riskStudentsList = useMemo(() => {
+    return studentsWithStats.filter(s => s.enRiesgo);
+  }, [studentsWithStats]);
+
+  const getNotificationTemplateText = (student: any) => {
+    const instructorName = currentInstructor?.nombre_del_instructor || "Instructor SENA";
+    if (notificationTemplateType === 'inasistencia') {
+      return `Asunto: Notificación por Inasistencia - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),\n\nLe informamos que presenta un acumulado de ${student.fallasAcumuladas} inasistencias en el programa ${courseData.denominacion}, superando el límite establecido (${limiteInasistencias}).\n\nPor favor acérquese con su instructor o coordinador para justificar las novedades correspondientes.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+    } else if (notificationTemplateType === 'llamado_atencion') {
+      return `Asunto: Llamado de Atención por Inasistencias Reiteradas - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nEl presente correo constituye un llamado de atención formal debido a sus fallas continuas (${student.fallasAcumuladas} faltas). Recordamos que la asistencia es obligatoria según el reglamento del aprendiz SENA.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+    } else {
+      return `Asunto: Citación a Descargos / Comité - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nDado el incumplimiento reiterado en las normas de asistencia (${student.fallasAcumuladas} inasistencias), se le cita formalmente para revisión de su caso.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+    }
+  };
+
   if (!authReady || isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -365,9 +388,11 @@ export default function App() {
                 title="Centro de Notificaciones"
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
-                  3
-                </span>
+                {riskStudentsList.length > 0 && (
+                  <span className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                    {riskStudentsList.length}
+                  </span>
+                )}
               </button>
 
               {showNotificationsDropdown && (
@@ -393,6 +418,33 @@ export default function App() {
                       </div>
                     </div>
                     <p className="text-[10px] text-slate-500 mt-1">CC Automática: <strong>{correoInstructorActual}</strong></p>
+                  </div>
+
+                  <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                    {riskStudentsList.length > 0 ? (
+                      riskStudentsList.map((student) => (
+                        <div key={student.numero_documento} className="px-4 py-2.5 hover:bg-slate-50 flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-bold text-slate-800">{student.apellidos} {student.nombres}</p>
+                            <p className="text-[10px] text-red-600 font-semibold">{student.fallasAcumuladas} inasistencias registradas</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedStudentForNotification(student);
+                              setShowNotificationModal(true);
+                              setShowNotificationsDropdown(false);
+                            }}
+                            className="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-[11px] font-bold transition-colors whitespace-nowrap"
+                          >
+                            Plantilla
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-6 text-center text-xs text-slate-400">
+                        No hay aprendices que alcancen el límite de inasistencia actual.
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -459,7 +511,7 @@ export default function App() {
           </h1>
         </div>
 
-        {/* CONTENIDO 1: LISTADO DE APRENDICES (Incluye submenús ficha, asistencia, alertas, reportes) */}
+        {/* CONTENIDO 1: LISTADO DE APRENDICES */}
         {mainView === 'listado' && (
           <div className="space-y-6">
             <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
@@ -681,9 +733,12 @@ export default function App() {
                             </div>
 
                             {student.enRiesgo && (
-                              <span className="bg-red-50 text-red-600 border border-red-200 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1">
-                                <AlertTriangle className="w-3.5 h-3.5" /> En Riesgo
-                              </span>
+                              <button 
+                                onClick={() => { setSelectedStudentForNotification(student); setShowNotificationModal(true); }}
+                                className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors"
+                              >
+                                <AlertTriangle className="w-3.5 h-3.5" /> En Riesgo (Notificar)
+                              </button>
                             )}
                           </div>
                         </div>
@@ -746,7 +801,7 @@ export default function App() {
           </div>
         )}
 
-        {/* CONTENIDO 2: VISTA DE TABLERO (Tabla completa consolidada de asistencia) */}
+        {/* CONTENIDO 2: VISTA DE TABLERO */}
         {mainView === 'tablero' && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-4">
             <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -825,6 +880,76 @@ export default function App() {
           courseData={courseData}
           students={studentsWithStats}
         />
+      )}
+
+      {/* MODAL DE PLANTILLAS DE NOTIFICACIÓN */}
+      {showNotificationModal && selectedStudentForNotification && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                <Mail className="w-4 h-4 text-emerald-600" /> Plantilla de Notificación
+              </h3>
+              <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <span className="text-xs font-semibold text-slate-500">Aprendiz seleccionado:</span>
+                <p className="text-sm font-bold text-slate-800">{selectedStudentForNotification.apellidos} {selectedStudentForNotification.nombres}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Tipo de Plantilla:</label>
+                <select 
+                  value={notificationTemplateType}
+                  onChange={(e: any) => setNotificationTemplateType(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium bg-white"
+                >
+                  <option value="inasistencia">Aviso de Inasistencia</option>
+                  <option value="llamado_atencion">Llamado de Atención Formal</option>
+                  <option value="citacion">Citación a Comité / Descargos</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Contenido del Mensaje:</label>
+                <textarea 
+                  readOnly
+                  rows={8}
+                  value={getNotificationTemplateText(selectedStudentForNotification)}
+                  className="w-full border border-slate-300 rounded-lg p-3 text-xs font-mono bg-slate-50 text-slate-700 focus:outline-none"
+                />
+              </div>
+
+              <div className="text-[11px] text-slate-500 bg-emerald-50 border border-emerald-200 p-3 rounded-lg">
+                Se enviará copia automática de este reporte a tu correo: <strong>{correoInstructorActual}</strong>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowNotificationModal(false)}
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100"
+              >
+                Cerrar
+              </button>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(getNotificationTemplateText(selectedStudentForNotification));
+                  setCopiedNotification(true);
+                  setTimeout(() => setCopiedNotification(false), 2000);
+                }}
+                className="px-4 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 flex items-center gap-2 transition-colors"
+              >
+                {copiedNotification ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copiedNotification ? 'Copiado al Portapapeles' : 'Copiar Plantilla'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showAttendanceModal && (
