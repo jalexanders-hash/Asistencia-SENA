@@ -21,7 +21,7 @@ import {
   ParsedTemplateResult
 } from '../lib/templateGenerator';
 import { downloadBlankAttendanceTemplate } from '../lib/blankTemplateGenerator';
-import { updateFichaCompleteData } from '../lib/firebase'; // <--- Usamos la función de actualización aislada por ID de ficha
+import { updateFichaCompleteData } from '../lib/firebase';
 import { courseData as initialCourseData } from '../data';
 
 interface SheetsTemplateModalProps {
@@ -29,7 +29,7 @@ interface SheetsTemplateModalProps {
   onClose: () => void;
   currentFicha: string;
   courseData: typeof initialCourseData;
-  onDataLoaded: (newData: typeof initialCourseData, targetFichaId?: string) => void; // <--- Soportamos el ID opcional para el cambio de ficha
+  onDataLoaded: (newData: typeof initialCourseData, targetFichaId?: string) => void;
 }
 
 /**
@@ -68,7 +68,7 @@ function mergeInstructorAttendance(
 
   mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
     const uploadedStudent = uploadedData.asistencias_aprendices?.find(
-      (s: any) => s.numero_documento === cloudStudent.numero_documento
+      (s: any) => String(s.numero_documento).trim() === String(cloudStudent.numero_documento).trim()
     );
 
     if (!uploadedStudent) return cloudStudent;
@@ -120,6 +120,7 @@ export function SheetsTemplateModal({
 
     try {
       const result = await parseUploadedTemplate(file, courseData);
+      console.log("=== RESULTADO DE PARSEADO EXCEL ===", result);
       setUploadResult(result);
     } catch (err: any) {
       console.error("Error al procesar plantilla Excel:", err);
@@ -135,38 +136,47 @@ export function SheetsTemplateModal({
   const handleApplyData = async () => {
     if (!uploadResult?.data) return;
 
-    // 1. Extraer y validar rigurosamente el número de ficha que trae el archivo Excel
-    const excelFichaId = uploadResult.data.ficha_de_caracterizacion 
-      ? String(uploadResult.data.ficha_de_caracterizacion).trim() 
-      : '';
-
-    if (!excelFichaId || excelFichaId === 'undefined' || excelFichaId === 'null') {
-      alert('Error de validación: El archivo Excel no contiene un número de ficha de caracterización válido. Por favor verifique la plantilla antes de cargar.');
-      return;
+    // 1. Extracción avanzada y segura del número de ficha
+    let excelFichaId = '';
+    
+    if (uploadResult.data.ficha_de_caracterizacion) {
+      excelFichaId = String(uploadResult.data.ficha_de_caracterizacion).trim();
     }
+
+    // Fallback: Intentar extraer del nombre del archivo si contiene números de ficha (ej: 3387401)
+    if ((!excelFichaId || excelFichaId === 'undefined' || excelFichaId === 'null') && selectedFile) {
+      const match = selectedFile.name.match(/\b\d{7}\b/);
+      if (match) {
+        excelFichaId = match[0];
+      }
+    }
+
+    // Último recurso: si el archivo no trae ficha explícita, usar la ficha activa actual para evitar bloqueos
+    if (!excelFichaId || excelFichaId === 'undefined' || excelFichaId === 'null') {
+      excelFichaId = currentFicha;
+    }
+
+    console.log("Ficha de destino seleccionada para guardar:", excelFichaId);
 
     setIsSaving(true);
     try {
-      // 2. Detección segura del instructor activo
       const currentInstructorName = courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "Instructor";
 
-      // 3. Fusión granular segura de inasistencias
       const safeMergedData = mergeInstructorAttendance(
         courseData,
         uploadResult.data,
         currentInstructorName
       );
 
-      // Asegurar que la estructura refleje el ID de la ficha correcto
       safeMergedData.ficha_de_caracterizacion = excelFichaId;
 
-      // 4. Guardado aislado en Firebase usando estrictamente el documento de ESTA ficha
+      // 2. Guardado aislado en Firebase utilizando estrictamente el ID de esta ficha
       await updateFichaCompleteData(safeMergedData, excelFichaId);
 
-      // 5. Actualizar la aplicación principal pasando los datos y la ficha destino
+      // 3. Notificar a la app principal para actualizar estado y cambiar de ficha si corresponde
       onDataLoaded(safeMergedData, excelFichaId);
       
-      alert(`¡Inasistencias cargadas con éxito en la Ficha N° ${excelFichaId}! No se han afectado datos de otras fichas.`);
+      alert(`¡Inasistencias cargadas con éxito en la Ficha N° ${excelFichaId}!`);
       onClose();
     } catch (err: any) {
       console.error("Error al guardar en Firebase desde el modal:", err);
@@ -185,7 +195,7 @@ export function SheetsTemplateModal({
         {/* Header */}
         <div className="px-6 py-5 bg-gradient-to-r from-emerald-800 via-emerald-700 to-sena text-white flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/20 shadow-inner">
+            <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/20 shadow-inner">
               <FileSpreadsheet className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -256,7 +266,7 @@ export function SheetsTemplateModal({
                     Formato oficial compatible con Google Sheets y Microsoft Excel (.xlsx)
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Este archivo contiene las hojas preconfiguradas con los datos de la ficha, instructores y el listado de aprendices listos para el registro de inasistencias.
+                    Este archivo contiene las hojas preconfiguradas con los datos de la ficha actual ({currentFicha}), instructores y el listado de aprendices listos para el registro de inasistencias.
                   </p>
                 </div>
               </div>
@@ -336,7 +346,7 @@ export function SheetsTemplateModal({
                     Selecciona tu archivo de Google Sheets o Excel diligenciado
                   </h3>
                   <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                    Carga el archivo <code>.xlsx</code> con las inasistencias marcadas. El sistema actualizará automáticamente la base de datos.
+                    Carga el archivo <code>.xlsx</code> con las inasistencias marcadas para la Ficha activa actual ({currentFicha}).
                   </p>
                 </div>
 
