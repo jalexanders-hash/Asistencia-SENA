@@ -58,14 +58,20 @@ export const saveAttendanceData = async (
   }
 };
 
-export const updateFichaCompleteData = async (newData: typeof defaultData) => {
+/**
+ * Actualiza la ficha completa asegurando que se respete la ficha activa (fichaId),
+ * evitando que un archivo externo sobrescriba una ficha que no corresponde.
+ */
+export const updateFichaCompleteData = async (newData: typeof defaultData, fichaId?: string) => {
   try {
-    // Extraer dinámicamente el ID de la ficha desde el archivo cargado
-    const fichaId = String(newData.ficha_de_caracterizacion || DEFAULT_FICHA_ID);
-    const docRef = doc(db, "fichas", fichaId);
+    // Usamos prioritariamente el ID de la ficha activa en la UI para proteger los datos
+    const targetFichaId = String(fichaId || newData.ficha_de_caracterizacion || DEFAULT_FICHA_ID);
+    const docRef = doc(db, "fichas", targetFichaId);
     
-    // Usamos setDoc con merge:true para crear la ficha si es nueva o actualizarla si ya existe
-    await setDoc(docRef, newData, { merge: true });
+    await setDoc(docRef, {
+      ...newData,
+      ficha_de_caracterizacion: targetFichaId // Forzamos que la ficha coincida con el documento de Firestore
+    }, { merge: true });
   } catch (error) {
     console.error("Error al actualizar ficha:", error);
     throw error;
