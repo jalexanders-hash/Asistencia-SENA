@@ -1111,7 +1111,12 @@ CC: ${correoInstructorActual}`;
       onClose={() => setIsSheetsModalOpen(false)} 
       currentFicha={currentFichaId}
       courseData={courseData}
-      onDataLoaded={(newData) => setCourseData(newData)}
+      onDataLoaded={(newData, targetFichaId) => {
+        if (targetFichaId && targetFichaId !== currentFichaId) {
+          setCurrentFichaId(targetFichaId); // Actualiza la ficha activa automáticamente si cambió
+        }
+        setCourseData(newData); // Actualiza los datos visuales al instante
+      }}
     />
 
     {/* MODAL EXPORTAR / REPORTES */}
