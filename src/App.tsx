@@ -1110,12 +1110,14 @@ CC: ${correoInstructorActual}`;
       isOpen={isSheetsModalOpen} 
       onClose={() => setIsSheetsModalOpen(false)} 
       currentFicha={currentFichaId}
-      courseData={courseData}
+      courseData={courseData} 
       onDataLoaded={(newData, targetFichaId) => {
+        // 1. Forzar el cambio de ficha inmediatamente si es diferente
         if (targetFichaId && targetFichaId !== currentFichaId) {
-          setCurrentFichaId(targetFichaId); // Actualiza la ficha activa automáticamente si cambió
+          setCurrentFichaId(targetFichaId);
         }
-        setCourseData(newData); // Actualiza los datos visuales al instante
+        // 2. Inyectar los datos directamente al estado local para visualización instantánea
+        setCourseData(JSON.parse(JSON.stringify(newData)));
       }}
     />
 
