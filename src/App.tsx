@@ -104,12 +104,12 @@ export default function App() {
       setCurrentInstructorIdx(null);
     }
   }, [user, courseData]);
-    
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
-    
+  
   const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
 
   const currentInstructorDates = useMemo(() => {
@@ -119,7 +119,7 @@ export default function App() {
     }
     return courseData.fechas_asistencia;
   }, [currentInstructor, courseData]);
-    
+  
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [isSavingAttendance, setIsSavingAttendance] = useState(false);
@@ -132,7 +132,7 @@ export default function App() {
   useEffect(() => {
     setIsLoading(true);
     let unsubscribe: () => void;
-     
+    
     subscribeToFichaData((data) => {
       setCourseData(data);
       setIsLoading(false);
@@ -142,7 +142,7 @@ export default function App() {
       console.error("Error loading data from Firestore:", err);
       setIsLoading(false);
     });
-     
+    
     return () => {
       if (unsubscribe) unsubscribe();
     };
@@ -151,12 +151,12 @@ export default function App() {
   const handleOpenAttendance = () => {
     const formattedDate = formatDateForData(attendanceDate);
     const existingRecords: Record<string, string> = {};
-     
+    
     courseData.asistencias_aprendices.forEach(student => {
       const status = student.registros[formattedDate as keyof typeof student.registros];
       existingRecords[student.numero_documento] = status || 'Presente';
     });
-     
+    
     setTempRecords(existingRecords);
     setShowAttendanceModal(true);
   };
@@ -164,12 +164,12 @@ export default function App() {
   const handleSaveAttendance = async () => {
     setIsSavingAttendance(true);
     const formattedDate = formatDateForData(attendanceDate);
-     
+    
     let newFechas = [...courseData.fechas_asistencia];
     if (!newFechas.includes(formattedDate)) {
       newFechas.push(formattedDate);
     }
-     
+    
     let newFechasPorInstructor = { ...(courseData.fechas_por_instructor || {}) };
     if (currentInstructor) {
       let currentDates = [...(newFechasPorInstructor[currentInstructor.nombre_del_instructor] || [])];
@@ -178,7 +178,7 @@ export default function App() {
         newFechasPorInstructor[currentInstructor.nombre_del_instructor] = currentDates;
       }
     }
-     
+    
     const newAprendices = courseData.asistencias_aprendices.map(student => {
       const status = tempRecords[student.numero_documento];
       const newRegistros = { ...student.registros } as Record<string, string>;
@@ -189,7 +189,7 @@ export default function App() {
       }
       return { ...student, registros: newRegistros };
     });
-     
+    
     try {
       await saveAttendanceData(newFechas, newAprendices, newFechasPorInstructor, currentFichaId);
       setShowAttendanceModal(false);
@@ -200,7 +200,7 @@ export default function App() {
       setShowAttendanceModal(false);
       alert("Sin conexión cloud: Asistencia guardada en modo local (Offline).");
     } finally {
-      setIsSavingAttendance(false);
+      setIsLoading(false);
     }
   };
 
@@ -219,7 +219,7 @@ export default function App() {
       let tardanzasAcumuladas = 0;
       let fechasTarde: string[] = [];
       let fechasFalla: string[] = [];
-       
+      
       currentInstructorDates.forEach(date => {
         const status = student.registros[date as keyof typeof student.registros];
         if (status) {
@@ -280,7 +280,7 @@ export default function App() {
 
   const filteredStudents = useMemo(() => {
     let filtered = studentsWithStats;
-     
+    
     if (selectedStudentDoc) {
       return filtered.filter(s => s.numero_documento === selectedStudentDoc);
     }
@@ -298,7 +298,7 @@ export default function App() {
     if (showRiskOnly) {
       filtered = filtered.filter(s => s.enRiesgo || s.enRiesgoTarde);
     }
-     
+    
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(student => 
@@ -307,7 +307,7 @@ export default function App() {
         student.numero_documento.includes(term)
       );
     }
-     
+    
     return filtered;
   }, [searchTerm, selectedStudentDoc, showRiskOnly, studentsWithStats, kpiFilter]);
 
@@ -317,14 +317,9 @@ export default function App() {
     return studentsWithStats.filter(s => s.enRiesgo || s.enRiesgoTarde);
   }, [studentsWithStats]);
 
-  // Generación de plantillas basadas en el Acuerdo 009 de 2024 con fechas exclusivamente del instructor actual
   const getNotificationTemplateText = (student: any) => {
     const instructorName = currentInstructor?.nombre_del_instructor || "Instructor SENA";
-    
-    // Fechas de fallas ('X') exclusivas de este instructor
     const fechasFallasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'X');
-    
-    // Fechas de tardanzas ('Tarde') exclusivas de este instructor
     const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde');
 
     if (notificationTemplateType === 'inasistencia') {
@@ -402,7 +397,7 @@ CC: ${correoInstructorActual}`;
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Acceso Restringido</h1>
           <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor en esta ficha.'}</p>
-           
+          
           <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-500 text-left">
             <span className="font-semibold text-slate-700 block mb-1">Correo actual:</span>
             {user.email}
@@ -421,11 +416,8 @@ CC: ${correoInstructorActual}`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12 flex flex-col justify-between">
-      
-      {/* HEADER INSTITUCIONAL */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-3">
-          
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-[#39a900]/30 p-1">
               <img src={LOGO_SENA_SVG} alt="Logo SENA" className="w-full h-full object-contain" />
@@ -537,9 +529,7 @@ CC: ${correoInstructorActual}`;
         </div>
       </header>
 
-      {/* CUERPO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
-        
         <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
@@ -638,233 +628,130 @@ CC: ${correoInstructorActual}`;
                     <p className="text-slate-800 text-base font-bold mt-0.5">{courseData.centro}</p>
                   </div>
                 </div>
-
-                <div className="border-t pt-6 space-y-4">
-                  <h3 className="text-base font-bold text-slate-800">Equipo de Instructores y Días de Formación</h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {courseData.equipo_instructores?.map((inst: any, idx: number) => {
-                      const diasInst = courseData.fechas_por_instructor?.[inst.nombre_del_instructor] || courseData.fechas_asistencia;
-                      return (
-                        <div key={idx} className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                          <div>
-                            <h4 className="font-bold text-slate-800 text-sm">{inst.nombre_del_instructor}</h4>
-                            <p className="text-xs text-slate-500 mt-0.5">Correo: {inst.correo || inst.correo_institucional || 'No registrado'}</p>
-                          </div>
-                          <div className="text-xs space-y-1 text-right md:text-left">
-                            <span className="font-semibold text-[#39a900] block">Días de formación programados:</span>
-                            <span className="text-slate-700 font-mono font-bold">{diasInst.length} sesiones</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
             )}
 
             {activeTab === 'asistencia' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div 
-                    onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
-                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' && !selectedStudentDoc ? 'border-[#39a900] ring-2 ring-[#39a900]/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
-                      <div className="p-2 bg-emerald-50 rounded-lg text-[#39a900]"><Users className="w-4 h-4" /></div>
-                    </div>
-                    <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
-                    <span className="text-[10px] text-slate-400 mt-1">Clic para mostrar todos</span>
-                  </div>
-                  
-                  <div 
-                    onClick={() => { setKpiFilter('present'); setSelectedStudentDoc(null); }}
-                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-[#39a900] ring-2 ring-[#39a900]/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
-                      <div className="p-2 bg-emerald-50 rounded-lg text-[#39a900]"><CheckCircle2 className="w-4 h-4" /></div>
-                    </div>
-                    <span className="text-2xl font-bold text-[#39a900] mt-3">{stats.attendanceRate}%</span>
-                    <span className="text-[10px] text-slate-400 mt-1">Sin inasistencias</span>
-                  </div>
-
-                  <div 
-                    onClick={() => { setKpiFilter('absent'); setSelectedStudentDoc(null); }}
-                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'absent' ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-semibold text-slate-500">Total Inasistencias</span>
-                      <div className="p-2 bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></div>
-                    </div>
-                    <span className="text-2xl font-bold text-slate-900 mt-3">{stats.absent}</span>
-                    <span className="text-[10px] text-slate-400 mt-1">Aprendices con fallas</span>
-                  </div>
-
-                  <div 
-                    onClick={() => { setKpiFilter('late'); setSelectedStudentDoc(null); }}
-                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'late' ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-semibold text-slate-500">Llegadas Tarde</span>
-                      <div className="p-2 bg-amber-50 rounded-lg text-amber-600"><Clock className="w-4 h-4" /></div>
-                    </div>
-                    <span className="text-2xl font-bold text-slate-900 mt-3">{stats.late}</span>
-                    <span className="text-[10px] text-slate-400 mt-1">Retardos registrados</span>
-                  </div>
-
-                  <div 
-                    onClick={() => { setKpiFilter('risk'); setSelectedStudentDoc(null); }}
-                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all col-span-2 md:col-span-1 ${kpiFilter === 'risk' ? 'border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/20' : 'border-slate-200 hover:border-slate-300'}`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-semibold text-slate-500">En Riesgo</span>
-                      <div className="p-2 bg-purple-50 rounded-lg text-purple-600"><AlertTriangle className="w-4 h-4" /></div>
-                    </div>
-                    <span className="text-2xl font-bold text-slate-900 mt-3">{stats.enRiesgo}</span>
-                    <span className="text-[10px] text-slate-400 mt-1">&gt;= {limiteInasistencias} inasistencias</span>
-                  </div>
-                </div>
-
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
+                <div className="flex flex-col md:flex-row justify-between gap-4 items-center">
                   <div className="relative w-full md:w-96">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                     <input 
-                      type="text"
-                      placeholder="Buscar por nombre, apellido o documento..."
+                      type="text" 
+                      placeholder="Buscar por nombre o número de documento..." 
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:bg-white focus:border-[#39a900] transition-colors"
+                      className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#39a900]/30 focus:border-[#39a900]"
                     />
                   </div>
-
-                  <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                    <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                    <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
                       <input 
-                        type="checkbox"
-                        checked={showRiskOnly}
+                        type="checkbox" 
+                        checked={showRiskOnly} 
                         onChange={(e) => setShowRiskOnly(e.target.checked)}
-                        className="rounded border-slate-300 text-[#39a900] focus:ring-[#39a900] w-4 h-4"
+                        className="rounded text-[#39a900] focus:ring-[#39a900]"
                       />
-                      Mostrar solo aprendices en riesgo
+                      <span>Ver solo aprendices en riesgo</span>
                     </label>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-200">
-                          <th className="p-3.5 sticky left-0 bg-slate-50 z-10">Aprendiz</th>
-                          <th className="p-3.5 text-center">Documento</th>
-                          <th className="p-3.5 text-center">Fallas</th>
-                          <th className="p-3.5 text-center">Tardanzas</th>
-                          {currentInstructorDates.map((date, idx) => (
-                            <th key={idx} className="p-3.5 text-center whitespace-nowrap font-mono">{date}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredStudents.map((student) => (
-                          <tr key={student.numero_documento} className="hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedStudentForProfile(student)}>
-                            <td className="p-3.5 font-bold text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap hover:text-[#39a900]">
-                              {student.apellidos} {student.nombres} 🔍
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                        <th className="p-3">N°</th>
+                        <th className="p-3">Apellidos y Nombres</th>
+                        <th className="p-3">Documento</th>
+                        <th className="p-3 text-center">Fallas (X)</th>
+                        <th className="p-3 text-center">Tardanzas</th>
+                        <th className="p-3 text-center">Estado</th>
+                        <th className="p-3 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredStudents.length > 0 ? (
+                        filteredStudents.map((student, idx) => (
+                          <tr key={student.numero_documento} className="hover:bg-slate-50 transition-colors">
+                            <td className="p-3 text-slate-500">{idx + 1}</td>
+                            <td className="p-3 font-semibold text-slate-800">{student.apellidos} {student.nombres}</td>
+                            <td className="p-3 text-slate-600">{student.numero_documento}</td>
+                            <td className="p-3 text-center font-bold text-red-600">{student.fallasAcumuladas}</td>
+                            <td className="p-3 text-center font-bold text-amber-600">{student.tardanzasAcumuladas}</td>
+                            <td className="p-3 text-center">
+                              {student.enRiesgo ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                                  En Riesgo (Acuerdo 009)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#39a900]">
+                                  Regular
+                                </span>
+                              )}
                             </td>
-                            <td className="p-3.5 text-center font-mono text-slate-500 whitespace-nowrap">{student.numero_documento}</td>
-                            <td className="p-3.5 text-center font-bold">
-                              <span className={`px-2 py-0.5 rounded text-[11px] ${student.fallasAcumuladas >= limiteInasistencias ? 'bg-red-100 text-red-700' : 'text-slate-700'}`}>
-                                {student.fallasAcumuladas}
-                              </span>
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() => {
+                                  setSelectedStudentForNotification(student);
+                                  setShowNotificationModal(true);
+                                }}
+                                className="px-2.5 py-1 bg-emerald-50 text-[#39a900] hover:bg-emerald-100 rounded text-[11px] font-bold transition-colors inline-flex items-center gap-1"
+                              >
+                                <Mail className="w-3 h-3" /> Notificar
+                              </button>
                             </td>
-                            <td className="p-3.5 text-center font-bold">
-                              <span className={`px-2 py-0.5 rounded text-[11px] ${student.tardanzasAcumuladas > 0 ? 'bg-amber-100 text-amber-700' : 'text-slate-700'}`}>
-                                {student.tardanzasAcumuladas}
-                              </span>
-                            </td>
-                            {currentInstructorDates.map((date, idx) => {
-                              const status = student.registros[date];
-                              return (
-                                <td key={idx} className="p-3.5 text-center whitespace-nowrap">
-                                  {!status ? (
-                                    <span className="text-[#39a900] font-bold">·</span>
-                                  ) : status === 'X' ? (
-                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">X</span>
-                                  ) : status === 'Tarde' ? (
-                                    <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">T</span>
-                                  ) : (
-                                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">E</span>
-                                  )}
-                                </td>
-                              );
-                            })}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="p-6 text-center text-slate-400">
+                            No se encontraron aprendices con los filtros seleccionados.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
             {activeTab === 'alertas' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-                <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Configuración de Alertas y Notificaciones</h2>
-                <div className="max-w-md space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Límite de Inasistencias para Alertas</label>
-                    <input 
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={limiteInasistencias}
-                      onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold bg-white text-[#39a900]"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Los aprendices que alcancen o superen este número de faltas aparecerán destacados en el centro de notificaciones según el Acuerdo 009 de 2024.</p>
-                  </div>
+                <h2 className="text-lg font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-[#39a900]" /> Configuración de Alertas y Acuerdos
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Configure el umbral de inasistencias para el monitoreo de los aprendices acorde a los Artículos 27, 28, 29 y 30 del Reglamento del Aprendiz SENA (Acuerdo 009 de 2024).
+                </p>
+                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 max-w-md">
+                  <span className="text-sm font-semibold text-slate-700">Límite de Faltas para Alerta:</span>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="20" 
+                    value={limiteInasistencias}
+                    onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-20 text-center border border-slate-300 rounded px-2 py-1 text-sm font-bold bg-white text-[#39a900]"
+                  />
                 </div>
               </div>
             )}
 
             {activeTab === 'reportes' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-                <div className="flex items-center gap-3 border-b pb-4">
-                  <img src={LOGO_SENA_SVG} alt="" className="w-10 h-10" />
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-800">Generador de Reportes y Sincronización Google Sheets</h2>
-                    <p className="text-xs text-slate-500">Centralice la información académica discriminando por instructor y competencias.</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border">
-                  <div className="w-full sm:w-auto">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Filtrar Reportes por Instructor:</label>
-                    <select 
-                      value={instructorFiltroReporte}
-                      onChange={(e) => setInstructorFiltroReporte(e.target.value)}
-                      className="border rounded-lg px-3 py-1.5 text-xs font-semibold bg-white text-slate-800"
-                    >
-                      <option value="todos">Todos los Instructores</option>
-                      {courseData.equipo_instructores?.map((inst: any, idx: number) => (
-                        <option key={idx} value={inst.nombre_del_instructor}>{inst.nombre_del_instructor}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-4 pt-2">
-                  <button 
-                    onClick={() => setShowExportModal(true)}
-                    className="px-5 py-2.5 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors"
-                  >
-                    <Printer className="w-4 h-4" /> Abrir Vista Previa y PDF
-                  </button>
+                <h2 className="text-lg font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                  <FileSpreadsheet className="w-5 h-5 text-[#39a900]" /> Reportes y Integración con Google Sheets
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Genere reportes detallados de asistencia o conecte la aplicación directamente con su plantilla de Google Sheets institucional.
+                </p>
+                <div className="flex gap-4">
                   <button 
                     onClick={() => setIsSheetsModalOpen(true)}
-                    className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-emerald-50 hover:text-[#39a900] flex items-center gap-2 shadow-sm transition-colors"
+                    className="px-4 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] transition-colors flex items-center gap-2 shadow-sm"
                   >
-                    <FileSpreadsheet className="w-4 h-4 text-[#39a900]" /> Sincronizar Google Sheets
+                    <FileSpreadsheet className="w-4 h-4" /> Abrir Plantilla Google Sheets
                   </button>
                 </div>
               </div>
@@ -873,84 +760,86 @@ CC: ${correoInstructorActual}`;
         )}
 
         {mainView === 'tablero' && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <img src={LOGO_SENA_SVG} alt="" className="w-6 h-6" /> Vista de Tablero y Estadísticas Generales
-            </h2>
-            <p className="text-sm text-slate-600">Resumen analítico del comportamiento de asistencia de la ficha {courseData.ficha_de_caracterizacion}.</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 border-l-4 border-l-[#39a900]">
-                <span className="text-xs font-semibold text-slate-500">Total Aprendices Matriculados</span>
-                <p className="text-3xl font-bold text-slate-800 mt-1">{stats.totalStudents}</p>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div 
+                onClick={() => setKpiFilter('all')}
+                className={`bg-white p-5 rounded-xl border shadow-sm cursor-pointer transition-all ${kpiFilter === 'all' ? 'border-[#39a900] ring-2 ring-[#39a900]/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Aprendices</p>
+                <p className="text-2xl font-bold text-slate-900 mt-1">{stats.totalStudents}</p>
               </div>
-              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 border-l-4 border-l-blue-500">
-                <span className="text-xs font-semibold text-slate-500">Porcentaje de Asistencia General</span>
-                <p className="text-3xl font-bold text-[#39a900] mt-1">{stats.attendanceRate}%</p>
+              <div 
+                onClick={() => setKpiFilter('risk')}
+                className={`bg-white p-5 rounded-xl border shadow-sm cursor-pointer transition-all ${kpiFilter === 'risk' ? 'border-red-500 ring-2 ring-red-500/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">Aprendices en Riesgo</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">{stats.enRiesgo}</p>
               </div>
-              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 border-l-4 border-l-red-500">
-                <span className="text-xs font-semibold text-slate-500">Aprendices en Riesgo Académico</span>
-                <p className="text-3xl font-bold text-red-600 mt-1">{stats.enRiesgo}</p>
+              <div 
+                onClick={() => setKpiFilter('late')}
+                className={`bg-white p-5 rounded-xl border shadow-sm cursor-pointer transition-all ${kpiFilter === 'late' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-slate-200 hover:border-slate-300'}`}
+              >
+                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Tardanzas Registradas</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">{stats.late}</p>
+              </div>
+              <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <p className="text-xs font-semibold text-[#39a900] uppercase tracking-wider">Tasa de Asistencia</p>
+                <p className="text-2xl font-bold text-[#39a900] mt-1">{stats.attendanceRate}%</p>
               </div>
             </div>
           </div>
         )}
-      </main>
 
-      {/* MODAL: PERFIL HISTÓRICO DEL APRENDIZ */}
-      {selectedStudentForProfile && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <img src={LOGO_SENA_SVG} alt="" className="w-8 h-8" />
-                <div>
-                  <h3 className="font-bold text-slate-800 text-base">{selectedStudentForProfile.apellidos} {selectedStudentForProfile.nombres}</h3>
-                  <p className="text-xs text-slate-500 font-mono">Documento: {selectedStudentForProfile.numero_documento} | Ficha: {courseData.ficha_de_caracterizacion}</p>
-                </div>
-              </div>
-              <button onClick={() => setSelectedStudentForProfile(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 overflow-y-auto flex-grow">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-center">
-                  <span className="text-xs font-semibold text-red-600">Fallas Acumuladas</span>
-                  <p className="text-2xl font-bold text-red-700 mt-1">{selectedStudentForProfile.fallasAcumuladas}</p>
-                </div>
-                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl text-center">
-                  <span className="text-xs font-semibold text-amber-600">Llegadas Tarde</span>
-                  <p className="text-2xl font-bold text-amber-700 mt-1">{selectedStudentForProfile.tardanzasAcumuladas}</p>
-                </div>
+        {/* MODAL DE TOMAR ASISTENCIA */}
+        {showAttendanceModal && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+              <div className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 className="font-bold text-base flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-[#39a900]" /> Registro de Asistencia - Ficha {currentFichaId}
+                </h3>
+                <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div>
-                <h4 className="text-sm font-bold text-slate-800 mb-2">Historial Detallado de Registros por Fecha:</h4>
-                <div className="border rounded-xl overflow-hidden">
-                  <table className="w-full text-left text-xs">
+              <div className="p-6 space-y-4 overflow-y-auto flex-grow">
+                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <label className="text-xs font-bold text-slate-700">Fecha de Asistencia:</label>
+                  <input 
+                    type="date" 
+                    value={attendanceDate} 
+                    onChange={(e) => setAttendanceDate(e.target.value)}
+                    className="border border-slate-300 rounded px-3 py-1.5 text-xs font-bold bg-white text-slate-800"
+                  />
+                </div>
+
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="bg-slate-100 text-slate-700 uppercase font-bold border-b">
-                        <th className="p-3">Fecha de Sesión</th>
-                        <th className="p-3 text-center">Estado Registrado</th>
+                      <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                        <th className="p-3">Aprendiz</th>
+                        <th className="p-3 text-center">Estado</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {currentInstructorDates.map((date, idx) => {
-                        const status = selectedStudentForProfile.registros[date];
+                      {courseData.asistencias_aprendices.map((student) => {
+                        const currentStatus = tempRecords[student.numero_documento] || 'Presente';
                         return (
-                          <tr key={idx} className="hover:bg-slate-50">
-                            <td className="p-3 font-mono font-bold text-slate-700">{date}</td>
+                          <tr key={student.numero_documento} className="hover:bg-slate-50">
+                            <td className="p-3 font-semibold text-slate-800">{student.apellidos} {student.nombres}</td>
                             <td className="p-3 text-center">
-                              {!status ? (
-                                <span className="bg-emerald-50 text-[#39a900] font-bold px-2 py-0.5 rounded">Presente</span>
-                              ) : status === 'X' ? (
-                                <span className="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded">Falta (X)</span>
-                              ) : status === 'Tarde' ? (
-                                <span className="bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded">Tarde (T)</span>
-                              ) : (
-                                <span className="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded">Excusa (E)</span>
-                              )}
+                              <select
+                                value={currentStatus}
+                                onChange={(e) => setTempRecords({ ...tempRecords, [student.numero_documento]: e.target.value })}
+                                className="border border-slate-300 rounded px-2 py-1 text-xs font-bold bg-white"
+                              >
+                                <option value="Presente">Presente</option>
+                                <option value="X">Falta (X)</option>
+                                <option value="Tarde">Tarde</option>
+                                <option value="Excusa">Excusa</option>
+                              </select>
                             </td>
                           </tr>
                         );
@@ -959,166 +848,97 @@ CC: ${correoInstructorActual}`;
                   </table>
                 </div>
               </div>
-            </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-              <button 
-                onClick={() => setSelectedStudentForProfile(null)}
-                className="px-5 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-900"
-              >
-                Cerrar Perfil
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL TOMAR ASISTENCIA */}
-      {showAttendanceModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Registro Diario de Asistencia
-              </h3>
-              <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 overflow-y-auto flex-grow">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <label className="text-xs font-bold text-slate-700">Fecha de la Sesión:</label>
-                <input 
-                  type="date"
-                  value={attendanceDate}
-                  onChange={(e) => setAttendanceDate(e.target.value)}
-                  className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold bg-white text-slate-800"
-                />
-              </div>
-
-              <div className="space-y-2">
-                {courseData.asistencias_aprendices.map((student) => (
-                  <div key={student.numero_documento} className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">{student.apellidos} {student.nombres}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">{student.numero_documento}</p>
-                    </div>
-                    <select
-                      value={tempRecords[student.numero_documento] || 'Presente'}
-                      onChange={(e) => setTempRecords({ ...tempRecords, [student.numero_documento]: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-3 py-1 text-xs font-bold bg-slate-50 text-slate-800"
-                    >
-                      <option value="Presente">Presente</option>
-                      <option value="X">Falta (X)</option>
-                      <option value="Tarde">Tarde (T)</option>
-                      <option value="Excusa">Excusa (E)</option>
-                    </select>
-                  </div>
-                ))}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+                <button 
+                  onClick={() => setShowAttendanceModal(false)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleSaveAttendance}
+                  disabled={isSavingAttendance}
+                  className="px-4 py-2 bg-[#39a900] text-white rounded-lg text-xs font-bold hover:bg-[#329600] flex items-center gap-2"
+                >
+                  {isSavingAttendance && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Guardar Asistencia
+                </button>
               </div>
             </div>
-
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-              <button 
-                onClick={() => setShowAttendanceModal(false)}
-                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleSaveAttendance}
-                disabled={isSavingAttendance}
-                className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors disabled:opacity-50"
-              >
-                {isSavingAttendance && <Loader2 className="w-4 h-4 animate-spin" />}
-                Guardar Asistencia
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* MODAL PLANTILLA NOTIFICACIÓN ACUERDO 009 DE 2024 */}
-      {showNotificationModal && selectedStudentForNotification && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Plantilla Acuerdo 009 de 2024 SENA
-              </h3>
-              <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setNotificationTemplateType('inasistencia')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'inasistencia' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
-                >
-                  Inasistencia
-                </button>
-                <button
-                  onClick={() => setNotificationTemplateType('llegadas_tarde')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'llegadas_tarde' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
-                >
-                  Llegadas Tarde
-                </button>
-                <button
-                  onClick={() => setNotificationTemplateType('citacion')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'citacion' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
-                >
-                  Citación a Comité
+        {/* MODAL DE PLANTILLA DE NOTIFICACIÓN ACUERDO 009 */}
+        {showNotificationModal && selectedStudentForNotification && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col">
+              <div className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 className="font-bold text-base flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-[#39a900]" /> Notificación Institucional - Acuerdo 009 de 2024
+                </h3>
+                <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-white">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <textarea 
-                readOnly
-                value={getNotificationTemplateText(selectedStudentForNotification)}
-                rows={11}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none"
-              />
-            </div>
+              <div className="p-6 space-y-4">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setNotificationTemplateType('inasistencia')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'inasistencia' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-700'}`}
+                  >
+                    Inasistencia
+                  </button>
+                  <button
+                    onClick={() => setNotificationTemplateType('llegadas_tarde')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'llegadas_tarde' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-700'}`}
+                  >
+                    Llegadas Tarde
+                  </button>
+                  <button
+                    onClick={() => setNotificationTemplateType('citacion')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'citacion' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-700'}`}
+                  >
+                    Citación Comité
+                  </button>
+                </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-              <button 
-                onClick={() => setShowNotificationModal(false)}
-                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100"
-              >
-                Cerrar
-              </button>
-              <button 
-                onClick={() => {
-                  navigator.clipboard.writeText(getNotificationTemplateText(selectedStudentForNotification));
-                  setCopiedNotification(true);
-                  setTimeout(() => setCopiedNotification(false), 2000);
-                }}
-                className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors"
-              >
-                {copiedNotification ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copiedNotification ? 'Copiado al Portapapeles' : 'Copiar Texto'}
-              </button>
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <textarea
+                    readOnly
+                    value={getNotificationTemplateText(selectedStudentForNotification)}
+                    className="w-full h-64 bg-transparent text-xs text-slate-800 font-mono focus:outline-none resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(getNotificationTemplateText(selectedStudentForNotification));
+                    alert("Plantilla copiada al portapapeles.");
+                  }}
+                  className="px-4 py-2 bg-[#39a900] text-white rounded-lg text-xs font-bold hover:bg-[#329600] flex items-center gap-2"
+                >
+                  <Copy className="w-3.5 h-3.5" /> Copiar Plantilla
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* MODAL GOOGLE SHEETS */}
-      <SheetsTemplateModal 
-        isOpen={isSheetsModalOpen} 
-        onClose={() => setIsSheetsModalOpen(false)} 
-        courseData={courseData} 
-      />
+        {isSheetsModalOpen && (
+          <SheetsTemplateModal isOpen={isSheetsModalOpen} onClose={() => setIsSheetsModalOpen(false)} courseData={courseData} />
+        )}
 
-      {/* MODAL EXPORTAR / REPORTES */}
-      <ExportReportModal 
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        courseData={courseData}
-        students={studentsWithStats}
-      />
+        {showExportModal && (
+          <ExportReportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} courseData={courseData} />
+        )}
+      </main>
+
+      <footer className="bg-white border-t border-slate-200 py-4 mt-12 text-center text-xs text-slate-500">
+        <p>SENA - Servicio Nacional de Aprendizaje | Sistema de Gestión Académica y Asistencia</p>
+      </footer>
     </div>
   );
 }
