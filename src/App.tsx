@@ -49,7 +49,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  const [mainView, setMainView] = useState<'listado' | 'tablero' | 'offline' | 'reportes'>('listado');
+  const [mainView, setMainView] = useState<'listado' | 'tablero'>('listado');
   const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
@@ -57,13 +57,12 @@ export default function App() {
 
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
-  // Estados para historial y perfil individual del aprendiz
   const [selectedStudentForProfile, setSelectedStudentForProfile] = useState<any>(null);
 
-  // Estados para plantillas de notificaciones con reglamento SENA
+  // Estados para plantillas de notificación Acuerdo 009 de 2024
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedStudentForNotification, setSelectedStudentForNotification] = useState<any>(null);
-  const [notificationTemplateType, setNotificationTemplateType] = useState<'inasistencia' | 'llamado_atencion' | 'citacion'>('inasistencia');
+  const [notificationTemplateType, setNotificationTemplateType] = useState<'inasistencia' | 'llegadas_tarde' | 'citacion'>('inasistencia');
   const [copiedNotification, setCopiedNotification] = useState(false);
 
   useEffect(() => {
@@ -197,7 +196,6 @@ export default function App() {
       alert("Asistencia guardada correctamente.");
     } catch (error) {
       console.error("Failed to save attendance", error);
-      // Fallback offline a localStorage si falla la red
       localStorage.setItem(`sena_offline_ficha_${currentFichaId}`, JSON.stringify({ newFechas, newAprendices }));
       setShowAttendanceModal(false);
       alert("Sin conexión cloud: Asistencia guardada en modo local (Offline).");
@@ -319,14 +317,60 @@ export default function App() {
     return studentsWithStats.filter(s => s.enRiesgo || s.enRiesgoTarde);
   }, [studentsWithStats]);
 
+  // Generación de plantillas basadas en el Acuerdo 009 de 2024 con fechas exclusivamente del instructor actual
   const getNotificationTemplateText = (student: any) => {
     const instructorName = currentInstructor?.nombre_del_instructor || "Instructor SENA";
+    
+    // Fechas de fallas ('X') exclusivas de este instructor
+    const fechasFallasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'X');
+    
+    // Fechas de tardanzas ('Tarde') exclusivas de este instructor
+    const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde');
+
     if (notificationTemplateType === 'inasistencia') {
-      return `Asunto: Notificación por Inasistencia y Presunto Incumplimiento - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),\n\nDe conformidad con el Reglamento del Aprendiz SENA (Acuerdo 07 de 2012 / Acuerdo Actualizado - Art. 18), le informamos que presenta un acumulado de ${student.fallasAcumuladas} inasistencias injustificadas en la competencia del programa ${courseData.denominacion}.\n\nLe recordamos el deber de asistencia puntual a las actividades de formación. Por favor acérquese con su instructor para presentar las justificaciones pertinentes.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
-    } else if (notificationTemplateType === 'llamado_atencion') {
-      return `Asunto: Llamado de Atención Formal por Inasistencias Reiteradas - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nEl presente correo constituye un LLAMADO DE ATENCIÓN FORMAL (Art. 27 Reglamento del Aprendiz) debido a sus fallas continuas (${student.fallasAcumuladas} faltas), vulnerando los deberes institucionales sobre asistencia obligatoria.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+      const listadoFechas = fechasFallasInstructor.length > 0 ? fechasFallasInstructor.map(f => `- ${f}`).join('\n') : 'Ninguna registrada por este instructor';
+      return `Asunto: Notificación por Inasistencia Injustificada (Acuerdo 009 de 2024) - Ficha ${courseData.ficha_de_caracterizacion}
+
+Estimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),
+
+De conformidad con el Acuerdo 009 de 2024 (Reglamento del Aprendiz SENA), específicamente en su Artículo 27 ("Cumplimiento satisfactorio del proceso formativo") y el Artículo 29 ("Incumplimiento injustificado"), le informamos que registra un acumulado de ${fechasFallasInstructor.length} inasistencia(s) injustificada(s) en las sesiones de formación con este instructor:
+
+${listadoFechas}
+
+Le recordamos que, conforme al Artículo 28, las inasistencias no programadas deben justificarse formalmente con los respectivos soportes a más tardar dentro de los cinco (5) días hábiles siguientes a su ocurrencia. De lo contrario, se configurará deserción según el Artículo 30.
+
+Atentamente,
+${instructorName}
+CC: ${correoInstructorActual} / Coordinación Académica`;
+
+    } else if (notificationTemplateType === 'llegadas_tarde') {
+      const listadoTardanzas = fechasTardanzasInstructor.length > 0 ? fechasTardanzasInstructor.map(f => `- ${f}`).join('\n') : 'Ninguna registrada por este instructor';
+      return `Asunto: Llamado de Atención Formal por Llegadas Tarde - Ficha ${courseData.ficha_de_caracterizacion}
+
+Estimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),
+
+El presente correo constituye un llamado de atención formal en relación con sus reiteradas llegadas tarde y ausencias parciales a las sesiones de formación programadas.
+
+Conforme al Artículo 27 del Acuerdo 009 de 2024 del SENA, el cumplimiento satisfactorio exige puntualidad y participación activa. Las tardanzas registradas en las sesiones de este instructor son:
+
+${listadoTardanzas}
+
+La puntualidad es un compromiso institucional fundamental para el desarrollo adecuado de la competencia.
+
+Atentamente,
+${instructorName}
+CC: ${correoInstructorActual}`;
+
     } else {
-      return `Asunto: Citación a Comité de Evaluación y Seguimiento - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nDado el incumplimiento reiterado en las normas de asistencia (${student.fallasAcumuladas} inasistencias), se le cita formalmente a Comité de Evaluación y Seguimiento para revisión de su caso y emisión de descargos (Art. 22 al 26).\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+      return `Asunto: Citación a Comité de Evaluación y Seguimiento - Ficha ${courseData.ficha_de_caracterizacion}
+
+Estimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),
+
+Dado el incumplimiento reiterado en las normas de asistencia y puntualidad bajo los lineamientos del Acuerdo 009 de 2024 (Artículos 22 al 26), se le cita formalmente a Comité de Evaluación y Seguimiento para la revisión de su caso y emisión de descargos correspondientes.
+
+Atentamente,
+${instructorName}
+CC: ${correoInstructorActual}`;
     }
   };
 
@@ -378,7 +422,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12 flex flex-col justify-between">
       
-      {/* HEADER CON LOGO OFICIAL Y ESTILOS INSTITUCIONALES */}
+      {/* HEADER INSTITUCIONAL */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-3">
           
@@ -406,7 +450,6 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Indicador Online / Offline */}
             <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${isOnline ? 'bg-emerald-50 text-[#39a900] border border-[#39a900]/30' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
               {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
               <span>{isOnline ? 'En línea' : 'Modo Offline'}</span>
@@ -494,10 +537,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL */}
+      {/* CUERPO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
         
-        {/* NAVEGACIÓN PRINCIPAL ENTRE VISTAS */}
         <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
@@ -684,7 +726,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Filtros y Buscador */}
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
                   <div className="relative w-full md:w-96">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -710,7 +751,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Tabla de Asistencia optimizada */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
@@ -781,7 +821,7 @@ export default function App() {
                       onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold bg-white text-[#39a900]"
                     />
-                    <p className="text-xs text-slate-500 mt-1">Los aprendices que alcancen o superen este número de faltas aparecerán destacados en el centro de notificaciones según el Reglamento del Aprendiz SENA.</p>
+                    <p className="text-xs text-slate-500 mt-1">Los aprendices que alcancen o superen este número de faltas aparecerán destacados en el centro de notificaciones según el Acuerdo 009 de 2024.</p>
                   </div>
                 </div>
               </div>
@@ -856,7 +896,7 @@ export default function App() {
         )}
       </main>
 
-      {/* MODAL: HISTORIAL DETALLADO POR APRENDIZ */}
+      {/* MODAL: PERFIL HISTÓRICO DEL APRENDIZ */}
       {selectedStudentForProfile && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -999,13 +1039,13 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL PLANTILLA NOTIFICACIÓN */}
+      {/* MODAL PLANTILLA NOTIFICACIÓN ACUERDO 009 DE 2024 */}
       {showNotificationModal && selectedStudentForNotification && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Plantilla Reglamento del Aprendiz SENA
+                <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Plantilla Acuerdo 009 de 2024 SENA
               </h3>
               <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -1021,10 +1061,10 @@ export default function App() {
                   Inasistencia
                 </button>
                 <button
-                  onClick={() => setNotificationTemplateType('llamado_atencion')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'llamado_atencion' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
+                  onClick={() => setNotificationTemplateType('llegadas_tarde')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'llegadas_tarde' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
-                  Llamado de Atención
+                  Llegadas Tarde
                 </button>
                 <button
                   onClick={() => setNotificationTemplateType('citacion')}
@@ -1037,7 +1077,7 @@ export default function App() {
               <textarea 
                 readOnly
                 value={getNotificationTemplateText(selectedStudentForNotification)}
-                rows={10}
+                rows={11}
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none"
               />
             </div>
