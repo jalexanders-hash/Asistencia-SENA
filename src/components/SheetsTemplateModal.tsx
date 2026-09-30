@@ -32,68 +32,6 @@ interface SheetsTemplateModalProps {
   onDataLoaded: (newData: typeof initialCourseData, targetFichaId?: string) => void;
 }
 
-/**
- * Fusiona de manera segura las inasistencias de un instructor específico 
- * sin afectar las fechas ni los registros de otros instructores en la base de datos.
- */
-function mergeInstructorAttendance(
-  currentCloudData: typeof initialCourseData,
-  uploadedData: typeof initialCourseData,
-  currentInstructorName: string
-): typeof initialCourseData {
-  const fechasDelInstructor = uploadedData.fechas_por_instructor?.[currentInstructorName] 
-    || uploadedData.fechas_asistencia 
-    || [];
-
-  const mergedData = JSON.parse(JSON.stringify(currentCloudData));
-
-  if (!mergedData.fechas_asistencia) {
-    mergedData.fechas_asistencia = [];
-  }
-  
-  fechasDelInstructor.forEach((fecha: string) => {
-    if (!mergedData.fechas_asistencia.includes(fecha)) {
-      mergedData.fechas_asistencia.push(fecha);
-    }
-  });
-
-  if (!mergedData.fechas_por_instructor) {
-    mergedData.fechas_por_instructor = {};
-  }
-  mergedData.fechas_por_instructor[currentInstructorName] = fechasDelInstructor;
-
-  if (!mergedData.asistencias_aprendices) {
-    mergedData.asistencias_aprendices = [];
-  }
-
-  mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
-    const uploadedStudent = uploadedData.asistencias_aprendices?.find(
-      (s: any) => String(s.numero_documento).trim() === String(cloudStudent.numero_documento).trim()
-    );
-
-    if (!uploadedStudent) return cloudStudent;
-
-    const cloudRegistros = { ...(cloudStudent.registros || {}) };
-
-    fechasDelInstructor.forEach((fecha: string) => {
-      delete cloudRegistros[fecha];
-    });
-
-    fechasDelInstructor.forEach((fecha: string) => {
-      if (uploadedStudent.registros?.[fecha]) {
-        cloudRegistros[fecha] = uploadedStudent.registros[fecha];
-      }
-    });
-
-    return {
-      ...cloudStudent,
-      registros: cloudRegistros
-    };
-  });
-
-  return mergedData;
-}
-
 export function SheetsTemplateModal({
   isOpen,
   onClose,
@@ -120,7 +58,7 @@ export function SheetsTemplateModal({
 
     try {
       const result = await parseUploadedTemplate(file, courseData);
-      console.log("=== RESULTADO DE PARSEADO EXCEL ===", result);
+      console.log("=== RESULTADO DE PARSEADO EXCEL (Configuración Completa) ===", result);
       setUploadResult(result);
     } catch (err: any) {
       console.error("Error al procesar plantilla Excel:", err);
@@ -151,32 +89,28 @@ export function SheetsTemplateModal({
       }
     }
 
-    // Último recurso: si el archivo no trae ficha explícita, usar la ficha activa actual para evitar bloqueos
+    // Último recurso: si el archivo no trae ficha explícita, usar la ficha activa actual
     if (!excelFichaId || excelFichaId === 'undefined' || excelFichaId === 'null') {
       excelFichaId = currentFicha;
     }
 
-    console.log("Ficha de destino seleccionada para guardar:", excelFichaId);
+    console.log("Ficha de destino seleccionada para configuración completa:", excelFichaId);
 
     setIsSaving(true);
     try {
-      const currentInstructorName = courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "Instructor";
+      // 2. Tomamos directamente la estructura completa analizada del archivo Excel
+      const completeDataToSave = {
+        ...uploadResult.data,
+        ficha_de_caracterizacion: excelFichaId
+      };
 
-      const safeMergedData = mergeInstructorAttendance(
-        courseData,
-        uploadResult.data,
-        currentInstructorName
-      );
+      // 3. Guardado aislado y directo en Firebase para esta ficha
+      await updateFichaCompleteData(completeDataToSave, excelFichaId);
 
-      safeMergedData.ficha_de_caracterizacion = excelFichaId;
-
-      // 2. Guardado aislado en Firebase utilizando estrictamente el ID de esta ficha
-      await updateFichaCompleteData(safeMergedData, excelFichaId);
-
-      // 3. Notificar a la app principal para actualizar estado y cambiar de ficha si corresponde
-      onDataLoaded(safeMergedData, excelFichaId);
+      // 4. Notificar a la app principal para actualizar estado y cambiar de ficha si corresponde
+      onDataLoaded(completeDataToSave, excelFichaId);
       
-      alert(`¡Inasistencias cargadas con éxito en la Ficha N° ${excelFichaId}!`);
+      alert(`¡Configuración y datos de la Ficha N° ${excelFichaId} cargados con éxito!`);
       onClose();
     } catch (err: any) {
       console.error("Error al guardar en Firebase desde el modal:", err);
@@ -192,7 +126,7 @@ export function SheetsTemplateModal({
         className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header Institucional */}
         <div className="px-6 py-5 bg-gradient-to-r from-emerald-800 via-emerald-700 to-sena text-white flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center border border-white/20 shadow-inner">
@@ -253,7 +187,7 @@ export function SheetsTemplateModal({
           </button>
         </div>
 
-        {/* Tab Content */}
+        {/* Tab Content Container */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/50">
           
           {/* TAB 1: DESCARGAR Y ABRIR */}
@@ -266,12 +200,12 @@ export function SheetsTemplateModal({
                     Formato oficial compatible con Google Sheets y Microsoft Excel (.xlsx)
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Este archivo contiene las hojas preconfiguradas con los datos de la ficha actual ({currentFicha}), instructores y el listado de aprendices listos para el registro de inasistencias.
+                    Este archivo contiene las hojas preconfiguradas con los datos de la ficha actual ({currentFicha}), instructores y el listado de aprendices listos para la configuración general.
                   </p>
                 </div>
               </div>
 
-              {/* Action Cards */}
+              {/* Action Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition-all group">
                   <div>
@@ -282,7 +216,7 @@ export function SheetsTemplateModal({
                       Plantilla para Inasistencias (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga el archivo con el listado actual de aprendices para marcar fallas o tardanzas y volver a cargarlo.
+                      Descarga el archivo con el listado actual de aprendices para configurar o actualizar registros.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -326,9 +260,9 @@ export function SheetsTemplateModal({
           {activeTab === 'estructura' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-3">
-                <h4 className="font-bold text-sm text-slate-800">Guía para el cargue de inasistencias</h4>
+                <h4 className="font-bold text-sm text-slate-800">Guía para la configuración inicial</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Asegúrate de conservar las columnas principales de identificación del aprendiz (<code>numero_documento</code>, <code>nombres</code>, <code>apellidos</code>) y registra las novedades de asistencia en las columnas correspondientes a las fechas.
+                  Asegúrate de conservar las columnas principales de identificación del aprendiz (<code>numero_documento</code>, <code>nombres</code>, <code>apellidos</code>) y la estructura de configuración general de la ficha.
                 </p>
               </div>
             </div>
@@ -346,7 +280,7 @@ export function SheetsTemplateModal({
                     Selecciona tu archivo de Google Sheets o Excel diligenciado
                   </h3>
                   <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                    Carga el archivo <code>.xlsx</code> con las inasistencias marcadas para la Ficha activa actual ({currentFicha}).
+                    Carga el archivo <code>.xlsx</code> de configuración general para actualizar la Ficha ({currentFicha}).
                   </p>
                 </div>
 
@@ -449,7 +383,7 @@ export function SheetsTemplateModal({
 
         </div>
 
-        {/* Footer */}
+        {/* Modal Footer */}
         <div className="px-6 py-3.5 bg-slate-100/80 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
