@@ -42,7 +42,8 @@ function mergeInstructorAttendance(
   currentInstructorName: string
 ): typeof initialCourseData {
   const fechasDelInstructor = uploadedData.fechas_por_instructor?.[currentInstructorName] 
-    || uploadedData.fechas_asistencia;
+    || uploadedData.fechas_asistencia 
+    || [];
 
   const mergedData = JSON.parse(JSON.stringify(currentCloudData));
 
@@ -61,21 +62,25 @@ function mergeInstructorAttendance(
   }
   mergedData.fechas_por_instructor[currentInstructorName] = fechasDelInstructor;
 
+  if (!mergedData.asistencias_aprendices) {
+    mergedData.asistencias_aprendices = [];
+  }
+
   mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
-    const uploadedStudent = uploadedData.asistencias_aprendices.find(
+    const uploadedStudent = uploadedData.asistencias_aprendices?.find(
       (s: any) => s.numero_documento === cloudStudent.numero_documento
     );
 
     if (!uploadedStudent) return cloudStudent;
 
-    const cloudRegistros = { ...cloudStudent.registros };
+    const cloudRegistros = { ...(cloudStudent.registros || {}) };
 
     fechasDelInstructor.forEach((fecha: string) => {
       delete cloudRegistros[fecha];
     });
 
     fechasDelInstructor.forEach((fecha: string) => {
-      if (uploadedStudent.registros[fecha]) {
+      if (uploadedStudent.registros?.[fecha]) {
         cloudRegistros[fecha] = uploadedStudent.registros[fecha];
       }
     });
@@ -117,9 +122,10 @@ export function SheetsTemplateModal({
       const result = await parseUploadedTemplate(file, courseData);
       setUploadResult(result);
     } catch (err: any) {
+      console.error("Error al procesar plantilla Excel:", err);
       setUploadResult({
         success: false,
-        message: `Error al procesar el archivo: ${err.message || err}`
+        message: `Error al procesar el archivo: ${err.message || err.toString()}`
       });
     } finally {
       setIsParsing(false);
@@ -131,10 +137,10 @@ export function SheetsTemplateModal({
 
     setIsSaving(true);
     try {
-      // Detección del instructor activo de forma segura o nombre por defecto
-      const currentInstructorName = courseData.equipo_instructores?.[0]?.nombre_del_instructor || "Instructor";
+      // Detección segura del instructor activo
+      const currentInstructorName = courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "Instructor";
 
-      // Fusión granular: protege la información de los demás instructores
+      // Fusión granular segura
       const safeMergedData = mergeInstructorAttendance(
         courseData,
         uploadResult.data,
@@ -142,8 +148,8 @@ export function SheetsTemplateModal({
       );
 
       await saveAttendanceData(
-        safeMergedData.fechas_asistencia,
-        safeMergedData.asistencias_aprendices,
+        safeMergedData.fechas_asistencia || [],
+        safeMergedData.asistencias_aprendices || [],
         safeMergedData.fechas_por_instructor || {},
         currentFicha
       );
@@ -152,7 +158,8 @@ export function SheetsTemplateModal({
       alert('¡Inasistencias cargadas y sincronizadas de forma segura sin afectar a los demás instructores!');
       onClose();
     } catch (err: any) {
-      alert(`Error al guardar en la base de datos: ${err.message || err}`);
+      console.error("Error al guardar en Firebase desde el modal:", err);
+      alert(`Error al guardar en la base de datos: ${err.message || err.toString()}`);
     } finally {
       setIsSaving(false);
     }
