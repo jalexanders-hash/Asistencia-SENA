@@ -46,7 +46,8 @@ export const saveAttendanceData = async (
   fichaId: string = DEFAULT_FICHA_ID
 ) => {
   try {
-    const docRef = doc(db, "fichas", fichaId);
+    const targetFichaId = String(fichaId || DEFAULT_FICHA_ID);
+    const docRef = doc(db, "fichas", targetFichaId);
     await updateDoc(docRef, {
       fechas_asistencia,
       asistencias_aprendices,
@@ -59,21 +60,29 @@ export const saveAttendanceData = async (
 };
 
 /**
- * Actualiza la ficha completa asegurando que se respete la ficha activa (fichaId),
- * evitando que un archivo externo sobrescriba una ficha que no corresponde.
+ * Actualiza la información completa de la ficha garantizando un almacenamiento aislado por ID.
+ * Da prioridad absoluta a la ficha detectada en el archivo o pasada por parámetro,
+ * previniendo cruces de información o modificaciones en otras fichas.
  */
 export const updateFichaCompleteData = async (newData: typeof defaultData, fichaId?: string) => {
   try {
-    // Usamos prioritariamente el ID de la ficha activa en la UI para proteger los datos
+    // Determinación estricta y segura del ID de la ficha de destino
     const targetFichaId = String(fichaId || newData.ficha_de_caracterizacion || DEFAULT_FICHA_ID);
+    
+    if (!targetFichaId || targetFichaId === "undefined" || targetFichaId === "null") {
+      throw new Error("No se pudo determinar un número de ficha válido para realizar el guardado en la base de datos.");
+    }
+
     const docRef = doc(db, "fichas", targetFichaId);
     
     await setDoc(docRef, {
       ...newData,
-      ficha_de_caracterizacion: targetFichaId // Forzamos que la ficha coincida con el documento de Firestore
+      ficha_de_caracterizacion: targetFichaId // Asegura consistencia interna en el documento
     }, { merge: true });
+
+    console.log(`Ficha ${targetFichaId} actualizada y protegida exitosamente en Firestore.`);
   } catch (error) {
-    console.error("Error al actualizar ficha:", error);
+    console.error("Error al actualizar la ficha completa en Firebase:", error);
     throw error;
   }
 };
