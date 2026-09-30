@@ -1105,20 +1105,22 @@ CC: ${correoInstructorActual}`;
         </div>
       )}
 
-      {/* MODAL GOOGLE SHEETS */}
-      <SheetsTemplateModal 
-        isOpen={isSheetsModalOpen} 
-        onClose={() => setIsSheetsModalOpen(false)} 
-        courseData={courseData} 
-      />
+{/* MODAL GOOGLE SHEETS */}
+    <SheetsTemplateModal 
+      isOpen={isSheetsModalOpen} 
+      onClose={() => setIsSheetsModalOpen(false)} 
+      currentFicha={currentFichaId}
+      courseData={courseData}
+      onDataLoaded={(newData) => setCourseData(newData)}
+    />
 
-      {/* MODAL EXPORTAR / REPORTES */}
-      <ExportReportModal 
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        courseData={courseData}
-        students={studentsWithStats}
-      />
-    </div>
-  );
+    {/* MODAL EXPORTAR / REPORTES */}
+    <ExportReportModal 
+      isOpen={showExportModal}
+      onClose={() => setShowExportModal(false)}
+      courseData={courseData}
+      students={studentsWithStats}
+    />
+  </div>
+);
 }
