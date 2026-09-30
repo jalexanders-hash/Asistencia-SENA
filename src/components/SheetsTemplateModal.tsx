@@ -21,7 +21,7 @@ import {
   ParsedTemplateResult
 } from '../lib/templateGenerator';
 import { downloadBlankAttendanceTemplate } from '../lib/blankTemplateGenerator';
-import { updateFichaCompleteData } from '../lib/firebase';
+import { saveAttendanceData } from '../lib/firebase';
 import { courseData as initialCourseData } from '../data';
 
 interface SheetsTemplateModalProps {
@@ -30,6 +30,63 @@ interface SheetsTemplateModalProps {
   currentFicha: string;
   courseData: typeof initialCourseData;
   onDataLoaded: (newData: typeof initialCourseData) => void;
+}
+
+/**
+ * Fusiona de manera segura las inasistencias de un instructor específico 
+ * sin afectar las fechas ni los registros de otros instructores en la base de datos.
+ */
+function mergeInstructorAttendance(
+  currentCloudData: typeof initialCourseData,
+  uploadedData: typeof initialCourseData,
+  currentInstructorName: string
+): typeof initialCourseData {
+  const fechasDelInstructor = uploadedData.fechas_por_instructor?.[currentInstructorName] 
+    || uploadedData.fechas_asistencia;
+
+  const mergedData = JSON.parse(JSON.stringify(currentCloudData));
+
+  if (!mergedData.fechas_asistencia) {
+    mergedData.fechas_asistencia = [];
+  }
+  
+  fechasDelInstructor.forEach((fecha: string) => {
+    if (!mergedData.fechas_asistencia.includes(fecha)) {
+      mergedData.fechas_asistencia.push(fecha);
+    }
+  });
+
+  if (!mergedData.fechas_por_instructor) {
+    mergedData.fechas_por_instructor = {};
+  }
+  mergedData.fechas_por_instructor[currentInstructorName] = fechasDelInstructor;
+
+  mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
+    const uploadedStudent = uploadedData.asistencias_aprendices.find(
+      (s: any) => s.numero_documento === cloudStudent.numero_documento
+    );
+
+    if (!uploadedStudent) return cloudStudent;
+
+    const cloudRegistros = { ...cloudStudent.registros };
+
+    fechasDelInstructor.forEach((fecha: string) => {
+      delete cloudRegistros[fecha];
+    });
+
+    fechasDelInstructor.forEach((fecha: string) => {
+      if (uploadedStudent.registros[fecha]) {
+        cloudRegistros[fecha] = uploadedStudent.registros[fecha];
+      }
+    });
+
+    return {
+      ...cloudStudent,
+      registros: cloudRegistros
+    };
+  });
+
+  return mergedData;
 }
 
 export function SheetsTemplateModal({
@@ -74,9 +131,25 @@ export function SheetsTemplateModal({
 
     setIsSaving(true);
     try {
-      await updateFichaCompleteData(uploadResult.data);
-      onDataLoaded(uploadResult.data);
-      alert('¡Datos cargados y actualizados exitosamente en la nube!');
+      // Detección del instructor activo de forma segura o nombre por defecto
+      const currentInstructorName = courseData.equipo_instructores?.[0]?.nombre_del_instructor || "Instructor";
+
+      // Fusión granular: protege la información de los demás instructores
+      const safeMergedData = mergeInstructorAttendance(
+        courseData,
+        uploadResult.data,
+        currentInstructorName
+      );
+
+      await saveAttendanceData(
+        safeMergedData.fechas_asistencia,
+        safeMergedData.asistencias_aprendices,
+        safeMergedData.fechas_por_instructor || {},
+        currentFicha
+      );
+
+      onDataLoaded(safeMergedData);
+      alert('¡Inasistencias cargadas y sincronizadas de forma segura sin afectar a los demás instructores!');
       onClose();
     } catch (err: any) {
       alert(`Error al guardar en la base de datos: ${err.message || err}`);
@@ -172,7 +245,6 @@ export function SheetsTemplateModal({
 
               {/* Action Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Opción 1: Descarga Plantilla en Blanco para Inasistencias */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition-all group">
                   <div>
                     <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
@@ -196,7 +268,6 @@ export function SheetsTemplateModal({
                   </div>
                 </div>
 
-                {/* Opción 2: Descargar Formato Completo Estructurado */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-300 transition-all group">
                   <div>
                     <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center mb-3">
