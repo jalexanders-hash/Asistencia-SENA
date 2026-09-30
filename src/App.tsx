@@ -26,8 +26,12 @@ import {
   LayoutDashboard,
   Printer,
   Copy,
-  Check
+  Check,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
+
+const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding=%27utf-8%27?%3e%3c!--%20Generator:%20Adobe%20Illustrator%2026.0.1,%20SVG%20Export%20Plug-In%20.%20SVG%20Version:%206.00%20Build%200)%20--%3e%3csvg%20version=%271.1%27%20id=%27Capa_1%27%20xmlns=%27http://www.w3.org/2000/svg%27%20xmlns:xlink=%27http://www.w3.org/1999/xlink%27%20x=%270px%27%20y=%270px%27%20viewBox=%270%200%201000%201000%27%20style=%27enable-background:new%200%200%201000%201000;%27%20xml:space=%27preserve%27%3e%3cstyle%20type=%27text/css%27%3e%20.st0{fill:%2339a900;}%20%3c/style%3e%3cpath%20id=%27path47-5%27%20class=%27st0%27%20d=%27M504.2,20.5c-58.3,0.1-105.6,47.4-105.5,105.8c0.1,58.3,47.4,105.6,105.7,105.6%20c58.3,0,105.6-47.3,105.6-105.7V126C609.9,67.6,562.6,20.4,504.2,20.5z%20M155.6,264.6c-18.6,0.1-37.5,1.1-55.2,5.6%20c-11.7,3-23,7.8-30.3,15.4c-9.2,9.5-10.4,22.3-5.9,33.3c4,9.7,14.8,16.9,26.8,21.1c25.9,8.9,54.6,10.7,81.8,16.3%20c5,1.2,10.6,2.6,13.7,6c3.2,4.1,1.3,9.7-4,12.2c-8.8,4.5-20.1,4.5-30.4,4.4c-9.4-0.4-19.7-1.2-27.2-5.9c-5.5-3.4-6.5-9.1-5.2-14.1%20l-60.6,0c-0.2,9.2,1.6,18.9,8.4,26.8c5.6,6.8,14.8,11.5,24.6,14.4c15.7,4.6,32.7,6,49.4,6.4c22.7,0.4,45.8-0.3,67.6-5.4%20c13-3.2,25.8-8.3,34.1-16.6c14.8-14.8,11.3-38.3-8.3-49.8c-9.8-5.7-21.5-9.2-33.4-11.5c-17.5-3.6-35.3-6.3-52.9-9.2%20c-6.2-1.2-12.8-2.3-18-5.2c-5.5-2.9-5.9-9.8-0.3-12.9c7.2-4.1,16.8-4,25.4-4c9.1,0.2,19,0.7,26.5,5c4.2,2.3,5.9,6.3,5.9,10.1%20l57.6-0.1c-0.2-7.3-1.6-14.9-6.9-21.2c-6.2-7.8-17.1-12.7-28.3-15.5C192.8,265.6,174.1,264.7,155.6,264.6L155.6,264.6z%20M280.6,268.9%20l0,137.7l168.1,0l0-30H342.3v-26.7h94.9v-29.3h-94.9l0-21.9l102.6,0l-0.1-29.7L280.6,268.9z%20M557.5,269c0,0-51.9,0-77.9,0l0,137.7%20l59,0l0-92.7l80.8,92.6l81,0.1l0-137.7l-59.1,0l0.1,92L557.5,269z%20M805.6,269.2c0,0-63.6,91.9-95.6,137.7l61.9,0l14.9-24.8h95.7%20l13.9,24.9l68.8,0L874,269.2L805.6,269.2z%20M836.6,302.1l29.4,49.9l-60.7,0.1L836.6,302.1z%20M10.6,445.6l0.5,75l280.1-1%20c14.3,3.1,22.6,12.4,19.7,33.5L138.6,854.7l56.1,52.5l266.9-461.6L10.6,445.6z%20M545.2,446.2l262.4,459.6l58-52.1L691.3,552.9%20c-2.9-21.2,5.4-30.6,19.7-33.7l280.2,1l-0.1-73.7L545.2,446.2z%20M500.9,522.3L254.8,944.7l65.4,31.9L484.4,699%20c5.7-4.6,11.4-7.1,17.1-7.3c6-0.2,12.2,2,18.3,6.8l163.8,278.4l67.4-35.2L500.9,522.3z%27/%3e%3cg%20id=%27_x23_000000ff-2%27%20transform=%27matrix(0.31570611,0,0,0.23560774,-391.49698,-10.601126)%27%3e%3c/g%3e%3c/svg%3e`;
 
 const formatDateForData = (dateString: string) => {
   const [year, month, day] = dateString.split('-');
@@ -37,6 +41,7 @@ const formatDateForData = (dateString: string) => {
 export default function App() {
   const [courseData, setCourseData] = useState(initialCourseData);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
   const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
@@ -44,18 +49,33 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  const [mainView, setMainView] = useState<'listado' | 'tablero'>('listado');
+  const [mainView, setMainView] = useState<'listado' | 'tablero' | 'offline' | 'reportes'>('listado');
   const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const [instructorFiltroReporte, setInstructorFiltroReporte] = useState<string>('todos');
 
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
+  // Estados para historial y perfil individual del aprendiz
+  const [selectedStudentForProfile, setSelectedStudentForProfile] = useState<any>(null);
+
   // Estados para plantillas de notificaciones con reglamento SENA
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedStudentForNotification, setSelectedStudentForNotification] = useState<any>(null);
   const [notificationTemplateType, setNotificationTemplateType] = useState<'inasistencia' | 'llamado_atencion' | 'citacion'>('inasistencia');
   const [copiedNotification, setCopiedNotification] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -88,7 +108,6 @@ export default function App() {
     
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
     
@@ -103,7 +122,6 @@ export default function App() {
   }, [currentInstructor, courseData]);
     
   const [showExportModal, setShowExportModal] = useState(false);
-
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [isSavingAttendance, setIsSavingAttendance] = useState(false);
   const [attendanceDate, setAttendanceDate] = useState(() => {
@@ -179,7 +197,10 @@ export default function App() {
       alert("Asistencia guardada correctamente.");
     } catch (error) {
       console.error("Failed to save attendance", error);
-      alert("Error al guardar la asistencia en la nube.");
+      // Fallback offline a localStorage si falla la red
+      localStorage.setItem(`sena_offline_ficha_${currentFichaId}`, JSON.stringify({ newFechas, newAprendices }));
+      setShowAttendanceModal(false);
+      alert("Sin conexión cloud: Asistencia guardada en modo local (Offline).");
     } finally {
       setIsSavingAttendance(false);
     }
@@ -301,11 +322,11 @@ export default function App() {
   const getNotificationTemplateText = (student: any) => {
     const instructorName = currentInstructor?.nombre_del_instructor || "Instructor SENA";
     if (notificationTemplateType === 'inasistencia') {
-      return `Asunto: Notificación por Inasistencia y Presunto Incumplimiento - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),\n\nDe conformidad con el Reglamento del Aprendiz SENA (Acuerdo 07 de 2012 / Acuerdo Actualizado), le informamos que presenta un acumulado de ${student.fallasAcumuladas} inasistencias injustificadas en la competencia del programa ${courseData.denominacion}.\n\nLe recordamos el deber de asistencia puntual a las actividades de formación. Por favor acérquese con su instructor para presentar las justificaciones pertinentes.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+      return `Asunto: Notificación por Inasistencia y Presunto Incumplimiento - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),\n\nDe conformidad con el Reglamento del Aprendiz SENA (Acuerdo 07 de 2012 / Acuerdo Actualizado - Art. 18), le informamos que presenta un acumulado de ${student.fallasAcumuladas} inasistencias injustificadas en la competencia del programa ${courseData.denominacion}.\n\nLe recordamos el deber de asistencia puntual a las actividades de formación. Por favor acérquese con su instructor para presentar las justificaciones pertinentes.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
     } else if (notificationTemplateType === 'llamado_atencion') {
-      return `Asunto: Llamado de Atención Formal por Inasistencias Reiteradas - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nEl presente correo constituye un LLAMADO DE ATENCIÓN FORMAL debido a sus fallas continuas (${student.fallasAcumuladas} faltas), vulnerando los deberes y compromisos establecidos en la normativa institucional sobre la asistencia obligatoria a los procesos de formación.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+      return `Asunto: Llamado de Atención Formal por Inasistencias Reiteradas - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nEl presente correo constituye un LLAMADO DE ATENCIÓN FORMAL (Art. 27 Reglamento del Aprendiz) debido a sus fallas continuas (${student.fallasAcumuladas} faltas), vulnerando los deberes institucionales sobre asistencia obligatoria.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
     } else {
-      return `Asunto: Citación a Comité / Descargos por Inasistencia - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nDado el incumplimiento reiterado en las normas de asistencia (${student.fallasAcumuladas} inasistencias), se le cita formalmente a reunión de seguimiento académico para revisión de su caso y emisión de descargos.\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
+      return `Asunto: Citación a Comité de Evaluación y Seguimiento - Ficha ${courseData.ficha_de_caracterizacion}\n\nEstimado(a) aprendiz ${student.nombres} ${student.apellidos},\n\nDado el incumplimiento reiterado en las normas de asistencia (${student.fallasAcumuladas} inasistencias), se le cita formalmente a Comité de Evaluación y Seguimiento para revisión de su caso y emisión de descargos (Art. 22 al 26).\n\nAtentamente,\n${instructorName}\nCC: ${correoInstructorActual}`;
     }
   };
 
@@ -313,8 +334,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-          <p className="text-slate-500 font-medium">Cargando plataforma académica...</p>
+          <img src={LOGO_SENA_SVG} alt="SENA" className="w-16 h-16 animate-pulse" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#39a900]" />
+          <p className="text-slate-600 font-medium">Cargando plataforma académica SENA...</p>
         </div>
       </div>
     );
@@ -327,14 +349,17 @@ export default function App() {
   if (currentInstructorIdx === null || currentInstructor === null) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 p-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+        <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 p-8 text-center space-y-4">
+          <div className="flex justify-center">
+            <img src={LOGO_SENA_SVG} alt="SENA" className="w-14 h-14" />
+          </div>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-2">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h1 className="text-2xl font-bold mb-2 text-slate-800">Acceso Restringido</h1>
-          <p className="text-slate-600 mb-6">{authError || 'Tu usuario no tiene asignación en esta ficha.'}</p>
+          <h1 className="text-2xl font-bold text-slate-800">Acceso Restringido</h1>
+          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor en esta ficha.'}</p>
            
-          <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-500 mb-6 text-left">
+          <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-500 text-left">
             <span className="font-semibold text-slate-700 block mb-1">Correo actual:</span>
             {user.email}
           </div>
@@ -353,23 +378,24 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12 flex flex-col justify-between">
       
+      {/* HEADER CON LOGO OFICIAL Y ESTILOS INSTITUCIONALES */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-3">
           
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-emerald-700 rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-emerald-100">
-              <span className="text-xs tracking-tighter">SENA</span>
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-[#39a900]/30 p-1">
+              <img src={LOGO_SENA_SVG} alt="Logo SENA" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="font-bold text-slate-800 text-base tracking-tight hidden sm:block">
+              <span className="font-bold text-slate-900 text-base tracking-tight hidden sm:block">
                 SENA - Gestión Académica
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                <Layers className="w-3.5 h-3.5 text-[#39a900]" />
                 <select 
                   value={currentFichaId}
                   onChange={(e) => setCurrentFichaId(e.target.value)}
-                  className="bg-emerald-50 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded border border-emerald-200 focus:outline-none cursor-pointer"
+                  className="bg-emerald-50 text-[#39a900] text-xs font-bold px-2 py-0.5 rounded border border-[#39a900]/30 focus:outline-none cursor-pointer"
                 >
                   <option value="3387401">Ficha: 3387401</option>
                   <option value="3407860">Ficha: 3407860 (Nuevo Grupo)</option>
@@ -380,6 +406,12 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Indicador Online / Offline */}
+            <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${isOnline ? 'bg-emerald-50 text-[#39a900] border border-[#39a900]/30' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+              {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+              <span>{isOnline ? 'En línea' : 'Modo Offline'}</span>
+            </div>
+
             <div className="relative">
               <button 
                 onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
@@ -398,7 +430,7 @@ export default function App() {
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-3 z-50">
                   <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Centro de Notificaciones</span>
-                    <span className="text-[11px] text-emerald-600 font-semibold cursor-pointer hover:underline" onClick={() => { setMainView('listado'); setActiveTab('alertas'); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
+                    <span className="text-[11px] text-[#39a900] font-semibold cursor-pointer hover:underline" onClick={() => { setMainView('listado'); setActiveTab('alertas'); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
                   </div>
 
                   <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
@@ -411,7 +443,7 @@ export default function App() {
                           max="20" 
                           value={limiteInasistencias}
                           onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-14 text-center border border-slate-300 rounded px-1.5 py-0.5 text-xs font-bold bg-white"
+                          className="w-14 text-center border border-slate-300 rounded px-1.5 py-0.5 text-xs font-bold bg-white text-[#39a900]"
                         />
                         <span className="text-xs text-slate-500">faltas</span>
                       </div>
@@ -433,7 +465,7 @@ export default function App() {
                               setShowNotificationModal(true);
                               setShowNotificationsDropdown(false);
                             }}
-                            className="px-2.5 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-[11px] font-bold transition-colors whitespace-nowrap"
+                            className="px-2.5 py-1 bg-emerald-50 text-[#39a900] hover:bg-emerald-100 rounded text-[11px] font-bold transition-colors whitespace-nowrap"
                           >
                             Plantilla
                           </button>
@@ -450,7 +482,7 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
-              <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs border-2 border-emerald-100">
+              <div className="w-9 h-9 rounded-full bg-[#39a900]/10 flex items-center justify-center font-bold text-[#39a900] text-xs border-2 border-[#39a900]/20">
                 JS
               </div>
               <div className="hidden md:block text-left leading-tight">
@@ -462,39 +494,41 @@ export default function App() {
         </div>
       </header>
 
+      {/* CONTENIDO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
         
+        {/* NAVEGACIÓN PRINCIPAL ENTRE VISTAS */}
         <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setMainView('listado')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${mainView === 'listado' ? 'bg-emerald-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${mainView === 'listado' ? 'bg-[#39a900] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               <Users className="w-4 h-4" />
-              Listado de Aprendices
+              Listado y Asistencia
             </button>
             <button
               onClick={() => setMainView('tablero')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${mainView === 'tablero' ? 'bg-emerald-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${mainView === 'tablero' ? 'bg-[#39a900] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               <LayoutDashboard className="w-4 h-4" />
-              Vista de Tablero
+              Vista de Tablero (KPI)
             </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
             <button 
               onClick={handleOpenAttendance}
-              className="flex items-center gap-2 px-3.5 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 shadow-sm transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] shadow-sm transition-colors"
             >
               <ClipboardList className="w-4 h-4" />
               Tomar Asistencia
             </button>
             <button 
               onClick={() => setIsSheetsModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 shadow-sm transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-[#39a900] hover:border-[#39a900]/50 shadow-sm transition-colors"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <FileSpreadsheet className="w-4 h-4 text-[#39a900]" />
               <span className="hidden sm:inline">Google Sheets</span>
             </button>
           </div>
@@ -504,43 +538,46 @@ export default function App() {
           <p className="text-xs text-slate-500 mb-1">
             Inicio &gt; {mainView === 'listado' ? 'Listado de Aprendices' : 'Vista de Tablero'} &gt; <span className="font-semibold text-slate-800">Ficha {courseData.ficha_de_caracterizacion}</span>
           </p>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <img src={LOGO_SENA_SVG} alt="" className="w-7 h-7 inline-block" />
             {courseData.denominacion} - Ficha {courseData.ficha_de_caracterizacion}
           </h1>
         </div>
 
         {mainView === 'listado' && (
           <div className="space-y-6">
-            <div className="flex border-b border-slate-200 gap-8 text-sm font-medium">
+            <div className="flex border-b border-slate-200 gap-8 text-sm font-medium overflow-x-auto">
               <button 
                 onClick={() => setActiveTab('asistencia')}
-                className={`pb-3 transition-colors ${activeTab === 'asistencia' ? 'text-emerald-700 border-b-2 border-emerald-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'asistencia' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 Listado y Control de Asistencia
               </button>
               <button 
                 onClick={() => setActiveTab('ficha')}
-                className={`pb-3 transition-colors ${activeTab === 'ficha' ? 'text-emerald-700 border-b-2 border-emerald-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'ficha' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 Datos de la Ficha
               </button>
               <button 
                 onClick={() => setActiveTab('alertas')}
-                className={`pb-3 transition-colors ${activeTab === 'alertas' ? 'text-emerald-700 border-b-2 border-emerald-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'alertas' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 Configuración de Alertas
               </button>
               <button 
                 onClick={() => setActiveTab('reportes')}
-                className={`pb-3 transition-colors ${activeTab === 'reportes' ? 'text-emerald-700 border-b-2 border-emerald-700 font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'reportes' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
-                Reportes y Exportación
+                Reportes y Google Sheets
               </button>
             </div>
 
             {activeTab === 'ficha' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-                <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Información General de la Ficha</h2>
+                <h2 className="text-lg font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+                  <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Información General de la Ficha
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                   <div>
                     <span className="block font-semibold text-slate-500">Número de Ficha</span>
@@ -572,7 +609,7 @@ export default function App() {
                             <p className="text-xs text-slate-500 mt-0.5">Correo: {inst.correo || inst.correo_institucional || 'No registrado'}</p>
                           </div>
                           <div className="text-xs space-y-1 text-right md:text-left">
-                            <span className="font-semibold text-emerald-700 block">Días de formación programados:</span>
+                            <span className="font-semibold text-[#39a900] block">Días de formación programados:</span>
                             <span className="text-slate-700 font-mono font-bold">{diasInst.length} sesiones</span>
                           </div>
                         </div>
@@ -588,11 +625,11 @@ export default function App() {
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div 
                     onClick={() => { setKpiFilter('all'); setSelectedStudentDoc(null); }}
-                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' && !selectedStudentDoc ? 'border-emerald-700 ring-2 ring-emerald-700/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' && !selectedStudentDoc ? 'border-[#39a900] ring-2 ring-[#39a900]/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
                   >
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
-                      <div className="p-2 bg-emerald-50 rounded-lg text-emerald-700"><Users className="w-4 h-4" /></div>
+                      <div className="p-2 bg-emerald-50 rounded-lg text-[#39a900]"><Users className="w-4 h-4" /></div>
                     </div>
                     <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
                     <span className="text-[10px] text-slate-400 mt-1">Clic para mostrar todos</span>
@@ -600,13 +637,13 @@ export default function App() {
                   
                   <div 
                     onClick={() => { setKpiFilter('present'); setSelectedStudentDoc(null); }}
-                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-emerald-700 ring-2 ring-emerald-700/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
+                    className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'present' ? 'border-[#39a900] ring-2 ring-[#39a900]/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
                   >
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-semibold text-slate-500">Asistencia Global</span>
-                      <div className="p-2 bg-emerald-50 rounded-lg text-emerald-700"><CheckCircle2 className="w-4 h-4" /></div>
+                      <div className="p-2 bg-emerald-50 rounded-lg text-[#39a900]"><CheckCircle2 className="w-4 h-4" /></div>
                     </div>
-                    <span className="text-2xl font-bold text-emerald-700 mt-3">{stats.attendanceRate}%</span>
+                    <span className="text-2xl font-bold text-[#39a900] mt-3">{stats.attendanceRate}%</span>
                     <span className="text-[10px] text-slate-400 mt-1">Sin inasistencias</span>
                   </div>
 
@@ -656,7 +693,7 @@ export default function App() {
                       placeholder="Buscar por nombre, apellido o documento..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:bg-white focus:border-emerald-500 transition-colors"
+                      className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:bg-white focus:border-[#39a900] transition-colors"
                     />
                   </div>
 
@@ -666,14 +703,14 @@ export default function App() {
                         type="checkbox"
                         checked={showRiskOnly}
                         onChange={(e) => setShowRiskOnly(e.target.checked)}
-                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                        className="rounded border-slate-300 text-[#39a900] focus:ring-[#39a900] w-4 h-4"
                       />
                       Mostrar solo aprendices en riesgo
                     </label>
                   </div>
                 </div>
 
-                {/* Tabla de Asistencia */}
+                {/* Tabla de Asistencia optimizada */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
@@ -690,9 +727,9 @@ export default function App() {
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {filteredStudents.map((student) => (
-                          <tr key={student.numero_documento} className="hover:bg-slate-50/80">
-                            <td className="p-3.5 font-bold text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap">
-                              {student.apellidos} {student.nombres}
+                          <tr key={student.numero_documento} className="hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedStudentForProfile(student)}>
+                            <td className="p-3.5 font-bold text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap hover:text-[#39a900]">
+                              {student.apellidos} {student.nombres} 🔍
                             </td>
                             <td className="p-3.5 text-center font-mono text-slate-500 whitespace-nowrap">{student.numero_documento}</td>
                             <td className="p-3.5 text-center font-bold">
@@ -710,7 +747,7 @@ export default function App() {
                               return (
                                 <td key={idx} className="p-3.5 text-center whitespace-nowrap">
                                   {!status ? (
-                                    <span className="text-emerald-600 font-bold">·</span>
+                                    <span className="text-[#39a900] font-bold">·</span>
                                   ) : status === 'X' ? (
                                     <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">X</span>
                                   ) : status === 'Tarde' ? (
@@ -742,9 +779,9 @@ export default function App() {
                       max="20"
                       value={limiteInasistencias}
                       onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold bg-white"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold bg-white text-[#39a900]"
                     />
-                    <p className="text-xs text-slate-500 mt-1">Los aprendices que alcancen o superen este número de faltas aparecerán destacados en el centro de notificaciones.</p>
+                    <p className="text-xs text-slate-500 mt-1">Los aprendices que alcancen o superen este número de faltas aparecerán destacados en el centro de notificaciones según el Reglamento del Aprendiz SENA.</p>
                   </div>
                 </div>
               </div>
@@ -752,14 +789,44 @@ export default function App() {
 
             {activeTab === 'reportes' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-                <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Generador de Reportes Académicos</h2>
-                <p className="text-sm text-slate-600">Haz clic en el siguiente botón para abrir la vista previa e imprimir los reportes detallados de inasistencias y tardanzas.</p>
-                <button 
-                  onClick={() => setShowExportModal(true)}
-                  className="px-5 py-2.5 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 flex items-center gap-2 shadow-sm transition-colors"
-                >
-                  <Printer className="w-4 h-4" /> Abrir Generador de Reportes PDF
-                </button>
+                <div className="flex items-center gap-3 border-b pb-4">
+                  <img src={LOGO_SENA_SVG} alt="" className="w-10 h-10" />
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-800">Generador de Reportes y Sincronización Google Sheets</h2>
+                    <p className="text-xs text-slate-500">Centralice la información académica discriminando por instructor y competencias.</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border">
+                  <div className="w-full sm:w-auto">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Filtrar Reportes por Instructor:</label>
+                    <select 
+                      value={instructorFiltroReporte}
+                      onChange={(e) => setInstructorFiltroReporte(e.target.value)}
+                      className="border rounded-lg px-3 py-1.5 text-xs font-semibold bg-white text-slate-800"
+                    >
+                      <option value="todos">Todos los Instructores</option>
+                      {courseData.equipo_instructores?.map((inst: any, idx: number) => (
+                        <option key={idx} value={inst.nombre_del_instructor}>{inst.nombre_del_instructor}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-4 pt-2">
+                  <button 
+                    onClick={() => setShowExportModal(true)}
+                    className="px-5 py-2.5 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors"
+                  >
+                    <Printer className="w-4 h-4" /> Abrir Vista Previa y PDF
+                  </button>
+                  <button 
+                    onClick={() => setIsSheetsModalOpen(true)}
+                    className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-emerald-50 hover:text-[#39a900] flex items-center gap-2 shadow-sm transition-colors"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-[#39a900]" /> Sincronizar Google Sheets
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -767,25 +834,104 @@ export default function App() {
 
         {mainView === 'tablero' && (
           <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-            <h2 className="text-lg font-bold text-slate-800">Vista de Tablero y Estadísticas Generales</h2>
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <img src={LOGO_SENA_SVG} alt="" className="w-6 h-6" /> Vista de Tablero y Estadísticas Generales
+            </h2>
             <p className="text-sm text-slate-600">Resumen analítico del comportamiento de asistencia de la ficha {courseData.ficha_de_caracterizacion}.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 border-l-4 border-l-[#39a900]">
                 <span className="text-xs font-semibold text-slate-500">Total Aprendices Matriculados</span>
-                <p className="text-2xl font-bold text-slate-800 mt-1">{stats.totalStudents}</p>
+                <p className="text-3xl font-bold text-slate-800 mt-1">{stats.totalStudents}</p>
               </div>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 border-l-4 border-l-blue-500">
                 <span className="text-xs font-semibold text-slate-500">Porcentaje de Asistencia General</span>
-                <p className="text-2xl font-bold text-emerald-700 mt-1">{stats.attendanceRate}%</p>
+                <p className="text-3xl font-bold text-[#39a900] mt-1">{stats.attendanceRate}%</p>
               </div>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 border-l-4 border-l-red-500">
                 <span className="text-xs font-semibold text-slate-500">Aprendices en Riesgo Académico</span>
-                <p className="text-2xl font-bold text-red-600 mt-1">{stats.enRiesgo}</p>
+                <p className="text-3xl font-bold text-red-600 mt-1">{stats.enRiesgo}</p>
               </div>
             </div>
           </div>
         )}
       </main>
+
+      {/* MODAL: HISTORIAL DETALLADO POR APRENDIZ */}
+      {selectedStudentForProfile && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <img src={LOGO_SENA_SVG} alt="" className="w-8 h-8" />
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base">{selectedStudentForProfile.apellidos} {selectedStudentForProfile.nombres}</h3>
+                  <p className="text-xs text-slate-500 font-mono">Documento: {selectedStudentForProfile.numero_documento} | Ficha: {courseData.ficha_de_caracterizacion}</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedStudentForProfile(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-grow">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-center">
+                  <span className="text-xs font-semibold text-red-600">Fallas Acumuladas</span>
+                  <p className="text-2xl font-bold text-red-700 mt-1">{selectedStudentForProfile.fallasAcumuladas}</p>
+                </div>
+                <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl text-center">
+                  <span className="text-xs font-semibold text-amber-600">Llegadas Tarde</span>
+                  <p className="text-2xl font-bold text-amber-700 mt-1">{selectedStudentForProfile.tardanzasAcumuladas}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-bold text-slate-800 mb-2">Historial Detallado de Registros por Fecha:</h4>
+                <div className="border rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700 uppercase font-bold border-b">
+                        <th className="p-3">Fecha de Sesión</th>
+                        <th className="p-3 text-center">Estado Registrado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {currentInstructorDates.map((date, idx) => {
+                        const status = selectedStudentForProfile.registros[date];
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="p-3 font-mono font-bold text-slate-700">{date}</td>
+                            <td className="p-3 text-center">
+                              {!status ? (
+                                <span className="bg-emerald-50 text-[#39a900] font-bold px-2 py-0.5 rounded">Presente</span>
+                              ) : status === 'X' ? (
+                                <span className="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded">Falta (X)</span>
+                              ) : status === 'Tarde' ? (
+                                <span className="bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded">Tarde (T)</span>
+                              ) : (
+                                <span className="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded">Excusa (E)</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+              <button 
+                onClick={() => setSelectedStudentForProfile(null)}
+                className="px-5 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-900"
+              >
+                Cerrar Perfil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL TOMAR ASISTENCIA */}
       {showAttendanceModal && (
@@ -793,7 +939,7 @@ export default function App() {
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-emerald-600" /> Registro Diario de Asistencia
+                <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Registro Diario de Asistencia
               </h3>
               <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -843,7 +989,7 @@ export default function App() {
               <button 
                 onClick={handleSaveAttendance}
                 disabled={isSavingAttendance}
-                className="px-5 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 flex items-center gap-2 shadow-sm transition-colors disabled:opacity-50"
+                className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors disabled:opacity-50"
               >
                 {isSavingAttendance && <Loader2 className="w-4 h-4 animate-spin" />}
                 Guardar Asistencia
@@ -859,7 +1005,7 @@ export default function App() {
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col">
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                <Mail className="w-5 h-5 text-emerald-600" /> Plantilla de Comunicación SENA
+                <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Plantilla Reglamento del Aprendiz SENA
               </h3>
               <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -870,21 +1016,21 @@ export default function App() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setNotificationTemplateType('inasistencia')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'inasistencia' ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'inasistencia' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
                   Inasistencia
                 </button>
                 <button
                   onClick={() => setNotificationTemplateType('llamado_atencion')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'llamado_atencion' ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'llamado_atencion' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
                   Llamado de Atención
                 </button>
                 <button
                   onClick={() => setNotificationTemplateType('citacion')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'citacion' ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'citacion' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
-                  Citación
+                  Citación a Comité
                 </button>
               </div>
 
@@ -909,7 +1055,7 @@ export default function App() {
                   setCopiedNotification(true);
                   setTimeout(() => setCopiedNotification(false), 2000);
                 }}
-                className="px-5 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 flex items-center gap-2 shadow-sm transition-colors"
+                className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors"
               >
                 {copiedNotification ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copiedNotification ? 'Copiado al Portapapeles' : 'Copiar Texto'}
