@@ -131,20 +131,18 @@ export default function App() {
 
   useEffect(() => {
     setIsLoading(true);
-    let unsubscribe: () => void;
-     
-    subscribeToFichaData((data) => {
-      setCourseData(data);
+    
+    const unsubscribe = subscribeToFichaData((data) => {
+      if (data) {
+        setCourseData(data);
+      }
       setIsLoading(false);
-    }, currentFichaId).then(unsub => {
-      unsubscribe = unsub;
-    }).catch(err => {
-      console.error("Error loading data from Firestore:", err);
-      setIsLoading(false);
-    });
+    }, currentFichaId);
      
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
     };
   }, [currentFichaId]);
 
@@ -317,14 +315,9 @@ export default function App() {
     return studentsWithStats.filter(s => s.enRiesgo || s.enRiesgoTarde);
   }, [studentsWithStats]);
 
-  // Generación de plantillas basadas en el Acuerdo 009 de 2024 con fechas exclusivamente del instructor actual
   const getNotificationTemplateText = (student: any) => {
     const instructorName = currentInstructor?.nombre_del_instructor || "Instructor SENA";
-    
-    // Fechas de fallas ('X') exclusivas de este instructor
     const fechasFallasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'X');
-    
-    // Fechas de tardanzas ('Tarde') exclusivas de este instructor
     const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde');
 
     if (notificationTemplateType === 'inasistencia') {
@@ -1105,29 +1098,27 @@ CC: ${correoInstructorActual}`;
         </div>
       )}
 
-{/* MODAL GOOGLE SHEETS */}
-    <SheetsTemplateModal 
-      isOpen={isSheetsModalOpen} 
-      onClose={() => setIsSheetsModalOpen(false)} 
-      currentFicha={currentFichaId}
-      courseData={courseData} 
-      onDataLoaded={(newData, targetFichaId) => {
-        // 1. Forzar el cambio de ficha inmediatamente si es diferente
-        if (targetFichaId && targetFichaId !== currentFichaId) {
-          setCurrentFichaId(targetFichaId);
-        }
-        // 2. Inyectar los datos directamente al estado local para visualización instantánea
-        setCourseData(JSON.parse(JSON.stringify(newData)));
-      }}
-    />
+      {/* MODAL GOOGLE SHEETS */}
+      <SheetsTemplateModal 
+        isOpen={isSheetsModalOpen} 
+        onClose={() => setIsSheetsModalOpen(false)} 
+        currentFicha={currentFichaId}
+        courseData={courseData} 
+        onDataLoaded={(newData, targetFichaId) => {
+          if (targetFichaId && targetFichaId !== currentFichaId) {
+            setCurrentFichaId(targetFichaId);
+          }
+          setCourseData(JSON.parse(JSON.stringify(newData)));
+        }}
+      />
 
-    {/* MODAL EXPORTAR / REPORTES */}
-    <ExportReportModal 
-      isOpen={showExportModal}
-      onClose={() => setShowExportModal(false)}
-      courseData={courseData}
-      students={studentsWithStats}
-    />
-  </div>
-);
+      {/* MODAL EXPORTAR / REPORTES */}
+      <ExportReportModal 
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        courseData={courseData}
+        students={studentsWithStats}
+      />
+    </div>
+  );
 }
