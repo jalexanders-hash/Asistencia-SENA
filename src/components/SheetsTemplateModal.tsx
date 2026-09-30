@@ -21,7 +21,7 @@ import {
   ParsedTemplateResult
 } from '../lib/templateGenerator';
 import { downloadBlankAttendanceTemplate } from '../lib/blankTemplateGenerator';
-import { saveAttendanceData } from '../lib/firebase';
+import { updateFichaCompleteData } from '../lib/firebase'; // <--- Usamos la función de actualización aislada por ID de ficha
 import { courseData as initialCourseData } from '../data';
 
 interface SheetsTemplateModalProps {
@@ -29,7 +29,7 @@ interface SheetsTemplateModalProps {
   onClose: () => void;
   currentFicha: string;
   courseData: typeof initialCourseData;
-  onDataLoaded: (newData: typeof initialCourseData) => void;
+  onDataLoaded: (newData: typeof initialCourseData, targetFichaId?: string) => void; // <--- Soportamos el ID opcional para el cambio de ficha
 }
 
 /**
@@ -135,27 +135,38 @@ export function SheetsTemplateModal({
   const handleApplyData = async () => {
     if (!uploadResult?.data) return;
 
+    // 1. Extraer y validar rigurosamente el número de ficha que trae el archivo Excel
+    const excelFichaId = uploadResult.data.ficha_de_caracterizacion 
+      ? String(uploadResult.data.ficha_de_caracterizacion).trim() 
+      : '';
+
+    if (!excelFichaId || excelFichaId === 'undefined' || excelFichaId === 'null') {
+      alert('Error de validación: El archivo Excel no contiene un número de ficha de caracterización válido. Por favor verifique la plantilla antes de cargar.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // Detección segura del instructor activo
+      // 2. Detección segura del instructor activo
       const currentInstructorName = courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "Instructor";
 
-      // Fusión granular segura
+      // 3. Fusión granular segura de inasistencias
       const safeMergedData = mergeInstructorAttendance(
         courseData,
         uploadResult.data,
         currentInstructorName
       );
 
-      await saveAttendanceData(
-        safeMergedData.fechas_asistencia || [],
-        safeMergedData.asistencias_aprendices || [],
-        safeMergedData.fechas_por_instructor || {},
-        currentFicha
-      );
+      // Asegurar que la estructura refleje el ID de la ficha correcto
+      safeMergedData.ficha_de_caracterizacion = excelFichaId;
 
-      onDataLoaded(safeMergedData);
-      alert('¡Inasistencias cargadas y sincronizadas de forma segura sin afectar a los demás instructores!');
+      // 4. Guardado aislado en Firebase usando estrictamente el documento de ESTA ficha
+      await updateFichaCompleteData(safeMergedData, excelFichaId);
+
+      // 5. Actualizar la aplicación principal pasando los datos y la ficha destino
+      onDataLoaded(safeMergedData, excelFichaId);
+      
+      alert(`¡Inasistencias cargadas con éxito en la Ficha N° ${excelFichaId}! No se han afectado datos de otras fichas.`);
       onClose();
     } catch (err: any) {
       console.error("Error al guardar en Firebase desde el modal:", err);
@@ -391,7 +402,7 @@ export function SheetsTemplateModal({
                       <div>
                         <span className="text-slate-400 block font-medium">Ficha detectada:</span>
                         <span className="font-bold text-slate-800 text-sm">
-                          {uploadResult.data?.ficha_de_caracterizacion}
+                          {uploadResult.data?.ficha_de_caracterizacion || currentFicha}
                         </span>
                       </div>
                       <div>
