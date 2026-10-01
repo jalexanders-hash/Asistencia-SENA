@@ -207,58 +207,79 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           updatedData.fechas_asistencia = normalizedDates;
         }
 
-        updatedData.asistencias_aprendices = updatedData.asistencias_aprendices.map((cloudStudent: any) => {
-          const docCloud = String(cloudStudent.numero_documento || "").trim();
-          const uploadedRow = rawRows.find(r => {
+        // Mapear filas del Excel asegurando incluir todos los aprendices (existentes y nuevos)
+        updatedData.asistencias_aprendices = rawRows
+          .filter(r => {
             const docRow = String(r.numero_documento || r.documento || "").trim();
-            return docRow === docCloud;
-          });
+            const nombresRow = String(r.nombres || r.nombre || "").trim();
+            return docRow !== "" || nombresRow !== "";
+          })
+          .map(uploadedRow => {
+            const docNum = String(uploadedRow.numero_documento || uploadedRow.documento || "").trim();
+            
+            // Buscar si ya existía en los datos base para conservar estructura si es necesario
+            const cloudStudent = updatedData.asistencias_aprendices.find((s: any) => 
+              String(s.numero_documento || "").trim() === docNum
+            ) || {};
 
-          if (!uploadedRow) return cloudStudent;
+            const registrosActuales: Record<string, string> = {};
 
-          const registrosActuales: Record<string, string> = {};
+            dateMapping.forEach(({ original, normalized }) => {
+              const val = uploadedRow[original];
+              if (val !== null && val !== undefined) {
+                const valStr = String(val).trim();
+                if (valStr !== '' && valStr !== '·' && valStr !== '-') {
+                  
+                  // Normalizar estados comunes de asistencia si es necesario
+                  let finalVal = valStr;
+                  const lowerVal = valStr.toLowerCase();
+                  if (lowerVal === 'x' || lowerVal.includes('falla') || lowerVal.includes('inasistencia')) {
+                    finalVal = 'Inasistencia';
+                  } else if (lowerVal.includes('tarde') || lowerVal === 't') {
+                    finalVal = 'Tardanza';
+                  } else if (lowerVal.includes('excusa') || lowerVal === 'e') {
+                    finalVal = 'Excusa';
+                  } else if (lowerVal.includes('presente') || lowerVal === 'p') {
+                    finalVal = 'Presente';
+                  }
 
-          dateMapping.forEach(({ original, normalized }) => {
-            const val = uploadedRow[original];
-            if (val !== null && val !== undefined) {
-              const valStr = String(val).trim();
-              if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                // 1. Guardar bajo la clave principal DD/MM/YYYY
-                registrosActuales[normalized] = valStr;
+                  // 1. Guardar bajo la clave principal DD/MM/YYYY
+                  registrosActuales[normalized] = finalVal;
 
-                // 2. Generar espejos en múltiples formatos para garantizar lectura sin importar el componente
-                const parts = normalized.split('/');
-                if (parts.length === 3) {
-                  const [d, m, yFull] = parts;
-                  const dayNum = Number(d);
-                  const monthNum = Number(m);
-                  const yShort = yFull.slice(-2);
+                  // 2. Generar espejos en múltiples formatos para garantizar lectura sin importar el componente
+                  const parts = normalized.split('/');
+                  if (parts.length === 3) {
+                    const [d, m, yFull] = parts;
+                    const dayNum = Number(d);
+                    const monthNum = Number(m);
+                    const yShort = yFull.slice(-2);
 
-                  registrosActuales[`${dayNum}/${monthNum}/${yFull}`] = valStr; // Sin ceros (ej: 1/29/2026)
-                  registrosActuales[`${m}/${d}/${yFull}`]             = valStr; // Variante M/D/YYYY
-                  registrosActuales[`${monthNum}/${dayNum}/${yFull}`]  = valStr;
-                  registrosActuales[`${d}/${m}/${yShort}`]             = valStr; // Año corto DD/MM/AA
+                    registrosActuales[`${dayNum}/${monthNum}/${yFull}`] = finalVal; 
+                    registrosActuales[`${m}/${d}/${yFull}`]             = finalVal; 
+                    registrosActuales[`${monthNum}/${dayNum}/${yFull}`]  = finalVal;
+                    registrosActuales[`${d}/${m}/${yShort}`]             = finalVal; 
+                  }
                 }
               }
-            }
-          });
+            });
 
-          return {
-            ...cloudStudent,
-            nombres: String(uploadedRow.nombres || uploadedRow.nombre || cloudStudent.nombres).trim().toUpperCase(),
-            apellidos: String(uploadedRow.apellidos || uploadedRow.apellido || cloudStudent.apellidos).trim().toUpperCase(),
-            correo_electronico: String(uploadedRow.correo_electronico || uploadedRow.correo || cloudStudent.correo_electronico).trim().toLowerCase(),
-            telefono: String(uploadedRow.telefono || cloudStudent.telefono || "").trim(),
-            estado: String(uploadedRow.estado || cloudStudent.estado || "En formación").trim(),
-            registros: registrosActuales
-          };
-        });
+            return {
+              tipo_documento: String(uploadedRow.tipo_documento || cloudStudent.tipo_documento || "CC").trim(),
+              numero_documento: docNum,
+              nombres: String(uploadedRow.nombres || uploadedRow.nombre || cloudStudent.nombres || "").trim().toUpperCase(),
+              apellidos: String(uploadedRow.apellidos || uploadedRow.apellido || cloudStudent.apellidos || "").trim().toUpperCase(),
+              correo_electronico: String(uploadedRow.correo_electronico || uploadedRow.correo || cloudStudent.correo_electronico || "").trim().toLowerCase(),
+              telefono: String(uploadedRow.telefono || cloudStudent.telefono || "").trim(),
+              estado: String(uploadedRow.estado || cloudStudent.estado || "En formación").trim(),
+              registros: registrosActuales
+            };
+          });
       }
     }
 
     return {
       success: true,
-      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados en formato DD/MM/YYYY.`,
+      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados con sus registros de asistencia.`,
       data: updatedData,
       counts: {
         instructores: totalInstructores,
