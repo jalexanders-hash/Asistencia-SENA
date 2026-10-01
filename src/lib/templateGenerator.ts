@@ -12,6 +12,52 @@ export interface ParsedTemplateResult {
 }
 
 /**
+ * Convierte cualquier fecha (texto, serial de Excel, DD/MM/YYYY) 
+ * al formato estricto M/D/YYYY que utiliza la interfaz de la aplicación.
+ */
+function forceInterfaceDateFormat(key: string | number): string {
+  if (key === null || key === undefined || key === "") return "";
+
+  // Si es un número serial de Excel (ej: 45700)
+  if (typeof key === 'number' || /^\d{5}$/.test(String(key).trim())) {
+    const excelEpoch = new Date(1899, 11, 30);
+    const dateObj = new Date(excelEpoch.getTime() + Number(key) * 24 * 60 * 60 * 1000);
+    if (!isNaN(dateObj.getTime())) {
+      const d = dateObj.getDate();
+      const m = dateObj.getMonth() + 1;
+      const y = dateObj.getFullYear();
+      return `${m}/${d}/${y}`; // Formato M/D/YYYY exacto de la UI
+    }
+  }
+
+  const trimmed = String(key).trim();
+  const parts = trimmed.split(/[\/\-\.]/);
+  
+  if (parts.length === 3) {
+    let day: number, month: number, year: number;
+    
+    if (parts[0].length === 4) {
+      // Formato YYYY/MM/DD
+      year = Number(parts[0]);
+      month = Number(parts[1]);
+      day = Number(parts[2]);
+    } else {
+      // Asumimos DD/MM/YYYY o M/D/YYYY del usuario latinoamericano
+      day = Number(parts[0]);
+      month = Number(parts[1]);
+      year = Number(parts[2]);
+      if (year < 100) year += 2000;
+    }
+
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      return `${month}/${day}/${year}`; // Formato exacto M/D/YYYY (ej: 1/29/2026)
+    }
+  }
+
+  return trimmed;
+}
+
+/**
  * Genera el libro de trabajo oficial para Google Sheets / Excel
  */
 export function generateGoogleSheetsTemplate(): Uint8Array {
@@ -62,8 +108,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo de Excel haciendo coincidencia estricta por número de documento 
- * y aplicando índices espejo para garantizar que la interfaz dibuje las inasistencias.
+ * Parsea el archivo de Excel convirtiendo todas las fechas de columnas al formato M/D/YYYY
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -86,10 +131,9 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       };
     }
 
-    // Copia profunda de los datos base actuales de la app para no perder nada
     const updatedData = JSON.parse(JSON.stringify(baseData));
 
-    // 1. Parsear Ficha y Metadatos
+    // 1. Parsear Ficha
     if (fichaSheetName) {
       const ws = wb.Sheets[fichaSheetName];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -132,7 +176,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Fusión Inteligente y Robusta de Aprendices y Asistencias
+    // 3. Parsear Aprendices y normalizar las fechas de las columnas al formato exacto de la UI
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -146,69 +190,43 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           'fallas', 'tardanzas', 'm/d/yyyy', 'instructor_titular', 'competencia_activa'
         ];
         
-        // Detectar columnas de fechas en el Excel
-        const detectedDateColumns = Object.keys(sampleRow).filter(key => {
+        const rawDateColumns = Object.keys(sampleRow).filter(key => {
           const lowerKey = key.toLowerCase().trim();
           return !fixedKeys.some(fk => lowerKey.includes(fk));
         });
 
-        // Registrar las fechas detectadas en el listado global de fechas de asistencia
-        if (detectedDateColumns.length > 0) {
+        // Mapear columnas originales a claves normalizadas M/D/YYYY
+        const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
+          original: col,
+          normalized: forceInterfaceDateFormat(col)
+        })).filter(d => d.normalized !== "");
+
+        const normalizedDates = dateMapping.map(d => d.normalized);
+        if (normalizedDates.length > 0) {
           const existingDates = updatedData.fechas_asistencia || [];
-          const normalizedNewDates = detectedDateColumns.map(col => String(col).trim());
-          updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...normalizedNewDates]));
+          updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...normalizedDates]));
         }
 
-        // Mapear cada aprendiz existente y actualizar sus registros con base en su documento
         updatedData.asistencias_aprendices = updatedData.asistencias_aprendices.map((cloudStudent: any) => {
           const docCloud = String(cloudStudent.numero_documento || "").trim();
-          
-          // Buscar si el aprendiz viene en el archivo Excel subido mediante su número de documento
           const uploadedRow = rawRows.find(r => {
             const docRow = String(r.numero_documento || r.documento || "").trim();
             return docRow === docCloud;
           });
 
-          if (!uploadedRow) return cloudStudent; // Si no está en el Excel, se deja tal cual
+          if (!uploadedRow) return cloudStudent;
 
-          // Clonar los registros actuales del aprendiz
           const registrosActuales = cloudStudent.registros ? { ...cloudStudent.registros } : {};
 
-          // Extraer las marcas de las columnas de fechas del Excel
-          detectedDateColumns.forEach(colName => {
-            const val = uploadedRow[colName];
+          dateMapping.forEach(({ original, normalized }) => {
+            const val = uploadedRow[original];
             if (val !== null && val !== undefined) {
               const valStr = String(val).trim();
               if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                // Guardar la marca bajo la columna exacta y variantes espejo para asegurar renderizado
-                registrosActuales[colName] = valStr;
-
-                // Si la columna es un número de serie de Excel, calcular la fecha real
-                if (/^\d{5}$/.test(colName)) {
-                  const excelEpoch = new Date(1899, 11, 30);
-                  const dateObj = new Date(excelEpoch.getTime() + Number(colName) * 24 * 60 * 60 * 1000);
-                  if (!isNaN(dateObj.getTime())) {
-                    const d = dateObj.getDate();
-                    const m = dateObj.getMonth() + 1;
-                    const y = dateObj.getFullYear();
-                    registrosActuales[`${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`] = valStr;
-                    registrosActuales[`${d}/${m}/${y}`] = valStr;
-                    registrosActuales[`${m}/${d}/${y}`] = valStr;
-                  }
-                } else {
-                  // Si es texto, asegurar variantes con y sin ceros
-                  const parts = String(colName).trim().split(/[\/\-\.]/);
-                  if (parts.length === 3) {
-                    const [p1, p2, p3] = parts;
-                    if (p3.length === 4) {
-                      registrosActuales[`${Number(p1)}/${Number(p2)}/${p3}`] = valStr;
-                      registrosActuales[`${p1.padStart(2, '0')}/${p2.padStart(2, '0')}/${p3}`] = valStr;
-                      registrosActuales[`${p2}/${p1}/${p3}`] = valStr;
-                    }
-                  }
-                }
+                // Guardar la inasistencia bajo la clave exacta que lee la interfaz (ej: 1/29/2026)
+                registrosActuales[normalized] = valStr;
               } else {
-                delete registrosActuales[colName];
+                delete registrosActuales[normalized];
               }
             }
           });
