@@ -101,12 +101,12 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   // 4. Hoja Guía y Convenciones
   const guiaRows = [
     ["GUÍA Y CONVENCIONES PARA LA CARGA DE DATOS EN EL APLICATIVO SENA"],
-    [""],
+    ["l"],
     ["1. ESTRUCTURA DE HOJAS DEL ARCHIVO:"],
     ["- Ficha:", "Contiene los datos generales del programa, centro y número de ficha."],
     ["- Equipo_Ejecutor:", "Listado de instructores responsables de cada competencia formativa."],
     ["- Aprendices:", "Listado oficial de aprendices matriculados en la ficha."],
-    [""],
+    ["l"],
     ["2. CONVENCIONES DE ESTADO DE ASISTENCIA:"],
     ["Símbolo / Texto", "Significado", "Impacto en Alertas"],
     ["•", "Presente (Asistencia normal)", "Ninguno"],
@@ -114,7 +114,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
     ["Tarde", "Retardo / Llegada tarde", "Genera llamado de atención escrito al 3er retardo"],
     ["Excusa", "Falla justificada con incapacidad o soporte", "No computa para deserción injustificada"],
     ["Evento", "Actividad o evento institucional autorizado", "No computa como falla"],
-    [""],
+    ["l"],
     ["3. INSTRUCCIONES PARA GOOGLE SHEETS:"],
     ["Paso 1:", "Sube este archivo a tu Google Drive ( drive.google.com )."],
     ["Paso 2:", "Haz doble clic y ábrelo con Google Sheets."],
@@ -162,7 +162,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea un archivo .xlsx cargado por el usuario y valida los campos requeridos
+ * Parsea un archivo .xlsx cargado por el usuario y valida los campos requeridos y fechas de asistencia
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -176,7 +176,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     const fichaSheetName = findSheet(['ficha']);
     const equipoSheetName = findSheet(['equipo', 'instructor']);
-    const aprendicesSheetName = findSheet(['aprendiz', 'aprendices', 'alumnos', 'estudiantes']);
+    const aprendicesSheetName = findSheet(['aprendiz', 'aprendices', 'alumnos', 'estudiantes', 'asistencia']);
 
     if (!aprendicesSheetName && !fichaSheetName && !equipoSheetName) {
       return {
@@ -227,23 +227,52 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices
+    // 3. Parsear Aprendices y Columnas de Fechas (Inasistencias)
     let totalAprendices = updatedData.asistencias_aprendices.length;
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
-      const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      if (rows.length > 0) {
-        const newAprendices = rows
+      const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      
+      if (rawRows.length > 0) {
+        // Detectar automáticamente cuáles columnas corresponden a fechas de asistencia 
+        // (excluyendo columnas fijas como documento, nombres, apellidos, correo, telefono, estado, fallas, tardanzas)
+        const sampleRow = rawRows[0];
+        const fixedKeys = ['tipo_documento', 'numero_documento', 'documento', 'nombres', 'nombre', 'apellidos', 'apellido', 'correo_electronico', 'correo', 'telefono', 'estado', 'fallas', 'tardanzas'];
+        
+        const dateColumns = Object.keys(sampleRow).filter(key => {
+          const lowerKey = key.toLowerCase().trim();
+          return !fixedKeys.includes(lowerKey);
+        });
+
+        // Actualizar el listado general de fechas de asistencia detectadas en el Excel si existen
+        if (dateColumns.length > 0) {
+          updatedData.fechas_asistencia = dateColumns;
+        }
+
+        const newAprendices = rawRows
           .filter(r => (r.numero_documento || r.documento) && (r.nombres || r.nombre))
           .map(r => {
             const docNum = String(r.numero_documento || r.documento).trim();
             const existing = baseData.asistencias_aprendices.find(a => a.numero_documento === docNum);
+            
+            // Extraer dinámicamente los registros de asistencia de las columnas de fecha detectadas
+            const registros: Record<string, string> = existing ? { ...existing.registros } : {};
+            
+            dateColumns.forEach(dateCol => {
+              const val = String(r[dateCol] || "").trim();
+              if (val && val !== '·' && val !== '-') {
+                registros[dateCol] = val; // Ej: 'X', 'Tarde', 'Excusa'
+              } else {
+                delete registros[dateCol]; // Si está vacío o limpio, se remueve
+              }
+            });
+
             return {
               numero_documento: docNum,
               nombres: String(r.nombres || r.nombre).trim().toUpperCase(),
               apellidos: String(r.apellidos || r.apellido || "").trim().toUpperCase(),
               correo_electronico: String(r.correo_electronico || r.correo || "").trim().toLowerCase(),
-              registros: existing ? existing.registros : {}
+              registros: registros
             };
           });
 
