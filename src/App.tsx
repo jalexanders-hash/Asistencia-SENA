@@ -248,8 +248,12 @@ const currentInstructorDates = useMemo(() => {
       let fechasTarde: string[] = [];
       let fechasFalla: string[] = [];
        
-      currentInstructorDates.forEach(date => {
-        const status = student.registros[date as keyof typeof student.registros];
+currentInstructorDates.forEach(date => {
+        // Buscamos el registro probando tanto la fecha exacta como sus posibles variantes de formato
+        const status = student.registros[date] || 
+                       student.registros[formatDateForData(date)] || 
+                       student.registros[date.replace(/^0+/, '')];
+        
         if (status) {
           totalRecords++;
           if (status === 'X') {
