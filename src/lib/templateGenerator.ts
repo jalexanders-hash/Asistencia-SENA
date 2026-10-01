@@ -6,7 +6,6 @@ export interface ParsedTemplateResult {
   message: string;
   data?: typeof initialCourseData;
   counts?: {
-    instructores: number;
     aprendices: number;
   };
 }
@@ -59,21 +58,44 @@ function toStrictDDMMYYYY(key: string | number): string {
   return trimmed;
 }
 
+/**
+ * Genera la plantilla simplificada con solo dos pestañas: Ficha y Aprendices
+ */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  const fichaHeaders = ["ficha_de_caracterizacion", "programa", "centro", "denominacion", "fecha_inicio", "fecha_terminacion", "jornada"];
-  const fichaRows = [fichaHeaders, ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]];
+  // Pestaña 1: Ficha con los campos requeridos
+  const fichaHeaders = [
+    "ficha_de_caracterizacion", 
+    "programa", 
+    "centro", 
+    "denominacion", 
+    "instructor_titular", 
+    "competencia_activa"
+  ];
+  const fichaRows = [
+    fichaHeaders, 
+    ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", ""]
+  ];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  const equipoHeaders = ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "fecha_de_inicio", "fecha_terminacion", "rol"];
-  const equipoRows = [equipoHeaders, ["", "", "", "", "", "", "", ""]];
-  const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
-  XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
-
-  const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"];
-  const aprendicesRows = [aprendicesHeaders, ["", "", "", "", "", "", ""]];
+  // Pestaña 2: Aprendices con datos básicos y columnas de fechas de ejemplo
+  const aprendicesHeaders = [
+    "tipo_documento", 
+    "numero_documento", 
+    "nombres", 
+    "apellidos", 
+    "correo_electronico", 
+    "telefono", 
+    "estado",
+    "20/01/2026",
+    "21/01/2026"
+  ];
+  const aprendicesRows = [
+    aprendicesHeaders, 
+    ["CC", "", "", "", "", "", "En formación", "Presente", "Presente"]
+  ];
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
   XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
 
@@ -86,7 +108,7 @@ export function downloadGoogleSheetsTemplate() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Plantilla_Oficial_Asistencia_SENA.xlsx`;
+  a.download = `Plantilla_Asistencia_SENA_Simplificada.xlsx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -107,7 +129,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo Excel, sincroniza fechas de forma estricta y mapea registros con espejos múltiples
+ * Parsea el archivo Excel simplificado, sincroniza datos de Ficha y procesa Aprendices con fechas y registros
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -120,19 +142,18 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
     };
 
     const fichaSheetName = findSheet(['ficha']);
-    const equipoSheetName = findSheet(['equipo', 'instructor']);
     const aprendicesSheetName = findSheet(['aprendiz', 'aprendices', 'alumnos', 'estudiantes', 'asistencia']);
 
-    if (!aprendicesSheetName && !fichaSheetName && !equipoSheetName) {
+    if (!aprendicesSheetName && !fichaSheetName) {
       return {
         success: false,
-        message: "No se encontraron las hojas requeridas en el archivo."
+        message: "No se encontraron las hojas requeridas ('Ficha' o 'Aprendices') en el archivo."
       };
     }
 
     const updatedData = JSON.parse(JSON.stringify(baseData));
 
-    // 1. Parsear Ficha
+    // 1. Parsear Ficha Simplificada
     if (fichaSheetName) {
       const ws = wb.Sheets[fichaSheetName];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -146,36 +167,15 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
         if (first.centro) updatedData.centro = String(first.centro).trim();
         if (first.denominacion) updatedData.denominacion = String(first.denominacion).trim();
         if (first.instructor_titular) {
-          (updatedData as any).instructor_titular = String(first.instructor_titular).trim();
+          updatedData.instructor_titular = String(first.instructor_titular).trim();
+        }
+        if (first.competencia_activa) {
+          updatedData.competencia_activa = String(first.competencia_activa).trim();
         }
       }
     }
 
-    // 2. Parsear Equipo Ejecutor
-    let totalInstructores = updatedData.equipo_instructores.length;
-    if (equipoSheetName) {
-      const ws = wb.Sheets[equipoSheetName];
-      const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      if (rows.length > 0) {
-        const newInstructors = rows
-          .filter(r => (r.nombre_del_instructor || r.nombre || r.instructor) && (r.competencia))
-          .map(r => ({
-            competencia: String(r.competencia).trim(),
-            nombre_del_instructor: String(r.nombre_del_instructor || r.nombre || r.instructor).trim(),
-            fecha_de_inicio: toStrictDDMMYYYY(r.fecha_de_inicio || r.fecha_inicio || "20/01/2026"),
-            fecha_terminacion: toStrictDDMMYYYY(r.fecha_terminacion || r.fecha_fin || "03/12/2026"),
-            dia: String(r.dia || "Lunes").trim(),
-            correo: String(r.correo_google || r.correo_institucional_sena || r.correo || "").trim()
-          }));
-
-        if (newInstructors.length > 0) {
-          updatedData.equipo_instructores = newInstructors;
-          totalInstructores = newInstructors.length;
-        }
-      }
-    }
-
-    // 3. Parsear Aprendices, fechas y registros de asistencia con espejos bidireccionales
+    // 2. Parsear Aprendices, fechas y registros de asistencia con espejos bidireccionales
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -207,7 +207,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           updatedData.fechas_asistencia = normalizedDates;
         }
 
-        // Mapear filas del Excel asegurando incluir todos los aprendices (existentes y nuevos)
+        // Mapear filas del Excel asegurando incluir todos los aprendices
         updatedData.asistencias_aprendices = rawRows
           .filter(r => {
             const docRow = String(r.numero_documento || r.documento || "").trim();
@@ -217,7 +217,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           .map(uploadedRow => {
             const docNum = String(uploadedRow.numero_documento || uploadedRow.documento || "").trim();
             
-            // Buscar si ya existía en los datos base para conservar estructura si es necesario
             const cloudStudent = updatedData.asistencias_aprendices.find((s: any) => 
               String(s.numero_documento || "").trim() === docNum
             ) || {};
@@ -230,7 +229,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                 const valStr = String(val).trim();
                 if (valStr !== '' && valStr !== '·' && valStr !== '-') {
                   
-                  // Normalizar estados comunes de asistencia si es necesario
+                  // Normalizar estados comunes de asistencia y fallas ("X" como Inasistencia)
                   let finalVal = valStr;
                   const lowerVal = valStr.toLowerCase();
                   if (lowerVal === 'x' || lowerVal.includes('falla') || lowerVal.includes('inasistencia')) {
@@ -246,7 +245,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                   // 1. Guardar bajo la clave principal DD/MM/YYYY
                   registrosActuales[normalized] = finalVal;
 
-                  // 2. Generar espejos en múltiples formatos para garantizar lectura sin importar el componente
+                  // 2. Generar espejos en múltiples formatos para garantizar lectura interna
                   const parts = normalized.split('/');
                   if (parts.length === 3) {
                     const [d, m, yFull] = parts;
@@ -279,10 +278,9 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     return {
       success: true,
-      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados con sus registros de asistencia.`,
+      message: `Plantilla simplificada procesada con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
       data: updatedData,
       counts: {
-        instructores: totalInstructores,
         aprendices: updatedData.asistencias_aprendices.length
       }
     };
