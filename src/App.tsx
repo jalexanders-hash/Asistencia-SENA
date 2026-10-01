@@ -53,6 +53,17 @@ const formatDateForData = (dateString: string) => {
   return dateString;
 };
 
+// Función de formateo visual para que las fechas se muestren como DD/MM/YYYY en la interfaz
+const displayAsDDMMYYYY = (dateStr: string) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [m, d, y] = parts;
+    return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+  }
+  return dateStr;
+};
+
 export default function App() {
   const [courseData, setCourseData] = useState(initialCourseData);
   const [isLoading, setIsLoading] = useState(true);
