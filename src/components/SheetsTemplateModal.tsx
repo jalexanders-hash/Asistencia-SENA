@@ -12,7 +12,9 @@ import {
   Briefcase, 
   BookOpen, 
   Loader2,
-  Table
+  Table,
+  Settings,
+  ClipboardList
 } from 'lucide-react';
 import { 
   downloadGoogleSheetsTemplate, 
@@ -104,6 +106,7 @@ export function SheetsTemplateModal({
   onDataLoaded
 }: SheetsTemplateModalProps) {
   const [activeTab, setActiveTab] = useState<'descargar' | 'estructura' | 'cargar'>('descargar');
+  const [uploadType, setUploadType] = useState<'configuracion' | 'inasistencias' | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadResult, setUploadResult] = useState<ParsedTemplateResult | null>(null);
@@ -122,7 +125,7 @@ export function SheetsTemplateModal({
 
     try {
       const result = await parseUploadedTemplate(file, courseData);
-      console.log("=== RESULTADO DE PARSEADO EXCEL ===", result);
+      console.log(`=== RESULTADO DE PARSEADO EXCEL (${uploadType}) ===`, result);
       setUploadResult(result);
     } catch (err: any) {
       console.error("Error al procesar plantilla Excel:", err);
@@ -138,7 +141,6 @@ export function SheetsTemplateModal({
   const handleApplyData = async () => {
     if (!uploadResult?.data) return;
 
-    // 1. Extracción avanzada y segura del número de ficha
     let excelFichaId = '';
     
     if (uploadResult.data.ficha_de_caracterizacion) {
@@ -156,26 +158,22 @@ export function SheetsTemplateModal({
       excelFichaId = currentFicha;
     }
 
-    console.log("Ficha de destino seleccionada:", excelFichaId);
+    console.log(`Ficha de destino (${uploadType}):`, excelFichaId);
 
     setIsSaving(true);
     try {
-      const currentInstructorName = courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "";
-
-      // 2. Evaluamos si el archivo es una plantilla de inasistencias (trae registros de asistencia) 
-      // o un formato de configuración general completa.
       let finalDataToSave;
-      const hasAttendanceRecords = uploadResult.data.asistencias_aprendices?.some((s: any) => s.registros && Object.keys(s.registros).length > 0);
 
-      if (hasAttendanceRecords && currentInstructorName) {
-        // Si es un archivo de inasistencias, fusionamos de forma inteligente respetando la base de datos
+      if (uploadType === 'inasistencias') {
+        // Flujo 2: Fusionar inasistencias de forma segura
+        const currentInstructorName = courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "";
         finalDataToSave = mergeInstructorAttendance(
           courseData,
           uploadResult.data,
           currentInstructorName
         );
       } else {
-        // Si es un archivo de configuración completa, reemplazamos directamete
+        // Flujo 1: Configuración general completa (reemplazo íntegro)
         finalDataToSave = {
           ...uploadResult.data,
           ficha_de_caracterizacion: excelFichaId
@@ -184,13 +182,14 @@ export function SheetsTemplateModal({
 
       finalDataToSave.ficha_de_caracterizacion = excelFichaId;
 
-      // 3. Guardado aislado en Firebase
       await updateFichaCompleteData(finalDataToSave, excelFichaId);
-
-      // 4. Actualizar la aplicación principal al instante
       onDataLoaded(finalDataToSave, excelFichaId);
       
-      alert(`¡Datos y registros de la Ficha N° ${excelFichaId} cargados y guardados con éxito!`);
+      const mensajeExito = uploadType === 'inasistencias' 
+        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y fusionadas con éxito!`
+        : `¡Configuración general de la Ficha N° ${excelFichaId} actualizada con éxito!`;
+
+      alert(mensajeExito);
       onClose();
     } catch (err: any) {
       console.error("Error al guardar en Firebase desde el modal:", err);
@@ -280,7 +279,7 @@ export function SheetsTemplateModal({
                     Formato oficial compatible con Google Sheets y Microsoft Excel (.xlsx)
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Este archivo contiene las hojas preconfiguradas con los datos de la ficha actual ({currentFicha}), instructores y el listado de aprendices listos para el registro de inasistencias.
+                    Este archivo contiene las hojas preconfiguradas con los datos de la ficha actual ({currentFicha}), instructores y el listado de aprendices.
                   </p>
                 </div>
               </div>
@@ -340,67 +339,113 @@ export function SheetsTemplateModal({
           {activeTab === 'estructura' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-3">
-                <h4 className="font-bold text-sm text-slate-800">Guía para el cargue de inasistencias</h4>
+                <h4 className="font-bold text-sm text-slate-800">Guía para la carga independiente</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Asegúrate de conservar las columnas principales de identificación del aprendiz (<code>numero_documento</code>, <code>nombres</code>, <code>apellidos</code>) y registra las novedades de asistencia en las columnas correspondientes a las fechas.
+                  Utiliza <strong>Configuración General</strong> para actualizar la estructura de la ficha y aprendices. Utiliza <strong>Inasistencias</strong> para registrar o actualizar las novedades de asistencia manteniendo intacta la estructura general.
                 </p>
               </div>
             </div>
           )}
 
-          {/* TAB 3: CARGAR AL APLICATIVO */}
+          {/* TAB 3: CARGAR AL APLICATIVO (DOS OPCIONES SEPARADAS) */}
           {activeTab === 'cargar' && (
             <div className="space-y-5">
-              <div className="bg-white p-6 rounded-xl border border-slate-200 text-center space-y-4 shadow-xs">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
-                  <Upload className="w-7 h-7" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-800">
-                    Selecciona tu archivo de Google Sheets o Excel diligenciado
-                  </h3>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                    Carga el archivo <code>.xlsx</code> con las inasistencias marcadas para la Ficha activa actual ({currentFicha}).
-                  </p>
-                </div>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept=".xlsx, .xls"
-                  className="hidden"
-                />
-
-                <div className="flex justify-center gap-3">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isParsing}
-                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+              
+              {/* Selector de Tipo de Carga si no se ha elegido */}
+              {!uploadType ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div 
+                    onClick={() => setUploadType('configuracion')}
+                    className="bg-white p-6 rounded-xl border-2 border-slate-200 hover:border-emerald-600 cursor-pointer transition-all shadow-sm flex flex-col items-center text-center group"
                   >
-                    {isParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    {selectedFile ? 'Cambiar archivo' : 'Elegir archivo (.xlsx)'}
-                  </button>
-                  {selectedFile && (
-                    <button
-                      onClick={() => {
-                        setSelectedFile(null);
-                        setUploadResult(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }}
-                      className="px-4 py-2.5 text-xs text-slate-500 hover:text-red-600 transition-colors"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Settings className="w-7 h-7" />
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General</h3>
+                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                      Ideal para inicializar o actualizar la estructura base de la ficha, aprendices e instructores.
+                    </p>
+                  </div>
 
-                {selectedFile && (
-                  <p className="text-xs text-slate-600 font-mono bg-slate-50 py-1.5 px-3 rounded-md inline-block border border-slate-200">
-                    Archivo seleccionado: <strong>{selectedFile.name}</strong> ({Math.round(selectedFile.size / 1024)} KB)
-                  </p>
-                )}
-              </div>
+                  <div 
+                    onClick={() => setUploadType('inasistencias')}
+                    className="bg-white p-6 rounded-xl border-2 border-slate-200 hover:border-emerald-600 cursor-pointer transition-all shadow-sm flex flex-col items-center text-center group"
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <ClipboardList className="w-7 h-7" />
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-base">Cargar Registro de Inasistencias</h3>
+                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                      Ideal para actualizar únicamente las fallas y tardanzas marcadas en el formato de asistencia.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-xl">
+                    <span className="text-xs font-bold text-emerald-900">
+                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General de Ficha' : '📋 Registro de Inasistencias'}
+                    </span>
+                    <button 
+                      onClick={() => { setUploadType(null); setSelectedFile(null); setUploadResult(null); }}
+                      className="text-xs font-semibold text-emerald-700 hover:underline"
+                    >
+                      Cambiar modo
+                    </button>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 text-center space-y-4 shadow-xs">
+                    <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
+                      <Upload className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-800">
+                        Selecciona tu archivo Excel (.xlsx) diligenciado
+                      </h3>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+                        Ficha activa actual: <strong>{currentFicha}</strong>
+                      </p>
+                    </div>
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept=".xlsx, .xls"
+                      className="hidden"
+                    />
+
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isParsing}
+                        className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+                      >
+                        {isParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        {selectedFile ? 'Cambiar archivo' : 'Elegir archivo (.xlsx)'}
+                      </button>
+                      {selectedFile && (
+                        <button
+                          onClick={() => {
+                            setSelectedFile(null);
+                            setUploadResult(null);
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                          className="px-4 py-2.5 text-xs text-slate-500 hover:text-red-600 transition-colors"
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+
+                    {selectedFile && (
+                      <p className="text-xs text-slate-600 font-mono bg-slate-50 py-1.5 px-3 rounded-md inline-block border border-slate-200">
+                        Archivo seleccionado: <strong>{selectedFile.name}</strong> ({Math.round(selectedFile.size / 1024)} KB)
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Resultado de la validación */}
               {uploadResult && (
