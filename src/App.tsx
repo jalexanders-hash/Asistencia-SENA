@@ -135,7 +135,7 @@ export default function App() {
   const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
 
 const currentInstructorDates = useMemo(() => {
-    // Tomar siempre el listado global de fechas de asistencia sincronizado desde tu Excel/Sheets
+    // Retorna directamente todas las fechas globales del archivo sin filtros ni restricciones de instructores o días
     return courseData.fechas_asistencia || [];
   }, [courseData]);
     
