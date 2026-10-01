@@ -135,8 +135,19 @@ export default function App() {
   const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
 
 const currentInstructorDates = useMemo(() => {
-    // Retorna directamente todas las fechas globales del archivo sin filtros ni restricciones de instructores o días
-    return courseData.fechas_asistencia || [];
+    const dates = courseData.fechas_asistencia || [];
+    // Ordenar cronológicamente para que las columnas de la tabla no aparezcan salteadas
+    return [...dates].sort((a, b) => {
+      const parseDate = (dStr: string) => {
+        const parts = dStr.split('/');
+        if (parts.length === 3) {
+          // Soporta formato M/D/YYYY o DD/MM/YYYY
+          return new Date(Number(parts[2]), Number(parts[0]) - 1, Number(parts[1])).getTime();
+        }
+        return 0;
+      };
+      return parseDate(a) - parseDate(b);
+    });
   }, [courseData]);
     
   const [showExportModal, setShowExportModal] = useState(false);
