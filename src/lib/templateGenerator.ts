@@ -11,7 +11,7 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Convierte cualquier fecha, texto o número serial de Excel 
+ * Convierte cualquier fecha, texto, número serial de Excel o formato M/D/YYYY 
  * al formato estricto colombiano DD/MM/YYYY
  */
 function toStrictDDMMYYYY(key: string | number): string {
@@ -41,11 +41,22 @@ function toStrictDDMMYYYY(key: string | number): string {
       month = Number(parts[1]);
       day = Number(parts[2]);
     } else {
-      // Si viene en formato DD/MM/YYYY, M/D/YYYY o variantes
-      day = Number(parts[0]);
-      month = Number(parts[1]);
-      year = Number(parts[2]);
-      if (year < 100) year += 2000;
+      const p0 = Number(parts[0]);
+      const p1 = Number(parts[1]);
+      let possibleYear = Number(parts[2]);
+      if (possibleYear < 100) possibleYear += 2000;
+
+      // Validación inteligente: Si el primer número es mes y el segundo excede 12, es formato M/D/YYYY
+      if (p0 <= 12 && p1 > 12) {
+        month = p0;
+        day = p1;
+        year = possibleYear;
+      } else {
+        // Orden estándar Día / Mes / Año (DD/MM/YYYY)
+        day = p0;
+        month = p1;
+        year = possibleYear;
+      }
     }
 
     if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
@@ -200,7 +211,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           updatedData.fechas_asistencia = normalizedDates;
         }
 
-        // Mapear filas del Excel asegurando integridad
+        // Mapear filas del Excel asegurando integridad y mapeo correcto de "X" (Inasistencia)
         updatedData.asistencias_aprendices = rawRows
           .filter(r => {
             const docRow = String(r.numero_documento || r.documento || "").trim();
@@ -234,7 +245,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                     finalVal = 'Presente';
                   }
 
-                  // Registrar únicamente la fecha normalizada principal para mantener consistencia
+                  // Registrar la fecha normalizada principal
                   registrosActuales[normalized] = finalVal;
                 }
               }
