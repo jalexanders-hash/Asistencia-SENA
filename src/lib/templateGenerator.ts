@@ -64,7 +64,7 @@ function toStrictDDMMYYYY(key: string | number): string {
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // 1. Pestaña Ficha (con los campos solicitados)
+  // 1. Pestaña Ficha
   const fichaHeaders = [
     "ficha_de_caracterizacion", 
     "programa", 
@@ -80,7 +80,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // 2. Pestaña Aprendices (con datos básicos + columnas de fechas de ejemplo)
+  // 2. Pestaña Aprendices
   const aprendicesHeaders = [
     "tipo_documento", 
     "numero_documento", 
@@ -129,7 +129,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo Excel simplificado, sincronizando Ficha y Aprendices
+ * Parsea el archivo Excel simplificado, sincronizando Ficha y Aprendices de forma segura
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -153,29 +153,23 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     const updatedData = JSON.parse(JSON.stringify(baseData));
 
-    // 1. Parsear Ficha Simplificada
+    // 1. Parsear Ficha Simplificada (si existe)
     if (fichaSheetName) {
       const ws = wb.Sheets[fichaSheetName];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (rows.length > 0) {
         const first = rows[0];
         const fichaDetectada = first.ficha_de_caracterizacion || first.ficha || first.numero_ficha;
-        if (fichaDetectada) {
-          updatedData.ficha_de_caracterizacion = String(fichaDetectada).trim();
-        }
+        if (fichaDetectada) updatedData.ficha_de_caracterizacion = String(fichaDetectada).trim();
         if (first.programa) updatedData.programa = String(first.programa).trim();
         if (first.centro) updatedData.centro = String(first.centro).trim();
         if (first.denominacion) updatedData.denominacion = String(first.denominacion).trim();
-        if (first.instructor_titular) {
-          updatedData.instructor_titular = String(first.instructor_titular).trim();
-        }
-        if (first.competencia_activa) {
-          updatedData.competencia_activa = String(first.competencia_activa).trim();
-        }
+        if (first.instructor_titular) updatedData.instructor_titular = String(first.instructor_titular).trim();
+        if (first.competencia_activa) updatedData.competencia_activa = String(first.competencia_activa).trim();
       }
     }
 
-    // 2. Parsear Aprendices, fechas y registros de asistencia con espejos bidireccionales
+    // 2. Parsear Aprendices, fechas y registros de asistencia
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -206,7 +200,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           updatedData.fechas_asistencia = normalizedDates;
         }
 
-        // Mapear filas del Excel asegurando incluir todos los aprendices
+        // Mapear filas del Excel asegurando integridad
         updatedData.asistencias_aprendices = rawRows
           .filter(r => {
             const docRow = String(r.numero_documento || r.documento || "").trim();
@@ -240,20 +234,8 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                     finalVal = 'Presente';
                   }
 
+                  // Registrar únicamente la fecha normalizada principal para mantener consistencia
                   registrosActuales[normalized] = finalVal;
-
-                  const parts = normalized.split('/');
-                  if (parts.length === 3) {
-                    const [d, m, yFull] = parts;
-                    const dayNum = Number(d);
-                    const monthNum = Number(m);
-                    const yShort = yFull.slice(-2);
-
-                    registrosActuales[`${dayNum}/${monthNum}/${yFull}`] = finalVal; 
-                    registrosActuales[`${m}/${d}/${yFull}`]             = finalVal; 
-                    registrosActuales[`${monthNum}/${dayNum}/${yFull}`]  = finalVal;
-                    registrosActuales[`${d}/${m}/${yShort}`]             = finalVal; 
-                  }
                 }
               }
             });
