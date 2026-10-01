@@ -12,8 +12,8 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Convierte un número de serie de fecha de Excel, objetos Date o cadenas de fecha 
- * a un formato estandarizado DD/MM/YYYY compatible con el sistema de registros.
+ * Convierte un número de serie de fecha de Excel o cadenas de fecha 
+ * a un formato estandarizado y genera claves duales compatibles con la app.
  */
 function normalizeExcelDateKey(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
@@ -31,19 +31,14 @@ function normalizeExcelDateKey(key: string | number): string {
   }
 
   const trimmed = String(key).trim();
-
-  // Si ya viene en formato de fecha estándar o con guiones/puntos (ej: 2026-05-28 o 28/05/2026)
-  // Intentamos asegurar el formato limpio DD/MM/YYYY
   const parts = trimmed.split(/[\/\-\.]/);
   if (parts.length === 3) {
-    // Si viene en formato YYYY/MM/DD
     if (parts[0].length === 4) {
       const [year, month, day] = parts;
       return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
     }
-    // Si viene en formato DD/MM/YYYY o MM/DD/YYYY
     const [d, m, y] = parts;
-    if (y.length === 4) {
+    if (y && y.length === 4) {
       return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
     }
   }
@@ -170,7 +165,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea un archivo .xlsx cargado por el usuario con soporte robusto para fechas DD/MM/YYYY y seriales
+ * Parsea un archivo .xlsx cargado por el usuario asegurando compatibilidad total con formatos de fecha DD/MM/YYYY y M/D/YYYY
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -238,7 +233,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices y Columnas de Fechas (Formato DD/MM/YYYY y seriales)
+    // 3. Parsear Aprendices y Columnas de Fechas con claves duales para compatibilidad visual
     let totalAprendices = updatedData.asistencias_aprendices.length;
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
@@ -284,7 +279,18 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
               if (val !== null && val !== undefined) {
                 const valStr = String(val).trim();
                 if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                  registros[normalized] = valStr; // Ej: 'X', 'Tarde', 'Excusa'
+                  // Guardar con formato normalizado principal
+                  registros[normalized] = valStr;
+                  
+                  // Generar variantes de formato (ej: DD/MM/YYYY y M/D/YYYY sin ceros) para asegurar que la vista la pinte
+                  const parts = normalized.split('/');
+                  if (parts.length === 3) {
+                    const [d, m, y] = parts;
+                    const altFormat1 = `${Number(d)}/${Number(m)}/${y}`; // ej: 1/29/2026
+                    const altFormat2 = `${d}/${m}/${y}`;                 // ej: 29/01/2026
+                    registros[altFormat1] = valStr;
+                    registros[altFormat2] = valStr;
+                  }
                 } else {
                   delete registros[normalized];
                 }
