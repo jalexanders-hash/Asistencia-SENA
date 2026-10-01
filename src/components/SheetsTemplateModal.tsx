@@ -80,12 +80,13 @@ function mergeInstructorAttendance(
     const cloudRegistros = { ...(cloudStudent.registros || {}) };
 
     fechasDelInstructor.forEach((fecha: string) => {
-      delete cloudRegistros[fecha];
-    });
-
-    fechasDelInstructor.forEach((fecha: string) => {
-      if (uploadedStudent.registros?.[fecha]) {
-        cloudRegistros[fecha] = uploadedStudent.registros[fecha];
+      if (uploadedStudent.registros && uploadedStudent.registros[fecha] !== undefined) {
+        const val = uploadedStudent.registros[fecha];
+        if (val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '·' && String(val).trim() !== '-') {
+          cloudRegistros[fecha] = String(val).trim();
+        } else {
+          delete cloudRegistros[fecha];
+        }
       }
     });
 
@@ -165,8 +166,8 @@ export function SheetsTemplateModal({
       let finalDataToSave;
 
       if (uploadType === 'inasistencias') {
-        // Flujo 2: Fusionar inasistencias de forma segura
-        const currentInstructorName = courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "";
+        // Flujo 2: Fusionar inasistencias de forma segura utilizando el instructor titular
+        const currentInstructorName = uploadResult.data.instructor_titular || courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "";
         finalDataToSave = mergeInstructorAttendance(
           courseData,
           uploadResult.data,
@@ -182,15 +183,27 @@ export function SheetsTemplateModal({
 
       finalDataToSave.ficha_de_caracterizacion = excelFichaId;
 
+      // 1. Guardar persistentemente en Firebase
       await updateFichaCompleteData(finalDataToSave, excelFichaId);
-      onDataLoaded(finalDataToSave, excelFichaId);
+
+      // 2. Generar clon profundo para asegurar la reactividad inmediata en React
+      const refreshedData = JSON.parse(JSON.stringify(finalDataToSave));
+
+      // 3. Notificar a la app principal con los datos frescos
+      onDataLoaded(refreshedData, excelFichaId);
       
       const mensajeExito = uploadType === 'inasistencias' 
-        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y fusionadas con éxito!`
+        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y aplicadas con éxito!`
         : `¡Configuración general de la Ficha N° ${excelFichaId} actualizada con éxito!`;
 
       alert(mensajeExito);
       onClose();
+
+      // 4. Refresco automático controlado para asegurar el renderizado total de la vista principal
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+
     } catch (err: any) {
       console.error("Error al guardar en Firebase desde el modal:", err);
       alert(`Error al guardar en la base de datos: ${err.message || err.toString()}`);
