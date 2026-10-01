@@ -20,19 +20,16 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   const fichaHeaders = ["ficha_de_caracterizacion", "programa", "centro", "denominacion", "fecha_inicio", "fecha_terminacion", "jornada"];
   const fichaRows = [fichaHeaders, ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
-  wsFicha['!cols'] = [{ wch: 25 }, { wch: 38 }, { wch: 45 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
   const equipoHeaders = ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "fecha_de_inicio", "fecha_terminacion", "rol"];
   const equipoRows = [equipoHeaders, ["", "", "", "", "", "", "", ""]];
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
-  wsEquipo['!cols'] = [{ wch: 55 }, { wch: 32 }, { wch: 30 }, { wch: 30 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 22 }];
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
   const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"];
   const aprendicesRows = [aprendicesHeaders, ["", "", "", "", "", "", ""]];
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
-  wsAprendices['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 26 }, { wch: 26 }, { wch: 35 }, { wch: 16 }, { wch: 16 }];
   XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
 
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
@@ -65,8 +62,8 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo de Excel asegurando que todas las columnas de fechas se capturen 
- * y se dupliquen en variantes de texto para garantizar compatibilidad total con la interfaz.
+ * Parsea el archivo de Excel aplicando índices espejo de fechas para garantizar 
+ * compatibilidad absoluta con la interfaz gráfica de la aplicación.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -134,7 +131,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices y extraer columnas de fechas dinámicamente
+    // 3. Parsear Aprendices e inasistencias con indexación múltiple
     let totalAprendices = updatedData.asistencias_aprendices.length;
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
@@ -149,15 +146,32 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           'fallas', 'tardanzas', 'm/d/yyyy', 'instructor_titular', 'competencia_activa'
         ];
         
-        // Extraer todas las columnas que no sean campos fijos del sistema
         const detectedDateColumns = Object.keys(sampleRow).filter(key => {
           const lowerKey = key.toLowerCase().trim();
           return !fixedKeys.some(fk => lowerKey.includes(fk));
         });
 
-        if (detectedDateColumns.length > 0) {
+        // Generar lista limpia de fechas normalizadas estándar (DD/MM/YYYY) para la app
+        const normalizedDatesSet = new Set<string>();
+        detectedDateColumns.forEach(col => {
+          const trimmedCol = String(col).trim();
+          if (/^\d{5}$/.test(trimmedCol)) {
+            const excelEpoch = new Date(1899, 11, 30);
+            const dateObj = new Date(excelEpoch.getTime() + Number(trimmedCol) * 24 * 60 * 60 * 1000);
+            if (!isNaN(dateObj.getTime())) {
+              const d = String(dateObj.getDate()).padStart(2, '0');
+              const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+              const y = dateObj.getFullYear();
+              normalizedDatesSet.add(`${d}/${m}/${y}`);
+            }
+          } else {
+            normalizedDatesSet.add(trimmedCol);
+          }
+        });
+
+        if (normalizedDatesSet.size > 0) {
           const existingDates = updatedData.fechas_asistencia || [];
-          updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...detectedDateColumns]));
+          updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...Array.from(normalizedDatesSet)]));
         }
 
         const newAprendices = rawRows
@@ -170,37 +184,44 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             
             const registros: Record<string, string> = existing?.registros ? { ...existing.registros } : {};
             
-            // Registrar las marcas de asistencia usando el nombre exacto de la columna 
-            // y además variantes comunes para asegurar que la UI las dibuje
+            // Procesar cada columna de fecha del Excel y aplicar claves espejo
             detectedDateColumns.forEach(colName => {
               const val = r[colName];
               if (val !== null && val !== undefined) {
                 const valStr = String(val).trim();
                 if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                  // 1. Guardar con el nombre exacto de la columna del Excel
+                  // Clave 1: Nombre original de la columna
                   registros[colName] = valStr;
-                  
-                  // 2. Si la columna es una fecha en serie de Excel o texto, generar también variantes normalizadas
-                  if (/^\d{5}$/.test(colName)) {
+
+                  // Si es número de serie de Excel, extraer día/mes/año y crear múltiples formatos espejo
+                  if (/^\d{5}$/.test(String(colName).trim())) {
                     const excelEpoch = new Date(1899, 11, 30);
                     const dateObj = new Date(excelEpoch.getTime() + Number(colName) * 24 * 60 * 60 * 1000);
                     if (!isNaN(dateObj.getTime())) {
-                      const d = dateObj.getDate();
-                      const m = dateObj.getMonth() + 1;
-                      const y = dateObj.getFullYear();
-                      registros[`${d}/${m}/${y}`] = valStr;
-                      registros[`${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`] = valStr;
-                      registros[`${m}/${d}/${y}`] = valStr;
+                      const day = dateObj.getDate();
+                      const month = dateObj.getMonth() + 1;
+                      const year = dateObj.getFullYear();
+                      
+                      const dStr = String(day).padStart(2, '0');
+                      const mStr = String(month).padStart(2, '0');
+
+                      registros[`${dStr}/${mStr}/${year}`] = valStr; // 29/01/2026
+                      registros[`${day}/${month}/${year}`] = valStr;   // 29/1/2026
+                      registros[`${month}/${day}/${year}`] = valStr;   // 1/29/2026
+                      registros[`${year}-${mStr}-${dStr}`] = valStr;   // 2026-01-29
                     }
                   } else {
-                    // Si es texto, registrar variantes con y sin ceros a la izquierda
-                    const parts = colName.split(/[\/\-\.]/);
+                    // Si es texto con formato de fecha, extraer partes y crear variantes espejo
+                    const parts = String(colName).trim().split(/[\/\-\.]/);
                     if (parts.length === 3) {
                       const [p1, p2, p3] = parts;
                       if (p3.length === 4) {
-                        registros[`${Number(p1)}/${Number(p2)}/${p3}`] = valStr;
+                        const num1 = Number(p1);
+                        const num2 = Number(p2);
+                        registros[`${num1}/${num2}/${p3}`] = valStr;
                         registros[`${p1.padStart(2, '0')}/${p2.padStart(2, '0')}/${p3}`] = valStr;
-                        registros[`${p2}/${p1}/${p3}`] = valStr; // por si acaso invierten mes/día
+                        registros[`${num2}/${num1}/${p3}`] = valStr; // variante invertida mes/día por seguridad
+                        registros[`${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`] = valStr;
                       }
                     }
                   }
