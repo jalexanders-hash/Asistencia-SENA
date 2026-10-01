@@ -12,9 +12,10 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Estandariza cualquier formato de fecha al formato de la interfaz (M/D/YYYY o DD/MM/YYYY según el aplicativo)
+ * Convierte cualquier fecha, texto o número serial de Excel 
+ * al formato estricto DD/MM/YYYY
  */
-function normalizeDateKey(key: string | number): string {
+function toStrictDDMMYYYY(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
 
   // Si es un número serial de Excel (ej: 45700)
@@ -22,11 +23,10 @@ function normalizeDateKey(key: string | number): string {
     const excelEpoch = new Date(1899, 11, 30);
     const dateObj = new Date(excelEpoch.getTime() + Number(key) * 24 * 60 * 60 * 1000);
     if (!isNaN(dateObj.getTime())) {
-      const d = dateObj.getDate();
-      const m = dateObj.getMonth() + 1;
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
       const y = dateObj.getFullYear();
-      // Generamos el formato estándar que usa la interfaz de tu app (ej: 1/29/2026 o manteniendo las barras)
-      return `${m}/${d}/${y}`;
+      return `${d}/${m}/${y}`;
     }
   }
 
@@ -50,8 +50,9 @@ function normalizeDateKey(key: string | number): string {
     }
 
     if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-      // Retornar en el formato M/D/YYYY que renderiza la tabla de tu aplicación actual
-      return `${month}/${day}/${year}`;
+      const dStr = String(day).padStart(2, '0');
+      const mStr = String(month).padStart(2, '0');
+      return `${dStr}/${mStr}/${year}`;
     }
   }
 
@@ -109,7 +110,8 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo Excel, inyecta las fechas detectadas en el listado global y sincroniza las inasistencias
+ * Parsea el archivo Excel, sobrescribe las fechas globales con el formato DD/MM/YYYY 
+ * y aplica llaves espejo múltiples para garantizar compatibilidad visual total.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -164,8 +166,8 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           .map(r => ({
             competencia: String(r.competencia).trim(),
             nombre_del_instructor: String(r.nombre_del_instructor || r.nombre || r.instructor).trim(),
-            fecha_de_inicio: String(r.fecha_de_inicio || r.fecha_inicio || "20/01/26").trim(),
-            fecha_terminacion: String(r.fecha_terminacion || r.fecha_fin || "03/12/26").trim(),
+            fecha_de_inicio: toStrictDDMMYYYY(r.fecha_de_inicio || r.fecha_inicio || "20/01/2026"),
+            fecha_terminacion: toStrictDDMMYYYY(r.fecha_terminacion || r.fecha_fin || "03/12/2026"),
             dia: String(r.dia || "Lunes").trim(),
             correo: String(r.correo_google || r.correo_institucional_sena || r.correo || "").trim()
           }));
@@ -177,7 +179,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices, inasistencias y actualizar el listado global de columnas de fechas (`fechas_asistencia`)
+    // 3. Parsear Aprendices, extraer fechas del Excel y actualizar vistas
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -196,18 +198,17 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           return !fixedKeys.some(fk => lowerKey.includes(fk));
         });
 
-        // Mapear columnas originales a claves normalizadas
+        // Mapear columnas originales a formato DD/MM/YYYY estricto
         const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
           original: col,
-          normalized: normalizeDateKey(col)
+          normalized: toStrictDDMMYYYY(col)
         })).filter(d => d.normalized !== "");
 
-        // INYECTAR LAS FECHAS AL LISTADO GLOBAL DE LA APP PARA QUE LA TABLA LAS DIBUJE
         const normalizedDates = dateMapping.map(d => d.normalized);
+        
+        // REEMPLAZAR DIRECTAMENTE las fechas de asistencia con las del Excel para forzar el formato DD/MM/YYYY en la UI
         if (normalizedDates.length > 0) {
-          const existingDates = updatedData.fechas_asistencia || [];
-          // Combinar y ordenar cronológicamente o mantener el orden único
-          updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...normalizedDates]));
+          updatedData.fechas_asistencia = normalizedDates;
         }
 
         updatedData.asistencias_aprendices = updatedData.asistencias_aprendices.map((cloudStudent: any) => {
@@ -219,25 +220,29 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
           if (!uploadedRow) return cloudStudent;
 
-          const registrosActuales = cloudStudent.registros ? { ...cloudStudent.registros } : {};
+          const registrosActuales: Record<string, string> = {};
 
           dateMapping.forEach(({ original, normalized }) => {
             const val = uploadedRow[original];
             if (val !== null && val !== undefined) {
               const valStr = String(val).trim();
               if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                // Guardar la marca de inasistencia/tardanza usando la fecha normalizada
+                // 1. Guardar con la clave normalizada DD/MM/YYYY principal
                 registrosActuales[normalized] = valStr;
 
-                // Crear variantes espejo adicionales (por ejemplo formato con barras invertidas o ceros) para máxima compatibilidad
+                // 2. Crear llaves espejo múltiples (M/D/YYYY y DD/MM/AA) para blindar la lectura de la interfaz
                 const parts = normalized.split('/');
                 if (parts.length === 3) {
-                  const [m, d, y] = parts;
-                  registrosActuales[`${d}/${m}/${y}`] = valStr; // Variante DD/MM/YYYY
-                  registrosActuales[`${Number(d)}/${Number(m)}/${y}`] = valStr;
+                  const [d, m, yFull] = parts;
+                  const dayNum = Number(d);
+                  const monthNum = Number(m);
+                  const yShort = yFull.slice(-2);
+
+                  registrosActuales[`${dayNum}/${monthNum}/${yFull}`] = valStr; // Ej: 1/29/2026
+                  registrosActuales[`${d}/${m}/${yShort}`]             = valStr; // Ej: 29/01/26
+                  registrosActuales[`${dayNum}/${monthNum}/${yShort}`] = valStr; // Ej: 1/29/26
+                  registrosActuales[`${monthNum}/${dayNum}/${yFull}`]  = valStr; // Variante invertida por seguridad
                 }
-              } else {
-                delete registrosActuales[normalized];
               }
             }
           });
@@ -257,7 +262,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     return {
       success: true,
-      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices y todas sus fechas sincronizadas.`,
+      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados en formato DD/MM/YYYY.`,
       data: updatedData,
       counts: {
         instructores: totalInstructores,
