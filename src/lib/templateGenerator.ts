@@ -12,10 +12,10 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Convierte cualquier fecha o número de serie de Excel 
- * al formato estándar colombiano/SENA: DD/MM/YYYY
+ * Convierte cualquier fecha, texto o número serial de Excel 
+ * al formato estándar colombiano: DD/MM/YYYY
  */
-function formatToDDMMYYYY(key: string | number): string {
+function standardizeDateToDDMMYYYY(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
 
   // Si es un número serial de Excel (ej: 45700)
@@ -26,7 +26,7 @@ function formatToDDMMYYYY(key: string | number): string {
       const d = String(dateObj.getDate()).padStart(2, '0');
       const m = String(dateObj.getMonth() + 1).padStart(2, '0');
       const y = dateObj.getFullYear();
-      return `${d}/${m}/${y}`; // Formato DD/MM/YYYY
+      return `${d}/${m}/${y}`;
     }
   }
 
@@ -37,7 +37,7 @@ function formatToDDMMYYYY(key: string | number): string {
     let day: number, month: number, year: number;
     
     if (parts[0].length === 4) {
-      // Formato YYYY/MM/DD o YYYY-MM-DD
+      // Formato YYYY/MM/DD
       year = Number(parts[0]);
       month = Number(parts[1]);
       day = Number(parts[2]);
@@ -52,7 +52,7 @@ function formatToDDMMYYYY(key: string | number): string {
     if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
       const dStr = String(day).padStart(2, '0');
       const mStr = String(month).padStart(2, '0');
-      return `${dStr}/${mStr}/${year}`; // Formato estrictamente DD/MM/YYYY
+      return `${dStr}/${mStr}/${year}`;
     }
   }
 
@@ -110,7 +110,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo de Excel convirtiendo todas las cabeceras de fecha a DD/MM/YYYY
+ * Parsea el archivo Excel estandarizando todas las fechas a DD/MM/YYYY con índices espejo
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -178,7 +178,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices y estandarizar las fechas a DD/MM/YYYY
+    // 3. Parsear Aprendices y estandarizar asistencias a formato DD/MM/YYYY con espejos
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -197,10 +197,10 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           return !fixedKeys.some(fk => lowerKey.includes(fk));
         });
 
-        // Mapear cada columna de fecha original a su formato estricto DD/MM/YYYY
+        // Mapear columnas originales a formato estándar DD/MM/YYYY
         const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
           original: col,
-          normalized: formatToDDMMYYYY(col)
+          normalized: standardizeDateToDDMMYYYY(col)
         })).filter(d => d.normalized !== "");
 
         const normalizedDates = dateMapping.map(d => d.normalized);
@@ -225,15 +225,20 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             if (val !== null && val !== undefined) {
               const valStr = String(val).trim();
               if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                // Guardar la inasistencia directamente usando el formato DD/MM/YYYY
+                // 1. Guardar con formato DD/MM/YYYY estándar
                 registrosActuales[normalized] = valStr;
-                
-                // Generar también una variante con año a 2 dígitos por si la vista lo requiere (DD/MM/AA)
+
+                // 2. Generar copias espejo (ej: sin ceros iniciales o con año corto) para garantizar renderizado en cualquier vista
                 const parts = normalized.split('/');
                 if (parts.length === 3) {
                   const [d, m, yFull] = parts;
+                  const dayNum = Number(d);
+                  const monthNum = Number(m);
                   const yShort = yFull.slice(-2);
-                  registrosActuales[`${d}/${m}/${yShort}`] = valStr;
+
+                  registrosActuales[`${dayNum}/${monthNum}/${yFull}`] = valStr; // Ej: 1/29/2026 o 29/1/2026
+                  registrosActuales[`${d}/${m}/${yShort}`]             = valStr; // Ej: 29/01/26
+                  registrosActuales[`${dayNum}/${monthNum}/${yShort}`] = valStr; // Ej: 29/1/26
                 }
               } else {
                 delete registrosActuales[normalized];
