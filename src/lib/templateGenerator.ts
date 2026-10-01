@@ -12,10 +12,10 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Convierte cualquier fecha (texto, serial de Excel, DD/MM/YYYY) 
- * al formato estricto M/D/YYYY que utiliza la interfaz de la aplicación.
+ * Convierte cualquier fecha o número de serie de Excel 
+ * al formato estándar colombiano/SENA: DD/MM/YYYY
  */
-function forceInterfaceDateFormat(key: string | number): string {
+function formatToDDMMYYYY(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
 
   // Si es un número serial de Excel (ej: 45700)
@@ -23,10 +23,10 @@ function forceInterfaceDateFormat(key: string | number): string {
     const excelEpoch = new Date(1899, 11, 30);
     const dateObj = new Date(excelEpoch.getTime() + Number(key) * 24 * 60 * 60 * 1000);
     if (!isNaN(dateObj.getTime())) {
-      const d = dateObj.getDate();
-      const m = dateObj.getMonth() + 1;
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
       const y = dateObj.getFullYear();
-      return `${m}/${d}/${y}`; // Formato M/D/YYYY exacto de la UI
+      return `${d}/${m}/${y}`; // Formato DD/MM/YYYY
     }
   }
 
@@ -37,12 +37,12 @@ function forceInterfaceDateFormat(key: string | number): string {
     let day: number, month: number, year: number;
     
     if (parts[0].length === 4) {
-      // Formato YYYY/MM/DD
+      // Formato YYYY/MM/DD o YYYY-MM-DD
       year = Number(parts[0]);
       month = Number(parts[1]);
       day = Number(parts[2]);
     } else {
-      // Asumimos DD/MM/YYYY o M/D/YYYY del usuario latinoamericano
+      // Formato DD/MM/YYYY o M/D/YYYY
       day = Number(parts[0]);
       month = Number(parts[1]);
       year = Number(parts[2]);
@@ -50,7 +50,9 @@ function forceInterfaceDateFormat(key: string | number): string {
     }
 
     if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-      return `${month}/${day}/${year}`; // Formato exacto M/D/YYYY (ej: 1/29/2026)
+      const dStr = String(day).padStart(2, '0');
+      const mStr = String(month).padStart(2, '0');
+      return `${dStr}/${mStr}/${year}`; // Formato estrictamente DD/MM/YYYY
     }
   }
 
@@ -108,7 +110,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo de Excel convirtiendo todas las fechas de columnas al formato M/D/YYYY
+ * Parsea el archivo de Excel convirtiendo todas las cabeceras de fecha a DD/MM/YYYY
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -176,7 +178,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices y normalizar las fechas de las columnas al formato exacto de la UI
+    // 3. Parsear Aprendices y estandarizar las fechas a DD/MM/YYYY
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -195,10 +197,10 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           return !fixedKeys.some(fk => lowerKey.includes(fk));
         });
 
-        // Mapear columnas originales a claves normalizadas M/D/YYYY
+        // Mapear cada columna de fecha original a su formato estricto DD/MM/YYYY
         const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
           original: col,
-          normalized: forceInterfaceDateFormat(col)
+          normalized: formatToDDMMYYYY(col)
         })).filter(d => d.normalized !== "");
 
         const normalizedDates = dateMapping.map(d => d.normalized);
@@ -223,8 +225,16 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             if (val !== null && val !== undefined) {
               const valStr = String(val).trim();
               if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                // Guardar la inasistencia bajo la clave exacta que lee la interfaz (ej: 1/29/2026)
+                // Guardar la inasistencia directamente usando el formato DD/MM/YYYY
                 registrosActuales[normalized] = valStr;
+                
+                // Generar también una variante con año a 2 dígitos por si la vista lo requiere (DD/MM/AA)
+                const parts = normalized.split('/');
+                if (parts.length === 3) {
+                  const [d, m, yFull] = parts;
+                  const yShort = yFull.slice(-2);
+                  registrosActuales[`${d}/${m}/${yShort}`] = valStr;
+                }
               } else {
                 delete registrosActuales[normalized];
               }
@@ -246,7 +256,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     return {
       success: true,
-      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados correctamente.`,
+      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados en formato DD/MM/YYYY.`,
       data: updatedData,
       counts: {
         instructores: totalInstructores,
