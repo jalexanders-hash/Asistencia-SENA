@@ -50,7 +50,6 @@ const formatDateForData = (dateString: string) => {
   return dateString;
 };
 
-// Función de formateo visual para que las fechas se muestren estrictamente como DD/MM/YYYY en la interfaz
 const displayAsDDMMYYYY = (dateStr: string) => {
   if (!dateStr) return "";
   const parts = dateStr.split('/');
@@ -62,11 +61,54 @@ const displayAsDDMMYYYY = (dateStr: string) => {
 };
 
 export default function App() {
-  const [courseData, setCourseData] = useState(initialCourseData);
+  const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
+  
+  // Base de datos indexada por Ficha para evitar traslapes de fechas y registros
+  const [fichasDataMap, setFichasDataMap] = useState<Record<string, any>>(() => {
+    const saved = localStorage.getItem('sena_all_fichas_database');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      "3387401": JSON.parse(JSON.stringify(initialCourseData)),
+      "3407860": {
+        ...JSON.parse(JSON.stringify(initialCourseData)),
+        ficha_de_caracterizacion: "3407860",
+        denominacion: "GESTIÓN ADMINISTRATIVA (Nuevo Grupo)",
+        fechas_asistencia: [],
+        asistencias_aprendices: initialCourseData.asistencias_aprendices.map(a => ({
+          ...a,
+          registros: {}
+        }))
+      }
+    };
+  });
+
+  const courseData = useMemo(() => {
+    return fichasDataMap[currentFichaId] || {
+      ...JSON.parse(JSON.stringify(initialCourseData)),
+      ficha_de_caracterizacion: currentFichaId,
+      fechas_asistencia: [],
+      asistencias_aprendices: initialCourseData.asistencias_aprendices.map(a => ({ ...a, registros: {} }))
+    };
+  }, [fichasDataMap, currentFichaId]);
+
+  const updateCurrentFichaData = (newData: any) => {
+    setFichasDataMap(prev => {
+      const updated = {
+        ...prev,
+        [currentFichaId]: newData
+      };
+      localStorage.setItem('sena_all_fichas_database', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
-  const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
   const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -134,14 +176,12 @@ export default function App() {
     
   const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
 
-const currentInstructorDates = useMemo(() => {
+  const currentInstructorDates = useMemo(() => {
     const dates = courseData.fechas_asistencia || [];
-    // Ordenar cronológicamente para que las columnas de la tabla no aparezcan salteadas
     return [...dates].sort((a, b) => {
       const parseDate = (dStr: string) => {
         const parts = dStr.split('/');
         if (parts.length === 3) {
-          // Soporta formato M/D/YYYY o DD/MM/YYYY
           return new Date(Number(parts[2]), Number(parts[0]) - 1, Number(parts[1])).getTime();
         }
         return 0;
@@ -162,9 +202,17 @@ const currentInstructorDates = useMemo(() => {
   useEffect(() => {
     setIsLoading(true);
     
+    const localData = localStorage.getItem(`sena_ficha_data_${currentFichaId}`);
+    if (localData) {
+      try {
+        const parsed = JSON.parse(localData);
+        updateCurrentFichaData(parsed);
+      } catch (e) {}
+    }
+
     const unsubscribe = subscribeToFichaData((data) => {
       if (data) {
-        setCourseData(data);
+        updateCurrentFichaData(data);
       }
       setIsLoading(false);
     }, currentFichaId);
@@ -180,7 +228,7 @@ const currentInstructorDates = useMemo(() => {
     const formattedDate = formatDateForData(attendanceDate);
     const existingRecords: Record<string, string> = {};
      
-    courseData.asistencias_aprendices.forEach(student => {
+    courseData.asistencias_aprendices.forEach((student: any) => {
       const status = student.registros[formattedDate as keyof typeof student.registros];
       existingRecords[student.numero_documento] = status || 'Presente';
     });
@@ -200,14 +248,14 @@ const currentInstructorDates = useMemo(() => {
      
     let newFechasPorInstructor = { ...(courseData.fechas_por_instructor || {}) };
     if (currentInstructor) {
-      let currentDates = [...(newFechasPorInstructor[currentInstructor.nombre_del_instructor] || [])];
+      let currentDates = [...(newFechasPorInstructor[(currentInstructor as any).nombre_del_instructor] || [])];
       if (!currentDates.includes(formattedDate)) {
         currentDates.push(formattedDate);
-        newFechasPorInstructor[currentInstructor.nombre_del_instructor] = currentDates;
+        newFechasPorInstructor[(currentInstructor as any).nombre_del_instructor] = currentDates;
       }
     }
      
-    const newAprendices = courseData.asistencias_aprendices.map(student => {
+    const newAprendices = courseData.asistencias_aprendices.map((student: any) => {
       const status = tempRecords[student.numero_documento];
       const newRegistros = { ...student.registros } as Record<string, string>;
       if (status === 'Presente') {
@@ -217,14 +265,24 @@ const currentInstructorDates = useMemo(() => {
       }
       return { ...student, registros: newRegistros };
     });
+
+    const updatedCourseData = {
+      ...courseData,
+      fechas_asistencia: newFechas,
+      asistencias_aprendices: newAprendices,
+      fechas_por_instructor: newFechasPorInstructor
+    };
      
     try {
       await saveAttendanceData(newFechas, newAprendices, newFechasPorInstructor, currentFichaId);
+      updateCurrentFichaData(updatedCourseData);
+      localStorage.setItem(`sena_ficha_data_${currentFichaId}`, JSON.stringify(updatedCourseData));
       setShowAttendanceModal(false);
-      alert("Asistencia guardada correctamente.");
+      alert(`Asistencia guardada correctamente para la Ficha ${currentFichaId}.`);
     } catch (error) {
       console.error("Failed to save attendance", error);
-      localStorage.setItem(`sena_offline_ficha_${currentFichaId}`, JSON.stringify({ newFechas, newAprendices }));
+      updateCurrentFichaData(updatedCourseData);
+      localStorage.setItem(`sena_ficha_data_${currentFichaId}`, JSON.stringify(updatedCourseData));
       setShowAttendanceModal(false);
       alert("Sin conexión cloud: Asistencia guardada en modo local (Offline).");
     } finally {
@@ -242,14 +300,13 @@ const currentInstructorDates = useMemo(() => {
     let enRiesgoTarde = 0;
     let totalPossibleRecords = courseData.asistencias_aprendices.length * currentInstructorDates.length;
 
-    const augmented = courseData.asistencias_aprendices.map(student => {
+    const augmented = courseData.asistencias_aprendices.map((student: any) => {
       let fallasAcumuladas = 0;
       let tardanzasAcumuladas = 0;
       let fechasTarde: string[] = [];
       let fechasFalla: string[] = [];
        
-currentInstructorDates.forEach(date => {
-        // Buscamos el registro probando tanto la fecha exacta como sus posibles variantes de formato
+      currentInstructorDates.forEach(date => {
         const status = student.registros[date] || 
                        student.registros[formatDateForData(date)] || 
                        student.registros[date.replace(/^0+/, '')];
@@ -343,14 +400,14 @@ currentInstructorDates.forEach(date => {
     return filtered;
   }, [searchTerm, selectedStudentDoc, showRiskOnly, studentsWithStats, kpiFilter]);
 
-  const correoInstructorActual = (currentInstructor as any)?.correo_institucional_sena || (currentInstructor as any)?.correo_institucional || currentInstructor?.correo || user?.email || '';
+  const correoInstructorActual = (currentInstructor as any)?.correo_institucional_sena || (currentInstructor as any)?.correo_institucional || (currentInstructor as any)?.correo || user?.email || '';
 
   const riskStudentsList = useMemo(() => {
     return studentsWithStats.filter(s => s.enRiesgo || s.enRiesgoTarde);
   }, [studentsWithStats]);
 
   const getNotificationTemplateText = (student: any) => {
-    const instructorName = currentInstructor?.nombre_del_instructor || "Instructor SENA";
+    const instructorName = (currentInstructor as any)?.nombre_del_instructor || "Instructor SENA";
     const fechasFallasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'X');
     const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde');
 
@@ -523,7 +580,7 @@ CC: ${correoInstructorActual}`;
 
                   <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
                     {riskStudentsList.length > 0 ? (
-                      riskStudentsList.map((student) => (
+                      riskStudentsList.map((student: any) => (
                         <div key={student.numero_documento} className="px-4 py-2.5 hover:bg-slate-50 flex items-center justify-between gap-2">
                           <div>
                             <p className="text-xs font-bold text-slate-800">{student.apellidos} {student.nombres}</p>
@@ -795,7 +852,7 @@ CC: ${correoInstructorActual}`;
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {filteredStudents.map((student) => (
+                        {filteredStudents.map((student: any) => (
                           <tr key={student.numero_documento} className="hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedStudentForProfile(student)}>
                             <td className="p-3.5 font-bold text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap hover:text-[#39a900]">
                               {student.apellidos} {student.nombres} 🔍
@@ -1027,7 +1084,7 @@ CC: ${correoInstructorActual}`;
               </div>
 
               <div className="space-y-2">
-                {courseData.asistencias_aprendices.map((student) => (
+                {courseData.asistencias_aprendices.map((student: any) => (
                   <div key={student.numero_documento} className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs font-bold text-slate-800">{student.apellidos} {student.nombres}</p>
@@ -1141,10 +1198,12 @@ CC: ${correoInstructorActual}`;
         currentFicha={currentFichaId}
         courseData={courseData} 
         onDataLoaded={(newData, targetFichaId) => {
-          if (targetFichaId && targetFichaId !== currentFichaId) {
-            setCurrentFichaId(targetFichaId);
+          const fichaToUse = targetFichaId || currentFichaId;
+          if (fichaToUse !== currentFichaId) {
+            setCurrentFichaId(fichaToUse);
           }
-          setCourseData(JSON.parse(JSON.stringify(newData)));
+          updateCurrentFichaData(newData);
+          localStorage.setItem(`sena_ficha_data_${fichaToUse}`, JSON.stringify(newData));
         }}
       />
 
