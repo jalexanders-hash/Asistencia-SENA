@@ -134,13 +134,10 @@ export default function App() {
     
   const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
 
-  const currentInstructorDates = useMemo(() => {
-    if (!currentInstructor) return [];
-    if (courseData.fechas_por_instructor && courseData.fechas_por_instructor[currentInstructor.nombre_del_instructor]) {
-      return courseData.fechas_por_instructor[currentInstructor.nombre_del_instructor];
-    }
-    return courseData.fechas_asistencia;
-  }, [currentInstructor, courseData]);
+const currentInstructorDates = useMemo(() => {
+    // Tomar siempre el listado global de fechas de asistencia sincronizado desde tu Excel/Sheets
+    return courseData.fechas_asistencia || [];
+  }, [courseData]);
     
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
