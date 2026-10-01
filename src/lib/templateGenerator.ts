@@ -13,7 +13,7 @@ export interface ParsedTemplateResult {
 
 /**
  * Convierte cualquier fecha, texto o número serial de Excel 
- * al formato estricto DD/MM/YYYY
+ * al formato estricto colombiano DD/MM/YYYY
  */
 function toStrictDDMMYYYY(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
@@ -36,13 +36,13 @@ function toStrictDDMMYYYY(key: string | number): string {
   if (parts.length === 3) {
     let day: number, month: number, year: number;
     
+    // Si viene en formato YYYY/MM/DD o YYYY-MM-DD
     if (parts[0].length === 4) {
-      // YYYY/MM/DD
       year = Number(parts[0]);
       month = Number(parts[1]);
       day = Number(parts[2]);
     } else {
-      // DD/MM/YYYY o M/D/YYYY
+      // Si viene en formato DD/MM/YYYY, M/D/YYYY o variantes
       day = Number(parts[0]);
       month = Number(parts[1]);
       year = Number(parts[2]);
@@ -59,9 +59,6 @@ function toStrictDDMMYYYY(key: string | number): string {
   return trimmed;
 }
 
-/**
- * Genera el libro de trabajo oficial para Google Sheets / Excel
- */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
@@ -110,8 +107,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo Excel, sobrescribe las fechas globales con el formato DD/MM/YYYY 
- * y aplica llaves espejo múltiples para garantizar compatibilidad visual total.
+ * Parsea el archivo Excel, sincroniza fechas de forma estricta y mapea registros con espejos múltiples
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -179,7 +175,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices, extraer fechas del Excel y actualizar vistas
+    // 3. Parsear Aprendices, fechas y registros de asistencia con espejos bidireccionales
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -206,7 +202,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
         const normalizedDates = dateMapping.map(d => d.normalized);
         
-        // REEMPLAZAR DIRECTAMENTE las fechas de asistencia con las del Excel para forzar el formato DD/MM/YYYY en la UI
+        // Reemplazar el listado global de fechas para que la tabla pinte exactamente las columnas del Excel
         if (normalizedDates.length > 0) {
           updatedData.fechas_asistencia = normalizedDates;
         }
@@ -227,10 +223,10 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             if (val !== null && val !== undefined) {
               const valStr = String(val).trim();
               if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                // 1. Guardar con la clave normalizada DD/MM/YYYY principal
+                // 1. Guardar bajo la clave principal DD/MM/YYYY
                 registrosActuales[normalized] = valStr;
 
-                // 2. Crear llaves espejo múltiples (M/D/YYYY y DD/MM/AA) para blindar la lectura de la interfaz
+                // 2. Generar espejos en múltiples formatos para garantizar lectura sin importar el componente
                 const parts = normalized.split('/');
                 if (parts.length === 3) {
                   const [d, m, yFull] = parts;
@@ -238,10 +234,10 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                   const monthNum = Number(m);
                   const yShort = yFull.slice(-2);
 
-                  registrosActuales[`${dayNum}/${monthNum}/${yFull}`] = valStr; // Ej: 1/29/2026
-                  registrosActuales[`${d}/${m}/${yShort}`]             = valStr; // Ej: 29/01/26
-                  registrosActuales[`${dayNum}/${monthNum}/${yShort}`] = valStr; // Ej: 1/29/26
-                  registrosActuales[`${monthNum}/${dayNum}/${yFull}`]  = valStr; // Variante invertida por seguridad
+                  registrosActuales[`${dayNum}/${monthNum}/${yFull}`] = valStr; // Sin ceros (ej: 1/29/2026)
+                  registrosActuales[`${m}/${d}/${yFull}`]             = valStr; // Variante M/D/YYYY
+                  registrosActuales[`${monthNum}/${dayNum}/${yFull}`]  = valStr;
+                  registrosActuales[`${d}/${m}/${yShort}`]             = valStr; // Año corto DD/MM/AA
                 }
               }
             }
