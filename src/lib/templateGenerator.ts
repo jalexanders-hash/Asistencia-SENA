@@ -12,13 +12,53 @@ export interface ParsedTemplateResult {
 }
 
 /**
+ * Convierte un número de serie de fecha de Excel, objetos Date o cadenas de fecha 
+ * a un formato estandarizado DD/MM/YYYY compatible con el sistema de registros.
+ */
+function normalizeExcelDateKey(key: string | number): string {
+  if (key === null || key === undefined || key === "") return "";
+  
+  // Si Excel pasa la fecha como número serial (ej: 45700)
+  if (typeof key === 'number' || /^\d{5}$/.test(String(key).trim())) {
+    const excelEpoch = new Date(1899, 11, 30);
+    const dateObj = new Date(excelEpoch.getTime() + Number(key) * 24 * 60 * 60 * 1000);
+    if (!isNaN(dateObj.getTime())) {
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  const trimmed = String(key).trim();
+
+  // Si ya viene en formato de fecha estándar o con guiones/puntos (ej: 2026-05-28 o 28/05/2026)
+  // Intentamos asegurar el formato limpio DD/MM/YYYY
+  const parts = trimmed.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    // Si viene en formato YYYY/MM/DD
+    if (parts[0].length === 4) {
+      const [year, month, day] = parts;
+      return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+    }
+    // Si viene en formato DD/MM/YYYY o MM/DD/YYYY
+    const [d, m, y] = parts;
+    if (y.length === 4) {
+      return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+    }
+  }
+  
+  return trimmed;
+}
+
+/**
  * Genera el libro de trabajo oficial para Google Sheets / Excel
  * completamente en blanco para la carga de nuevos grupos.
  */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // 1. Hoja Ficha (En blanco para que el instructor escriba los datos del nuevo grupo)
+  // 1. Hoja Ficha
   const fichaHeaders = [
     "ficha_de_caracterizacion",
     "programa",
@@ -33,18 +73,10 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
     ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]
   ];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
-  wsFicha['!cols'] = [
-    { wch: 25 },
-    { wch: 38 },
-    { wch: 45 },
-    { wch: 30 },
-    { wch: 15 },
-    { wch: 18 },
-    { wch: 15 }
-  ];
+  wsFicha['!cols'] = [{ wch: 25 }, { wch: 38 }, { wch: 45 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // 2. Hoja Equipo Ejecutor (En blanco)
+  // 2. Hoja Equipo Ejecutor
   const equipoHeaders = [
     "competencia",
     "nombre_del_instructor",
@@ -55,24 +87,12 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
     "fecha_terminacion",
     "rol"
   ];
-  const equipoRows = [
-    equipoHeaders,
-    ["", "", "", "", "", "", "", ""]
-  ];
+  const equipoRows = [equipoHeaders, ["", "", "", "", "", "", "", ""]];
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
-  wsEquipo['!cols'] = [
-    { wch: 55 },
-    { wch: 32 },
-    { wch: 30 },
-    { wch: 30 },
-    { wch: 14 },
-    { wch: 16 },
-    { wch: 18 },
-    { wch: 22 }
-  ];
+  wsEquipo['!cols'] = [{ wch: 55 }, { wch: 32 }, { wch: 30 }, { wch: 30 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 22 }];
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-  // 3. Hoja Aprendices (En blanco)
+  // 3. Hoja Aprendices
   const aprendicesHeaders = [
     "tipo_documento",
     "numero_documento",
@@ -82,31 +102,20 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
     "telefono",
     "estado"
   ];
-  const aprendicesRows = [
-    aprendicesHeaders,
-    ["", "", "", "", "", "", ""]
-  ];
+  const aprendicesRows = [aprendicesHeaders, ["", "", "", "", "", "", ""]];
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
-  wsAprendices['!cols'] = [
-    { wch: 16 },
-    { wch: 20 },
-    { wch: 26 },
-    { wch: 26 },
-    { wch: 35 },
-    { wch: 16 },
-    { wch: 16 }
-  ];
+  wsAprendices['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 26 }, { wch: 26 }, { wch: 35 }, { wch: 16 }, { wch: 16 }];
   XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
 
   // 4. Hoja Guía y Convenciones
   const guiaRows = [
     ["GUÍA Y CONVENCIONES PARA LA CARGA DE DATOS EN EL APLICATIVO SENA"],
-    ["l"],
+    [""],
     ["1. ESTRUCTURA DE HOJAS DEL ARCHIVO:"],
     ["- Ficha:", "Contiene los datos generales del programa, centro y número de ficha."],
     ["- Equipo_Ejecutor:", "Listado de instructores responsables de cada competencia formativa."],
     ["- Aprendices:", "Listado oficial de aprendices matriculados en la ficha."],
-    ["l"],
+    [""],
     ["2. CONVENCIONES DE ESTADO DE ASISTENCIA:"],
     ["Símbolo / Texto", "Significado", "Impacto en Alertas"],
     ["•", "Presente (Asistencia normal)", "Ninguno"],
@@ -114,9 +123,9 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
     ["Tarde", "Retardo / Llegada tarde", "Genera llamado de atención escrito al 3er retardo"],
     ["Excusa", "Falla justificada con incapacidad o soporte", "No computa para deserción injustificada"],
     ["Evento", "Actividad o evento institucional autorizado", "No computa como falla"],
-    ["l"],
+    [""],
     ["3. INSTRUCCIONES PARA GOOGLE SHEETS:"],
-    ["Paso 1:", "Sube este archivo a tu Google Drive ( drive.google.com )."],
+    ["Paso 1:", "Sube este archivo a tu Google Drive (drive.google.com)."],
     ["Paso 2:", "Haz doble clic y ábrelo con Google Sheets."],
     ["Paso 3:", "Diligencia la información de tu nueva ficha y guarda los cambios."],
     ["Paso 4:", "Descárgalo en Archivo > Descargar > Microsoft Excel (.xlsx) y cárgalo en el aplicativo."]
@@ -149,7 +158,6 @@ export function downloadGoogleSheetsTemplate() {
  */
 export function downloadAprendicesCSVTemplate() {
   const csvContent = "tipo_documento,numero_documento,nombres,apellidos,correo_electronico,telefono,estado\n";
-
   const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -162,7 +170,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea un archivo .xlsx cargado por el usuario y valida los campos requeridos y fechas de asistencia
+ * Parsea un archivo .xlsx cargado por el usuario con soporte robusto para fechas DD/MM/YYYY y seriales
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -181,11 +189,11 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
     if (!aprendicesSheetName && !fichaSheetName && !equipoSheetName) {
       return {
         success: false,
-        message: "No se encontraron las hojas requeridas ('Ficha', 'Equipo_Ejecutor' o 'Aprendices') en el archivo."
+        message: "No se encontraron las hojas requeridas en el archivo."
       };
     }
 
-    const updatedData = { ...baseData };
+    const updatedData = JSON.parse(JSON.stringify(baseData));
 
     // 1. Parsear Ficha
     if (fichaSheetName) {
@@ -200,6 +208,9 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
         if (first.programa) updatedData.programa = String(first.programa).trim();
         if (first.centro) updatedData.centro = String(first.centro).trim();
         if (first.denominacion) updatedData.denominacion = String(first.denominacion).trim();
+        if (first.instructor_titular) {
+          (updatedData as any).instructor_titular = String(first.instructor_titular).trim();
+        }
       }
     }
 
@@ -227,57 +238,73 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices y Columnas de Fechas (Inasistencias)
+    // 3. Parsear Aprendices y Columnas de Fechas (Formato DD/MM/YYYY y seriales)
     let totalAprendices = updatedData.asistencias_aprendices.length;
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       
       if (rawRows.length > 0) {
-        // Detectar automáticamente cuáles columnas corresponden a fechas de asistencia 
-        // (excluyendo columnas fijas como documento, nombres, apellidos, correo, telefono, estado, fallas, tardanzas)
         const sampleRow = rawRows[0];
-        const fixedKeys = ['tipo_documento', 'numero_documento', 'documento', 'nombres', 'nombre', 'apellidos', 'apellido', 'correo_electronico', 'correo', 'telefono', 'estado', 'fallas', 'tardanzas'];
+        const fixedKeys = [
+          'tipo_documento', 'numero_documento', 'documento', 
+          'nombres', 'nombre', 'apellidos', 'apellido', 
+          'correo_electronico', 'correo', 'telefono', 'estado', 
+          'fallas', 'tardanzas', 'm/d/yyyy', 'instructor_titular', 'competencia_activa'
+        ];
         
-        const dateColumns = Object.keys(sampleRow).filter(key => {
+        const rawDateColumns = Object.keys(sampleRow).filter(key => {
           const lowerKey = key.toLowerCase().trim();
-          return !fixedKeys.includes(lowerKey);
+          return !fixedKeys.some(fk => lowerKey.includes(fk));
         });
 
-        // Actualizar el listado general de fechas de asistencia detectadas en el Excel si existen
-        if (dateColumns.length > 0) {
-          updatedData.fechas_asistencia = dateColumns;
+        const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
+          original: col,
+          normalized: normalizeExcelDateKey(col)
+        })).filter(d => d.normalized !== "");
+
+        const normalizedDates = dateMapping.map(d => d.normalized);
+        if (normalizedDates.length > 0) {
+          const existingDates = updatedData.fechas_asistencia || [];
+          updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...normalizedDates]));
         }
 
         const newAprendices = rawRows
           .filter(r => (r.numero_documento || r.documento) && (r.nombres || r.nombre))
           .map(r => {
             const docNum = String(r.numero_documento || r.documento).trim();
-            const existing = baseData.asistencias_aprendices.find(a => a.numero_documento === docNum);
+            const existing = baseData.asistencias_aprendices.find(
+              (a: any) => String(a.numero_documento).trim() === docNum
+            );
             
-            // Extraer dinámicamente los registros de asistencia de las columnas de fecha detectadas
-            const registros: Record<string, string> = existing ? { ...existing.registros } : {};
+            const registros: Record<string, string> = existing?.registros ? { ...existing.registros } : {};
             
-            dateColumns.forEach(dateCol => {
-              const val = String(r[dateCol] || "").trim();
-              if (val && val !== '·' && val !== '-') {
-                registros[dateCol] = val; // Ej: 'X', 'Tarde', 'Excusa'
-              } else {
-                delete registros[dateCol]; // Si está vacío o limpio, se remueve
+            dateMapping.forEach(({ original, normalized }) => {
+              const val = r[original];
+              if (val !== null && val !== undefined) {
+                const valStr = String(val).trim();
+                if (valStr !== '' && valStr !== '·' && valStr !== '-') {
+                  registros[normalized] = valStr; // Ej: 'X', 'Tarde', 'Excusa'
+                } else {
+                  delete registros[normalized];
+                }
               }
             });
 
             return {
+              tipo_documento: String(r.tipo_documento || existing?.tipo_documento || "CC").trim(),
               numero_documento: docNum,
-              nombres: String(r.nombres || r.nombre).trim().toUpperCase(),
+              nombres: String(r.nombres || r.nombre || "").trim().toUpperCase(),
               apellidos: String(r.apellidos || r.apellido || "").trim().toUpperCase(),
               correo_electronico: String(r.correo_electronico || r.correo || "").trim().toLowerCase(),
+              telefono: String(r.telefono || existing?.telefono || "").trim(),
+              estado: String(r.estado || existing?.estado || "En formación").trim(),
               registros: registros
             };
           });
 
         if (newAprendices.length > 0) {
-          updatedData.asistencias_aprendices = newAprendices as any;
+          updatedData.asistencias_aprendices = newAprendices;
           totalAprendices = newAprendices.length;
         }
       }
@@ -285,7 +312,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     return {
       success: true,
-      message: `Formato procesado con éxito: ${totalAprendices} aprendices y ${totalInstructores} instructores listos.`,
+      message: `Formato procesado con éxito: ${totalAprendices} aprendices y registros de asistencia sincronizados.`,
       data: updatedData,
       counts: {
         instructores: totalInstructores,
