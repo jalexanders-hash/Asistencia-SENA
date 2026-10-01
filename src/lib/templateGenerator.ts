@@ -12,129 +12,32 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Convierte un número de serie de fecha de Excel o cadenas de fecha 
- * a un formato estandarizado y genera claves duales compatibles con la app.
- */
-function normalizeExcelDateKey(key: string | number): string {
-  if (key === null || key === undefined || key === "") return "";
-  
-  // Si Excel pasa la fecha como número serial (ej: 45700)
-  if (typeof key === 'number' || /^\d{5}$/.test(String(key).trim())) {
-    const excelEpoch = new Date(1899, 11, 30);
-    const dateObj = new Date(excelEpoch.getTime() + Number(key) * 24 * 60 * 60 * 1000);
-    if (!isNaN(dateObj.getTime())) {
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const year = dateObj.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-  }
-
-  const trimmed = String(key).trim();
-  const parts = trimmed.split(/[\/\-\.]/);
-  if (parts.length === 3) {
-    if (parts[0].length === 4) {
-      const [year, month, day] = parts;
-      return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
-    }
-    const [d, m, y] = parts;
-    if (y && y.length === 4) {
-      return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
-    }
-  }
-  
-  return trimmed;
-}
-
-/**
  * Genera el libro de trabajo oficial para Google Sheets / Excel
- * completamente en blanco para la carga de nuevos grupos.
  */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // 1. Hoja Ficha
-  const fichaHeaders = [
-    "ficha_de_caracterizacion",
-    "programa",
-    "centro",
-    "denominacion",
-    "fecha_inicio",
-    "fecha_terminacion",
-    "jornada"
-  ];
-  const fichaRows = [
-    fichaHeaders,
-    ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]
-  ];
+  const fichaHeaders = ["ficha_de_caracterizacion", "programa", "centro", "denominacion", "fecha_inicio", "fecha_terminacion", "jornada"];
+  const fichaRows = [fichaHeaders, ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   wsFicha['!cols'] = [{ wch: 25 }, { wch: 38 }, { wch: 45 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // 2. Hoja Equipo Ejecutor
-  const equipoHeaders = [
-    "competencia",
-    "nombre_del_instructor",
-    "correo_google",
-    "correo_institucional_sena",
-    "dia",
-    "fecha_de_inicio",
-    "fecha_terminacion",
-    "rol"
-  ];
+  const equipoHeaders = ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "fecha_de_inicio", "fecha_terminacion", "rol"];
   const equipoRows = [equipoHeaders, ["", "", "", "", "", "", "", ""]];
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
   wsEquipo['!cols'] = [{ wch: 55 }, { wch: 32 }, { wch: 30 }, { wch: 30 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 22 }];
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-  // 3. Hoja Aprendices
-  const aprendicesHeaders = [
-    "tipo_documento",
-    "numero_documento",
-    "nombres",
-    "apellidos",
-    "correo_electronico",
-    "telefono",
-    "estado"
-  ];
+  const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"];
   const aprendicesRows = [aprendicesHeaders, ["", "", "", "", "", "", ""]];
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
   wsAprendices['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 26 }, { wch: 26 }, { wch: 35 }, { wch: 16 }, { wch: 16 }];
   XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
 
-  // 4. Hoja Guía y Convenciones
-  const guiaRows = [
-    ["GUÍA Y CONVENCIONES PARA LA CARGA DE DATOS EN EL APLICATIVO SENA"],
-    [""],
-    ["1. ESTRUCTURA DE HOJAS DEL ARCHIVO:"],
-    ["- Ficha:", "Contiene los datos generales del programa, centro y número de ficha."],
-    ["- Equipo_Ejecutor:", "Listado de instructores responsables de cada competencia formativa."],
-    ["- Aprendices:", "Listado oficial de aprendices matriculados en la ficha."],
-    [""],
-    ["2. CONVENCIONES DE ESTADO DE ASISTENCIA:"],
-    ["Símbolo / Texto", "Significado", "Impacto en Alertas"],
-    ["•", "Presente (Asistencia normal)", "Ninguno"],
-    ["X", "Inasistencia injustificada", "Genera alerta automática al acumular 3 o más fallas"],
-    ["Tarde", "Retardo / Llegada tarde", "Genera llamado de atención escrito al 3er retardo"],
-    ["Excusa", "Falla justificada con incapacidad o soporte", "No computa para deserción injustificada"],
-    ["Evento", "Actividad o evento institucional autorizado", "No computa como falla"],
-    [""],
-    ["3. INSTRUCCIONES PARA GOOGLE SHEETS:"],
-    ["Paso 1:", "Sube este archivo a tu Google Drive (drive.google.com)."],
-    ["Paso 2:", "Haz doble clic y ábrelo con Google Sheets."],
-    ["Paso 3:", "Diligencia la información de tu nueva ficha y guarda los cambios."],
-    ["Paso 4:", "Descárgalo en Archivo > Descargar > Microsoft Excel (.xlsx) y cárgalo en el aplicativo."]
-  ];
-  const wsGuia = XLSX.utils.aoa_to_sheet(guiaRows);
-  wsGuia['!cols'] = [{ wch: 25 }, { wch: 45 }, { wch: 45 }];
-  XLSX.utils.book_append_sheet(wb, wsGuia, "Guia_y_Convenciones");
-
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 }
 
-/**
- * Descarga directamente el archivo .xlsx en blanco en el navegador del usuario con nombre limpio
- */
 export function downloadGoogleSheetsTemplate() {
   const data = generateGoogleSheetsTemplate();
   const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -148,9 +51,6 @@ export function downloadGoogleSheetsTemplate() {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Descarga una plantilla CSV rápida de Aprendices en blanco
- */
 export function downloadAprendicesCSVTemplate() {
   const csvContent = "tipo_documento,numero_documento,nombres,apellidos,correo_electronico,telefono,estado\n";
   const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -165,7 +65,8 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea un archivo .xlsx cargado por el usuario asegurando compatibilidad total con formatos de fecha DD/MM/YYYY y M/D/YYYY
+ * Parsea el archivo de Excel asegurando que todas las columnas de fechas se capturen 
+ * y se dupliquen en variantes de texto para garantizar compatibilidad total con la interfaz.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -233,7 +134,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices y Columnas de Fechas con claves duales para compatibilidad visual
+    // 3. Parsear Aprendices y extraer columnas de fechas dinámicamente
     let totalAprendices = updatedData.asistencias_aprendices.length;
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
@@ -248,20 +149,15 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           'fallas', 'tardanzas', 'm/d/yyyy', 'instructor_titular', 'competencia_activa'
         ];
         
-        const rawDateColumns = Object.keys(sampleRow).filter(key => {
+        // Extraer todas las columnas que no sean campos fijos del sistema
+        const detectedDateColumns = Object.keys(sampleRow).filter(key => {
           const lowerKey = key.toLowerCase().trim();
           return !fixedKeys.some(fk => lowerKey.includes(fk));
         });
 
-        const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
-          original: col,
-          normalized: normalizeExcelDateKey(col)
-        })).filter(d => d.normalized !== "");
-
-        const normalizedDates = dateMapping.map(d => d.normalized);
-        if (normalizedDates.length > 0) {
+        if (detectedDateColumns.length > 0) {
           const existingDates = updatedData.fechas_asistencia || [];
-          updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...normalizedDates]));
+          updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...detectedDateColumns]));
         }
 
         const newAprendices = rawRows
@@ -274,25 +170,42 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             
             const registros: Record<string, string> = existing?.registros ? { ...existing.registros } : {};
             
-            dateMapping.forEach(({ original, normalized }) => {
-              const val = r[original];
+            // Registrar las marcas de asistencia usando el nombre exacto de la columna 
+            // y además variantes comunes para asegurar que la UI las dibuje
+            detectedDateColumns.forEach(colName => {
+              const val = r[colName];
               if (val !== null && val !== undefined) {
                 const valStr = String(val).trim();
                 if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                  // Guardar con formato normalizado principal
-                  registros[normalized] = valStr;
+                  // 1. Guardar con el nombre exacto de la columna del Excel
+                  registros[colName] = valStr;
                   
-                  // Generar variantes de formato (ej: DD/MM/YYYY y M/D/YYYY sin ceros) para asegurar que la vista la pinte
-                  const parts = normalized.split('/');
-                  if (parts.length === 3) {
-                    const [d, m, y] = parts;
-                    const altFormat1 = `${Number(d)}/${Number(m)}/${y}`; // ej: 1/29/2026
-                    const altFormat2 = `${d}/${m}/${y}`;                 // ej: 29/01/2026
-                    registros[altFormat1] = valStr;
-                    registros[altFormat2] = valStr;
+                  // 2. Si la columna es una fecha en serie de Excel o texto, generar también variantes normalizadas
+                  if (/^\d{5}$/.test(colName)) {
+                    const excelEpoch = new Date(1899, 11, 30);
+                    const dateObj = new Date(excelEpoch.getTime() + Number(colName) * 24 * 60 * 60 * 1000);
+                    if (!isNaN(dateObj.getTime())) {
+                      const d = dateObj.getDate();
+                      const m = dateObj.getMonth() + 1;
+                      const y = dateObj.getFullYear();
+                      registros[`${d}/${m}/${y}`] = valStr;
+                      registros[`${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`] = valStr;
+                      registros[`${m}/${d}/${y}`] = valStr;
+                    }
+                  } else {
+                    // Si es texto, registrar variantes con y sin ceros a la izquierda
+                    const parts = colName.split(/[\/\-\.]/);
+                    if (parts.length === 3) {
+                      const [p1, p2, p3] = parts;
+                      if (p3.length === 4) {
+                        registros[`${Number(p1)}/${Number(p2)}/${p3}`] = valStr;
+                        registros[`${p1.padStart(2, '0')}/${p2.padStart(2, '0')}/${p3}`] = valStr;
+                        registros[`${p2}/${p1}/${p3}`] = valStr; // por si acaso invierten mes/día
+                      }
+                    }
                   }
                 } else {
-                  delete registros[normalized];
+                  delete registros[colName];
                 }
               }
             });
