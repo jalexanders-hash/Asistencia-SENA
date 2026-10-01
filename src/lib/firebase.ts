@@ -23,16 +23,19 @@ const DEFAULT_FICHA_ID = "3387401";
 
 /**
  * Se suscribe en tiempo real a los cambios de una ficha específica en Firestore.
- * Si el documento no existe, lo inicializa con los datos por defecto.
+ * Si el documento no existe, lo inicializa con los datos por defecto adaptados al ID correspondiente.
  */
 export const subscribeToFichaData = (callback: (data: typeof defaultData) => void, fichaId: string = DEFAULT_FICHA_ID) => {
   const targetFichaId = String(fichaId || DEFAULT_FICHA_ID);
   const docRef = doc(db, "fichas", targetFichaId);
 
-  // Verificamos de forma asíncrona si el documento existe para inicializarlo si es necesario
+  // Verificamos de forma asíncrona si el documento existe para inicializarlo de forma aislada
   getDoc(docRef).then((docSnap) => {
     if (!docSnap.exists()) {
-      setDoc(docRef, defaultData);
+      setDoc(docRef, {
+        ...defaultData,
+        ficha_de_caracterizacion: targetFichaId
+      });
     }
   }).catch((error) => {
     console.error("Error al verificar datos iniciales:", error);
