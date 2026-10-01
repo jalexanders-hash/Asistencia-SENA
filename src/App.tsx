@@ -36,16 +36,13 @@ const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding
 const formatDateForData = (dateString: string) => {
   if (!dateString) return "";
   
-  // Si el formato original viene con guiones (YYYY-MM-DD)
   if (dateString.includes('-')) {
     const [year, month, day] = dateString.split('-');
     return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
   }
   
-  // Si ya viene con barras (por si acaso viene como M/D/YYYY o DD/MM/YYYY)
   const parts = dateString.split('/');
   if (parts.length === 3) {
-    // Si la app lo guardaba como [mes, dia, año], los reordenamos a [dia, mes, año]
     const [m, d, y] = parts;
     return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
   }
@@ -53,7 +50,7 @@ const formatDateForData = (dateString: string) => {
   return dateString;
 };
 
-// Función de formateo visual para que las fechas se muestren como DD/MM/YYYY en la interfaz
+// Función de formateo visual para que las fechas se muestren estrictamente como DD/MM/YYYY en la interfaz
 const displayAsDDMMYYYY = (dateStr: string) => {
   if (!dateStr) return "";
   const parts = dateStr.split('/');
@@ -85,7 +82,6 @@ export default function App() {
   
   const [selectedStudentForProfile, setSelectedStudentForProfile] = useState<any>(null);
 
-  // Estados para plantillas de notificación Acuerdo 009 de 2024
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedStudentForNotification, setSelectedStudentForNotification] = useState<any>(null);
   const [notificationTemplateType, setNotificationTemplateType] = useState<'inasistencia' | 'llegadas_tarde' | 'citacion'>('inasistencia');
@@ -347,7 +343,7 @@ export default function App() {
     const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde');
 
     if (notificationTemplateType === 'inasistencia') {
-      const listadoFechas = fechasFallasInstructor.length > 0 ? fechasFallasInstructor.map(f => `- ${f}`).join('\n') : 'Ninguna registrada por este instructor';
+      const listadoFechas = fechasFallasInstructor.length > 0 ? fechasFallasInstructor.map(f => `- ${displayAsDDMMYYYY(f)}`).join('\n') : 'Ninguna registrada por este instructor';
       return `Asunto: Notificación por Inasistencia Injustificada (Acuerdo 009 de 2024) - Ficha ${courseData.ficha_de_caracterizacion}
 
 Estimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),
@@ -363,7 +359,7 @@ ${instructorName}
 CC: ${correoInstructorActual} / Coordinación Académica`;
 
     } else if (notificationTemplateType === 'llegadas_tarde') {
-      const listadoTardanzas = fechasTardanzasInstructor.length > 0 ? fechasTardanzasInstructor.map(f => `- ${f}`).join('\n') : 'Ninguna registrada por este instructor';
+      const listadoTardanzas = fechasTardanzasInstructor.length > 0 ? fechasTardanzasInstructor.map(f => `- ${displayAsDDMMYYYY(f)}`).join('\n') : 'Ninguna registrada por este instructor';
       return `Asunto: Llamado de Atención Formal por Llegadas Tarde - Ficha ${courseData.ficha_de_caracterizacion}
 
 Estimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),
@@ -780,7 +776,9 @@ CC: ${correoInstructorActual}`;
                           <th className="p-3.5 text-center">Fallas</th>
                           <th className="p-3.5 text-center">Tardanzas</th>
                           {currentInstructorDates.map((date, idx) => (
-                            <th key={idx} className="p-3.5 text-center whitespace-nowrap font-mono">{date}</th>
+                            <th key={idx} className="p-3.5 text-center whitespace-nowrap font-mono">
+                              {displayAsDDMMYYYY(date)}
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -959,7 +957,7 @@ CC: ${correoInstructorActual}`;
                         const status = selectedStudentForProfile.registros[date];
                         return (
                           <tr key={idx} className="hover:bg-slate-50">
-                            <td className="p-3 font-mono font-bold text-slate-700">{date}</td>
+                            <td className="p-3 font-mono font-bold text-slate-700">{displayAsDDMMYYYY(date)}</td>
                             <td className="p-3 text-center">
                               {!status ? (
                                 <span className="bg-emerald-50 text-[#39a900] font-bold px-2 py-0.5 rounded">Presente</span>
