@@ -59,12 +59,12 @@ function toStrictDDMMYYYY(key: string | number): string {
 }
 
 /**
- * Genera la plantilla simplificada con solo dos pestañas: Ficha y Aprendices
+ * Genera la plantilla simplificada con EXACTAMENTE dos pestañas: Ficha y Aprendices
  */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // Pestaña 1: Ficha con los campos requeridos
+  // 1. Pestaña Ficha (con los campos solicitados)
   const fichaHeaders = [
     "ficha_de_caracterizacion", 
     "programa", 
@@ -80,7 +80,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // Pestaña 2: Aprendices con datos básicos y columnas de fechas de ejemplo
+  // 2. Pestaña Aprendices (con datos básicos + columnas de fechas de ejemplo)
   const aprendicesHeaders = [
     "tipo_documento", 
     "numero_documento", 
@@ -129,7 +129,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo Excel simplificado, sincroniza datos de Ficha y procesa Aprendices con fechas y registros
+ * Parsea el archivo Excel simplificado, sincronizando Ficha y Aprendices
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -202,7 +202,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
         const normalizedDates = dateMapping.map(d => d.normalized);
         
-        // Reemplazar el listado global de fechas para que la tabla pinte exactamente las columnas del Excel
         if (normalizedDates.length > 0) {
           updatedData.fechas_asistencia = normalizedDates;
         }
@@ -229,7 +228,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                 const valStr = String(val).trim();
                 if (valStr !== '' && valStr !== '·' && valStr !== '-') {
                   
-                  // Normalizar estados comunes de asistencia y fallas ("X" como Inasistencia)
                   let finalVal = valStr;
                   const lowerVal = valStr.toLowerCase();
                   if (lowerVal === 'x' || lowerVal.includes('falla') || lowerVal.includes('inasistencia')) {
@@ -242,10 +240,8 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                     finalVal = 'Presente';
                   }
 
-                  // 1. Guardar bajo la clave principal DD/MM/YYYY
                   registrosActuales[normalized] = finalVal;
 
-                  // 2. Generar espejos en múltiples formatos para garantizar lectura interna
                   const parts = normalized.split('/');
                   if (parts.length === 3) {
                     const [d, m, yFull] = parts;
@@ -267,7 +263,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
               numero_documento: docNum,
               nombres: String(uploadedRow.nombres || uploadedRow.nombre || cloudStudent.nombres || "").trim().toUpperCase(),
               apellidos: String(uploadedRow.apellidos || uploadedRow.apellido || cloudStudent.apellidos || "").trim().toUpperCase(),
-              correo_electronico: String(uploadedRow.correo_electronico || uploadedRow.correo || cloudStudent.correo_electronico || "").trim().toLowerCase(),
+              correo_electronico: String(uploadedRow.correo_electronico || cloudStudent.correo || cloudStudent.correo_electronico || "").trim().toLowerCase(),
               telefono: String(uploadedRow.telefono || cloudStudent.telefono || "").trim(),
               estado: String(uploadedRow.estado || cloudStudent.estado || "En formación").trim(),
               registros: registrosActuales
