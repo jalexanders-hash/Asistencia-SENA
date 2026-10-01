@@ -7,25 +7,16 @@ export const courseData = {
     {
       "competencia": "Intervenir en el desarrollo de los programas de mejoramiento organizacional que se deriven de la función administrativa",
       "nombre_del_instructor": "Xalima De Jesús Ruiz Doria",
-      "fecha_de_inicio": "21/07/26",
-      "fecha_terminacion": "1/12/26",
-      "dia": "Martes",
       "correo": "xaruiz@sena.edu.co"
     },
     {
       "competencia": "Procesar la información de acuerdo con las necesidades de la organización",
       "nombre_del_instructor": "Alfredo De Jesús Pérez Mendez",
-      "fecha_de_inicio": "6/04/26",
-      "fecha_terminacion": "22/06/26",
-      "dia": "Lunes",
       "correo": "aperezm@sena.edu.co"
     },
     {
       "competencia": "Comprender textos en inglés en forma escrita y auditiva",
       "nombre_del_instructor": "Leidy Carolina Cano Muñoz",
-      "fecha_de_inicio": "13/02/26",
-      "fecha_terminacion": "4/12/26",
-      "dia": "Viernes",
       "correo": "carolinamunoz901@gmail.com",
       "correo_google": "carolinamunoz901@gmail.com",
       "correo_institucional": "lccano@sena.edu.co"
@@ -33,9 +24,6 @@ export const courseData = {
     {
       "competencia": "Producir los documentos que se originen de las funciones administrativas, siguiendo la norma técnica y la legislación vigente",
       "nombre_del_instructor": "Jorge Alexander Sepúlveda Vélez",
-      "fecha_de_inicio": "20/01/26",
-      "fecha_terminacion": "3/12/26",
-      "dia": "Jueves",
       "correo": "jalexanders@gmail.com",
       "correo_google": "jalexanders@gmail.com",
       "correo_institucional": "jasepulveda@sena.edu.co"
@@ -43,9 +31,6 @@ export const courseData = {
     {
       "competencia": "Aplicar tecnologías de la información teniendo en cuenta las necesidades de la unidad administrativa",
       "nombre_del_instructor": "Dayana Marcela Diaz Dager",
-      "fecha_de_inicio": "10/02/26",
-      "fecha_terminacion": "2/12/26",
-      "dia": "Miércoles",
       "correo": "dayanadager@gmail.com",
       "correo_google": "dayanadager@gmail.com",
       "correo_institucional": "dayanadiaz@sena.edu.co"
