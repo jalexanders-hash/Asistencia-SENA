@@ -75,13 +75,11 @@ export const saveAttendanceData = async (
 };
 
 /**
- * Actualiza la información completa de la ficha garantizando un almacenamiento aislado por ID.
- * Da prioridad absoluta a la ficha detectada en el archivo o pasada por parámetro,
- * previniendo cruces de información o modificaciones en otras fichas.
+ * Actualiza la información completa de la ficha mediante fusión ({ merge: true }).
+ * Útil para cambios parciales o incrementales.
  */
 export const updateFichaCompleteData = async (newData: typeof defaultData, fichaId?: string) => {
   try {
-    // Determinación estricta y segura del ID de la ficha de destino
     const targetFichaId = String(fichaId || newData.ficha_de_caracterizacion || DEFAULT_FICHA_ID);
     
     if (!targetFichaId || targetFichaId === "undefined" || targetFichaId === "null") {
@@ -92,12 +90,40 @@ export const updateFichaCompleteData = async (newData: typeof defaultData, ficha
     
     await setDoc(docRef, {
       ...newData,
-      ficha_de_caracterizacion: targetFichaId // Asegura consistencia interna en el documento
+      ficha_de_caracterizacion: targetFichaId
     }, { merge: true });
 
-    console.log(`Ficha ${targetFichaId} actualizada y protegida exitosamente en Firestore.`);
+    console.log(`Ficha ${targetFichaId} actualizada exitosamente en Firestore.`);
   } catch (error) {
     console.error("Error al actualizar la ficha completa en Firebase:", error);
+    throw error;
+  }
+};
+
+/**
+ * REEMPLAZA por completo la información de la ficha en Firestore (sin merge).
+ * Ideal para cuando cargas una plantilla de Excel nueva, asegurando que se borren 
+ * fechas viejas o datos obsoletos y se guarde exactamente lo que trae el archivo.
+ */
+export const replaceFichaCompleteData = async (newData: typeof defaultData, fichaId?: string) => {
+  try {
+    const targetFichaId = String(fichaId || newData.ficha_de_caracterizacion || DEFAULT_FICHA_ID);
+    
+    if (!targetFichaId || targetFichaId === "undefined" || targetFichaId === "null") {
+      throw new Error("No se pudo determinar un número de ficha válido para realizar el reemplazo en la base de datos.");
+    }
+
+    const docRef = doc(db, "fichas", targetFichaId);
+    
+    // Al NO usar { merge: true }, el documento se sobrescribe por completo de forma limpia
+    await setDoc(docRef, {
+      ...newData,
+      ficha_de_caracterizacion: targetFichaId
+    });
+
+    console.log(`Ficha ${targetFichaId} reemplazada y limpiada exitosamente en Firestore con los datos del Excel.`);
+  } catch (error) {
+    console.error("Error al reemplazar la ficha completa en Firebase:", error);
     throw error;
   }
 };
