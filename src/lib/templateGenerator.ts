@@ -12,10 +12,9 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Convierte cualquier fecha, texto o número serial de Excel 
- * al formato estándar colombiano: DD/MM/YYYY
+ * Estandariza cualquier formato de fecha al formato de la interfaz (M/D/YYYY o DD/MM/YYYY según el aplicativo)
  */
-function standardizeDateToDDMMYYYY(key: string | number): string {
+function normalizeDateKey(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
 
   // Si es un número serial de Excel (ej: 45700)
@@ -23,10 +22,11 @@ function standardizeDateToDDMMYYYY(key: string | number): string {
     const excelEpoch = new Date(1899, 11, 30);
     const dateObj = new Date(excelEpoch.getTime() + Number(key) * 24 * 60 * 60 * 1000);
     if (!isNaN(dateObj.getTime())) {
-      const d = String(dateObj.getDate()).padStart(2, '0');
-      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = dateObj.getDate();
+      const m = dateObj.getMonth() + 1;
       const y = dateObj.getFullYear();
-      return `${d}/${m}/${y}`;
+      // Generamos el formato estándar que usa la interfaz de tu app (ej: 1/29/2026 o manteniendo las barras)
+      return `${m}/${d}/${y}`;
     }
   }
 
@@ -37,12 +37,12 @@ function standardizeDateToDDMMYYYY(key: string | number): string {
     let day: number, month: number, year: number;
     
     if (parts[0].length === 4) {
-      // Formato YYYY/MM/DD
+      // YYYY/MM/DD
       year = Number(parts[0]);
       month = Number(parts[1]);
       day = Number(parts[2]);
     } else {
-      // Formato DD/MM/YYYY o M/D/YYYY
+      // DD/MM/YYYY o M/D/YYYY
       day = Number(parts[0]);
       month = Number(parts[1]);
       year = Number(parts[2]);
@@ -50,9 +50,8 @@ function standardizeDateToDDMMYYYY(key: string | number): string {
     }
 
     if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-      const dStr = String(day).padStart(2, '0');
-      const mStr = String(month).padStart(2, '0');
-      return `${dStr}/${mStr}/${year}`;
+      // Retornar en el formato M/D/YYYY que renderiza la tabla de tu aplicación actual
+      return `${month}/${day}/${year}`;
     }
   }
 
@@ -110,7 +109,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo Excel estandarizando todas las fechas a DD/MM/YYYY con índices espejo
+ * Parsea el archivo Excel, inyecta las fechas detectadas en el listado global y sincroniza las inasistencias
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -178,7 +177,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices y estandarizar asistencias a formato DD/MM/YYYY con espejos
+    // 3. Parsear Aprendices, inasistencias y actualizar el listado global de columnas de fechas (`fechas_asistencia`)
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -197,15 +196,17 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           return !fixedKeys.some(fk => lowerKey.includes(fk));
         });
 
-        // Mapear columnas originales a formato estándar DD/MM/YYYY
+        // Mapear columnas originales a claves normalizadas
         const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
           original: col,
-          normalized: standardizeDateToDDMMYYYY(col)
+          normalized: normalizeDateKey(col)
         })).filter(d => d.normalized !== "");
 
+        // INYECTAR LAS FECHAS AL LISTADO GLOBAL DE LA APP PARA QUE LA TABLA LAS DIBUJE
         const normalizedDates = dateMapping.map(d => d.normalized);
         if (normalizedDates.length > 0) {
           const existingDates = updatedData.fechas_asistencia || [];
+          // Combinar y ordenar cronológicamente o mantener el orden único
           updatedData.fechas_asistencia = Array.from(new Set([...existingDates, ...normalizedDates]));
         }
 
@@ -225,20 +226,15 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             if (val !== null && val !== undefined) {
               const valStr = String(val).trim();
               if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                // 1. Guardar con formato DD/MM/YYYY estándar
+                // Guardar la marca de inasistencia/tardanza usando la fecha normalizada
                 registrosActuales[normalized] = valStr;
 
-                // 2. Generar copias espejo (ej: sin ceros iniciales o con año corto) para garantizar renderizado en cualquier vista
+                // Crear variantes espejo adicionales (por ejemplo formato con barras invertidas o ceros) para máxima compatibilidad
                 const parts = normalized.split('/');
                 if (parts.length === 3) {
-                  const [d, m, yFull] = parts;
-                  const dayNum = Number(d);
-                  const monthNum = Number(m);
-                  const yShort = yFull.slice(-2);
-
-                  registrosActuales[`${dayNum}/${monthNum}/${yFull}`] = valStr; // Ej: 1/29/2026 o 29/1/2026
-                  registrosActuales[`${d}/${m}/${yShort}`]             = valStr; // Ej: 29/01/26
-                  registrosActuales[`${dayNum}/${monthNum}/${yShort}`] = valStr; // Ej: 29/1/26
+                  const [m, d, y] = parts;
+                  registrosActuales[`${d}/${m}/${y}`] = valStr; // Variante DD/MM/YYYY
+                  registrosActuales[`${Number(d)}/${Number(m)}/${y}`] = valStr;
                 }
               } else {
                 delete registrosActuales[normalized];
@@ -261,7 +257,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     return {
       success: true,
-      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados en formato DD/MM/YYYY.`,
+      message: `Formato procesado con éxito: ${updatedData.asistencias_aprendices.length} aprendices y todas sus fechas sincronizadas.`,
       data: updatedData,
       counts: {
         instructores: totalInstructores,
