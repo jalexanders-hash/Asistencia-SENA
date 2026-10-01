@@ -1,28 +1,19 @@
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from './firebase'; // Ajusta la ruta si tu archivo firebase.ts está en otra ubicación
-import jsonData from '../data/backup_ficha_3387401.json';
-
 export async function migrarJsonAFirebase() {
   try {
-    const fichaId = "3387401";
+    const fichaId = "3407860"; // O la ficha que desees configurar
     
-    // 1. Convertimos los aprendices del JSON al formato que consume tu aplicativo
+    // 1. Convertimos los aprendices y sus registros de inasistencia/asistencia
     const asistencias_aprendices = jsonData.aprendices.map((ap: any) => {
       const registros: Record<string, string> = {};
 
-      // Mapeamos inasistencias ('X')
       ap.detalle_inasistencias?.forEach((item: any) => {
-        registros[item.fecha] = item.estado; // 'X'
+        registros[item.fecha] = item.estado;
       });
-
-      // Mapeamos retardos ('Tarde')
       ap.detalle_retardos?.forEach((item: any) => {
-        registros[item.fecha] = item.estado; // 'Tarde'
+        registros[item.fecha] = item.estado;
       });
-
-      // Mapeamos justificaciones ('Excusa')
       ap.detalle_justificaciones?.forEach((item: any) => {
-        registros[item.fecha] = item.estado; // 'Excusa'
+        registros[item.fecha] = item.estado;
       });
 
       const partesNombre = ap.nombre_completo.split(" ");
@@ -36,30 +27,28 @@ export async function migrarJsonAFirebase() {
         apellidos: apellidos.toUpperCase(),
         correo_electronico: (ap.correo_electronico || "").toLowerCase(),
         telefono: "",
-        registros: registros // Inyecta las inasistencias históricas
+        registros: registros
       };
     });
 
-    // 2. Extraemos todas las fechas únicas de asistencia de los instructores
+    // 2. Extraer fechas únicas directamente de los registros de los aprendices (más flexible)
     const todasLasFechasSet = new Set<string>();
-    jsonData.equipo_instructores_consolidado.forEach((inst: any) => {
-      inst.fechas_sesiones?.forEach((f: string) => todasLasFechasSet.add(f));
+    asistencias_aprendices.forEach((ap: any) => {
+      Object.keys(ap.registros).forEach((fecha) => todasLasFechasSet.add(fecha));
     });
-    const fechas_asistencia = Array.from(todasLasFechasSet);
+    const fechas_asistencia = Array.from(todasLasFechasSet).sort();
 
-    // 3. Mapeamos el equipo de instructores
+    // 3. Mapeo limpio de instructores SIN restricciones de fechas de sesiones ni festivos fijos
     const equipo_instructores = jsonData.equipo_instructores_consolidado.map((inst: any) => ({
       competencia: inst.competencia,
       nombre_del_instructor: inst.instructor,
       correo_google: inst.correo_acceso,
       correo_institucional_sena: inst.correo_institucional,
-      dia: inst.dia_formacion,
-      fecha_de_inicio: inst.fechas_sesiones?.[0] || "20/01/26",
-      fecha_terminacion: inst.fechas_sesiones?.[inst.fechas_sesiones.length - 1] || "03/12/26",
       rol: "Instructor"
+      // Se eliminan deliberadamente dia, fecha_de_inicio y fecha_terminacion para evitar bloqueos
     }));
 
-    // 4. Armamos la estructura completa que tu aplicativo lee
+    // 4. Estructura final libre de restricciones de calendario de instructor
     const courseDataCompleto = {
       ficha_de_caracterizacion: fichaId,
       programa: jsonData.metadata.ficha.programa,
@@ -70,13 +59,12 @@ export async function migrarJsonAFirebase() {
       equipo_instructores: equipo_instructores
     };
 
-    // 5. Guardamos todo en Firestore bajo el documento exacto de la ficha 3387401
     const docRef = doc(db, "fichas", fichaId);
     await setDoc(docRef, courseDataCompleto);
 
-    alert("¡Ficha 3387401 restaurada y sincronizada exitosamente con todas sus inasistencias!");
+    alert("¡Ficha migrada exitosamente y libre de restricciones de fechas de instructores!");
   } catch (error: any) {
-    console.error("Error al migrar el JSON:", error);
-    alert(`Error en la migración: ${error.message || error}`);
+    console.error("Error al migrar:", error);
+    alert(`Error: ${error.message || error}`);
   }
 }
