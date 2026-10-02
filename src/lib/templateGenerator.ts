@@ -12,7 +12,7 @@ export interface ParsedTemplateResult {
 
 /**
  * Convierte cualquier fecha, texto, número serial de Excel o formato M/D/YYYY 
- * al formato estricto colombiano DD/MM/YYYY
+ * al formato estricto colombiano DD/MM/YYYY asegurando sincronización limpia.
  */
 function toStrictDDMMYYYY(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
@@ -46,13 +46,12 @@ function toStrictDDMMYYYY(key: string | number): string {
       let possibleYear = Number(parts[2]);
       if (possibleYear < 100) possibleYear += 2000;
 
-      // Validación inteligente: Si el primer número es mes y el segundo excede 12, es formato M/D/YYYY
+      // Validación robusta: Manejo inteligente de M/D/YYYY vs DD/MM/YYYY
       if (p0 <= 12 && p1 > 12) {
         month = p0;
         day = p1;
         year = possibleYear;
       } else {
-        // Orden estándar Día / Mes / Año (DD/MM/YYYY)
         day = p0;
         month = p1;
         year = possibleYear;
@@ -70,12 +69,12 @@ function toStrictDDMMYYYY(key: string | number): string {
 }
 
 /**
- * Genera la plantilla simplificada con EXACTAMENTE dos pestañas: Ficha y Aprendices
+ * Genera la plantilla simplificada cumpliendo estrictamente con las 2 pestañas requeridas.
  */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // 1. Pestaña Ficha
+  // 1. Pestaña 'Ficha' (Campos exactos solicitados)
   const fichaHeaders = [
     "ficha_de_caracterizacion", 
     "programa", 
@@ -91,7 +90,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // 2. Pestaña Aprendices
+  // 2. Pestaña 'Aprendices' (Datos básicos + columnas dinámicas de ejemplo)
   const aprendicesHeaders = [
     "tipo_documento", 
     "numero_documento", 
@@ -140,7 +139,8 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo Excel simplificado, sincronizando Ficha y Aprendices de forma segura
+ * Parsea la plantilla simplificada asegurando aislamiento por ficha, 
+ * mapeo infalible de inasistencias y estructuración limpia para Firebase.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -155,119 +155,116 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
     const fichaSheetName = findSheet(['ficha']);
     const aprendicesSheetName = findSheet(['aprendiz', 'aprendices', 'alumnos', 'estudiantes', 'asistencia']);
 
-    if (!aprendicesSheetName && !fichaSheetName) {
+    if (!fichaSheetName || !aprendicesSheetName) {
       return {
         success: false,
-        message: "No se encontraron las hojas requeridas ('Ficha' o 'Aprendices') en el archivo."
+        message: "El archivo Excel debe contener obligatoriamente las pestañas 'Ficha' y 'Aprendices'."
       };
     }
 
     const updatedData = JSON.parse(JSON.stringify(baseData));
 
-    // 1. Parsear Ficha Simplificada (si existe)
-    if (fichaSheetName) {
-      const ws = wb.Sheets[fichaSheetName];
-      const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      if (rows.length > 0) {
-        const first = rows[0];
-        const fichaDetectada = first.ficha_de_caracterizacion || first.ficha || first.numero_ficha;
-        if (fichaDetectada) updatedData.ficha_de_caracterizacion = String(fichaDetectada).trim();
-        if (first.programa) updatedData.programa = String(first.programa).trim();
-        if (first.centro) updatedData.centro = String(first.centro).trim();
-        if (first.denominacion) updatedData.denominacion = String(first.denominacion).trim();
-        if (first.instructor_titular) updatedData.instructor_titular = String(first.instructor_titular).trim();
-        if (first.competencia_activa) updatedData.competencia_activa = String(first.competencia_activa).trim();
+    // 1. Parsear Ficha y asegurar aislamiento absoluto del ID
+    const wsFicha = wb.Sheets[fichaSheetName];
+    const fichaRows: any[] = XLSX.utils.sheet_to_json(wsFicha, { defval: "" });
+    if (fichaRows.length > 0) {
+      const first = fichaRows[0];
+      const fichaDetectada = first.ficha_de_caracterizacion || first.ficha || first.numero_ficha;
+      if (fichaDetectada) {
+        updatedData.ficha_de_caracterizacion = String(fichaDetectada).trim();
       }
+      if (first.programa) updatedData.programa = String(first.programa).trim();
+      if (first.centro) updatedData.centro = String(first.centro).trim();
+      if (first.denominacion) updatedData.denominacion = String(first.denominacion).trim();
+      if (first.instructor_titular) updatedData.instructor_titular = String(first.instructor_titular).trim();
+      if (first.competencia_activa) updatedData.competencia_activa = String(first.competencia_activa).trim();
     }
 
-    // 2. Parsear Aprendices, fechas y registros de asistencia
-    if (aprendicesSheetName) {
-      const ws = wb.Sheets[aprendicesSheetName];
-      const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    // 2. Parsear Aprendices, fechas dinámicas y mapeo robusto de estados
+    const wsAprendices = wb.Sheets[aprendicesSheetName];
+    const rawRows: any[] = XLSX.utils.sheet_to_json(wsAprendices, { defval: "" });
+    
+    if (rawRows.length > 0) {
+      const sampleRow = rawRows[0];
+      const fixedKeys = [
+        'tipo_documento', 'numero_documento', 'documento', 
+        'nombres', 'nombre', 'apellidos', 'apellido', 
+        'correo_electronico', 'correo', 'telefono', 'estado', 
+        'fallas', 'tardanzas', 'm/d/yyyy', 'instructor_titular', 'competencia_activa'
+      ];
       
-      if (rawRows.length > 0) {
-        const sampleRow = rawRows[0];
-        const fixedKeys = [
-          'tipo_documento', 'numero_documento', 'documento', 
-          'nombres', 'nombre', 'apellidos', 'apellido', 
-          'correo_electronico', 'correo', 'telefono', 'estado', 
-          'fallas', 'tardanzas', 'm/d/yyyy', 'instructor_titular', 'competencia_activa'
-        ];
-        
-        const rawDateColumns = Object.keys(sampleRow).filter(key => {
-          const lowerKey = key.toLowerCase().trim();
-          return !fixedKeys.some(fk => lowerKey.includes(fk));
-        });
+      const rawDateColumns = Object.keys(sampleRow).filter(key => {
+        const lowerKey = key.toLowerCase().trim();
+        return !fixedKeys.some(fk => lowerKey.includes(fk));
+      });
 
-        // Mapear columnas originales a formato DD/MM/YYYY estricto
-        const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
-          original: col,
-          normalized: toStrictDDMMYYYY(col)
-        })).filter(d => d.normalized !== "");
+      const dateMapping: { original: string; normalized: string }[] = rawDateColumns.map(col => ({
+        original: col,
+        normalized: toStrictDDMMYYYY(col)
+      })).filter(d => d.normalized !== "");
 
-        const normalizedDates = dateMapping.map(d => d.normalized);
-        
-        if (normalizedDates.length > 0) {
-          updatedData.fechas_asistencia = normalizedDates;
-        }
-
-        // Mapear filas del Excel asegurando integridad y mapeo correcto de "X" (Inasistencia)
-        updatedData.asistencias_aprendices = rawRows
-          .filter(r => {
-            const docRow = String(r.numero_documento || r.documento || "").trim();
-            const nombresRow = String(r.nombres || r.nombre || "").trim();
-            return docRow !== "" || nombresRow !== "";
-          })
-          .map(uploadedRow => {
-            const docNum = String(uploadedRow.numero_documento || uploadedRow.documento || "").trim();
-            
-            const cloudStudent = updatedData.asistencias_aprendices.find((s: any) => 
-              String(s.numero_documento || "").trim() === docNum
-            ) || {};
-
-            const registrosActuales: Record<string, string> = {};
-
-            dateMapping.forEach(({ original, normalized }) => {
-              const val = uploadedRow[original];
-              if (val !== null && val !== undefined) {
-                const valStr = String(val).trim();
-                if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                  
-                  let finalVal = valStr;
-                  const lowerVal = valStr.toLowerCase();
-                  if (lowerVal === 'x' || lowerVal.includes('falla') || lowerVal.includes('inasistencia')) {
-                    finalVal = 'Inasistencia';
-                  } else if (lowerVal.includes('tarde') || lowerVal === 't') {
-                    finalVal = 'Tardanza';
-                  } else if (lowerVal.includes('excusa') || lowerVal === 'e') {
-                    finalVal = 'Excusa';
-                  } else if (lowerVal.includes('presente') || lowerVal === 'p') {
-                    finalVal = 'Presente';
-                  }
-
-                  // Registrar la fecha normalizada principal
-                  registrosActuales[normalized] = finalVal;
-                }
-              }
-            });
-
-            return {
-              tipo_documento: String(uploadedRow.tipo_documento || cloudStudent.tipo_documento || "CC").trim(),
-              numero_documento: docNum,
-              nombres: String(uploadedRow.nombres || uploadedRow.nombre || cloudStudent.nombres || "").trim().toUpperCase(),
-              apellidos: String(uploadedRow.apellidos || uploadedRow.apellido || cloudStudent.apellidos || "").trim().toUpperCase(),
-              correo_electronico: String(uploadedRow.correo_electronico || cloudStudent.correo || cloudStudent.correo_electronico || "").trim().toLowerCase(),
-              telefono: String(uploadedRow.telefono || cloudStudent.telefono || "").trim(),
-              estado: String(uploadedRow.estado || cloudStudent.estado || "En formación").trim(),
-              registros: registrosActuales
-            };
-          });
+      const normalizedDates = dateMapping.map(d => d.normalized);
+      
+      if (normalizedDates.length > 0) {
+        updatedData.fechas_asistencia = normalizedDates;
       }
+
+      updatedData.asistencias_aprendices = rawRows
+        .filter(r => {
+          const docRow = String(r.numero_documento || r.documento || "").trim();
+          const nombresRow = String(r.nombres || r.nombre || "").trim();
+          return docRow !== "" || nombresRow !== "";
+        })
+        .map(uploadedRow => {
+          const docNum = String(uploadedRow.numero_documento || uploadedRow.documento || "").trim();
+          
+          const cloudStudent = updatedData.asistencias_aprendices.find((s: any) => 
+            String(s.numero_documento || "").trim() === docNum
+          ) || {};
+
+          const registrosActuales: Record<string, string> = {};
+
+          dateMapping.forEach(({ original, normalized }) => {
+            const val = uploadedRow[original];
+            if (val !== null && val !== undefined) {
+              const valStr = String(val).trim();
+              if (valStr !== '' && valStr !== '·' && valStr !== '-') {
+                
+                // Mapeo robusto de inasistencias, tardanzas, excusas y presentes
+                let finalVal = valStr;
+                const lowerVal = valStr.toLowerCase();
+                
+                if (lowerVal === 'x' || lowerVal.includes('falla') || lowerVal.includes('inasistencia')) {
+                  finalVal = 'Inasistencia';
+                } else if (lowerVal.includes('tarde') || lowerVal === 't') {
+                  finalVal = 'Tardanza';
+                } else if (lowerVal.includes('excusa') || lowerVal === 'e') {
+                  finalVal = 'Excusa';
+                } else if (lowerVal.includes('presente') || lowerVal === 'p') {
+                  finalVal = 'Presente';
+                }
+
+                registrosActuales[normalized] = finalVal;
+              }
+            }
+          });
+
+          return {
+            tipo_documento: String(uploadedRow.tipo_documento || cloudStudent.tipo_documento || "CC").trim(),
+            numero_documento: docNum,
+            nombres: String(uploadedRow.nombres || uploadedRow.nombre || cloudStudent.nombres || "").trim().toUpperCase(),
+            apellidos: String(uploadedRow.apellidos || uploadedRow.apellido || cloudStudent.apellidos || "").trim().toUpperCase(),
+            correo_electronico: String(uploadedRow.correo_electronico || cloudStudent.correo || cloudStudent.correo_electronico || "").trim().toLowerCase(),
+            telefono: String(uploadedRow.telefono || cloudStudent.telefono || "").trim(),
+            estado: String(uploadedRow.estado || cloudStudent.estado || "En formación").trim(),
+            registros: registrosActuales
+          };
+        });
     }
 
     return {
       success: true,
-      message: `Plantilla simplificada procesada con éxito: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
+      message: `Plantilla procesada con éxito para la Ficha ${updatedData.ficha_de_caracterizacion}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
       data: updatedData,
       counts: {
         aprendices: updatedData.asistencias_aprendices.length
@@ -276,7 +273,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
   } catch (error: any) {
     return {
       success: false,
-      message: `Error al leer el archivo Excel: ${error.message || error}`
+      message: `Error al procesar el archivo Excel: ${error.message || error}`
     };
   }
 }
