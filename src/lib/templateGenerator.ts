@@ -325,6 +325,30 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
+    // ==========================================
+    // BLINDAJE CRÍTICO CONTRA PROPIEDADES UNDEFINED
+    // ==========================================
+    updatedData.asistencias_aprendices = Array.isArray(updatedData.asistencias_aprendices) 
+      ? updatedData.asistencias_aprendices 
+      : [];
+      
+    updatedData.fechas_asistencia = Array.isArray(updatedData.fechas_asistencia) 
+      ? updatedData.fechas_asistencia 
+      : [];
+      
+    updatedData.equipo_instructores = Array.isArray(updatedData.equipo_instructores) 
+      ? updatedData.equipo_instructores 
+      : [];
+
+    return {
+      success: true,
+      message: `Archivo procesado con éxito para la Ficha ${updatedData.ficha_de_caracterizacion}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
+      data: updatedData,
+      counts: {
+        aprendices: updatedData.asistencias_aprendices.length
+      }
+    };
+    
     return {
       success: true,
       message: `Archivo procesado con éxito para la Ficha ${updatedData.ficha_de_caracterizacion}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
