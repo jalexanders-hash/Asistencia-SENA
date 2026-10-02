@@ -7,10 +7,6 @@ import {
   CheckCircle2, 
   AlertCircle, 
   X, 
-  FileText, 
-  Users, 
-  Briefcase, 
-  BookOpen, 
   Loader2,
   Table,
   Settings,
@@ -18,7 +14,7 @@ import {
 } from 'lucide-react';
 import { 
   downloadGoogleSheetsTemplate, 
-  downloadAprendicesCSVTemplate, 
+  downloadCompleteConfigurationTemplate,
   parseUploadedTemplate,
   ParsedTemplateResult
 } from '../lib/templateGenerator';
@@ -143,7 +139,7 @@ export function SheetsTemplateModal({
     if (!uploadResult?.data) return;
 
     let excelFichaId = '';
-    
+  
     if (uploadResult.data.ficha_de_caracterizacion) {
       excelFichaId = String(uploadResult.data.ficha_de_caracterizacion).trim();
     }
@@ -191,7 +187,7 @@ export function SheetsTemplateModal({
 
       // 3. Notificar a la app principal con los datos frescos
       onDataLoaded(refreshedData, excelFichaId);
-      
+     
       const mensajeExito = uploadType === 'inasistencias' 
         ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y aplicadas con éxito!`
         : `¡Configuración general de la Ficha N° ${excelFichaId} actualizada con éxito!`;
@@ -199,7 +195,7 @@ export function SheetsTemplateModal({
       alert(mensajeExito);
       onClose();
 
-      // 4. Refresco automático controlado para asegurar el renderizado total de la vista principal
+      // 4. Refresco automático controlado para asegurar el renderizado total
       setTimeout(() => {
         window.location.reload();
       }, 500);
@@ -308,12 +304,12 @@ export function SheetsTemplateModal({
                       Plantilla para Inasistencias (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga el archivo con el listado actual de aprendices para marcar fallas o tardanzas y volver a cargarlo.
+                      Descarga el archivo simplificado (2 pestañas) con el listado actual de aprendices para marcar fallas o tardanzas y volver a cargarlo.
                     </p>
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadBlankAttendanceTemplate(courseData)}
+                      onClick={() => downloadGoogleSheetsTemplate()}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
                     >
                       <Download className="w-4 h-4" />
@@ -331,12 +327,12 @@ export function SheetsTemplateModal({
                       Formato Completo de Configuración
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga la estructura completa de múltiples hojas para la configuración inicial de fichas e instructores.
+                      Descarga la estructura completa de múltiples hojas (incluyendo Equipo Ejecutor) para la configuración inicial de fichas nuevas.
                     </p>
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadGoogleSheetsTemplate(currentFicha)}
+                      onClick={() => downloadCompleteConfigurationTemplate()}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
                     >
                       <Download className="w-4 h-4" />
@@ -354,17 +350,15 @@ export function SheetsTemplateModal({
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-3">
                 <h4 className="font-bold text-sm text-slate-800">Guía para la carga independiente</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Utiliza <strong>Configuración General</strong> para actualizar la estructura de la ficha y aprendices. Utiliza <strong>Inasistencias</strong> para registrar o actualizar las novedades de asistencia manteniendo intacta la estructura general.
+                  Utiliza <strong>Configuración General</strong> para actualizar la estructura de la ficha y aprendices con el formato completo. Utiliza <strong>Inasistencias</strong> para registrar o actualizar las novedades de asistencia manteniendo intacta la estructura general.
                 </p>
               </div>
             </div>
           )}
 
-          {/* TAB 3: CARGAR AL APLICATIVO (DOS OPCIONES SEPARADAS) */}
+          {/* TAB 3: CARGAR AL APLICATIVO */}
           {activeTab === 'cargar' && (
             <div className="space-y-5">
-              
-              {/* Selector de Tipo de Carga si no se ha elegido */}
               {!uploadType ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div 
@@ -376,7 +370,7 @@ export function SheetsTemplateModal({
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Ideal para inicializar o actualizar la estructura base de la ficha, aprendices e instructores.
+                      Ideal para inicializar o actualizar la estructura base de fichas nuevas con múltiples hojas.
                     </p>
                   </div>
 
@@ -389,7 +383,7 @@ export function SheetsTemplateModal({
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">Cargar Registro de Inasistencias</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Ideal para actualizar únicamente las fallas y tardanzas marcadas en el formato de asistencia.
+                      Ideal para actualizar únicamente las fallas y tardanzas marcadas en el formato de asistencia simplificado.
                     </p>
                   </div>
                 </div>
@@ -480,7 +474,7 @@ export function SheetsTemplateModal({
                   </div>
 
                   {uploadResult.success && uploadResult.counts && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white p-3.5 rounded-lg border border-emerald-100 text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 bg-white p-3.5 rounded-lg border border-emerald-100 text-xs">
                       <div>
                         <span className="text-slate-400 block font-medium">Ficha detectada:</span>
                         <span className="font-bold text-slate-800 text-sm">
@@ -491,12 +485,6 @@ export function SheetsTemplateModal({
                         <span className="text-slate-400 block font-medium">Total Aprendices:</span>
                         <span className="font-bold text-emerald-700 text-sm">
                           {uploadResult.counts.aprendices} alumnos
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block font-medium">Equipo Ejecutor:</span>
-                        <span className="font-bold text-slate-800 text-sm">
-                          {uploadResult.counts.instructores} instructores
                         </span>
                       </div>
                     </div>
