@@ -196,6 +196,11 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     const updatedData = JSON.parse(JSON.stringify(baseData));
 
+    // Asegurar estructura base en memoria desde el inicio para evitar undefined
+    updatedData.asistencias_aprendices = Array.isArray(baseData.asistencias_aprendices) ? baseData.asistencias_aprendices : [];
+    updatedData.fechas_asistencia = Array.isArray(baseData.fechas_asistencia) ? baseData.fechas_asistencia : [];
+    updatedData.equipo_instructores = Array.isArray(baseData.equipo_instructores) ? baseData.equipo_instructores : [];
+
     // 1. Parsear Ficha
     if (fichaSheetName) {
       const ws = wb.Sheets[fichaSheetName];
@@ -212,7 +217,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 2. Parsear Equipo Ejecutor adaptado al formato actual (sin requerir fechas en el Excel)
+    // 2. Parsear Equipo Ejecutor adaptado al formato actual
     if (equipoSheetName) {
       const ws = wb.Sheets[equipoSheetName];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -226,7 +231,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             correo_institucional_sena: String(r.correo_institucional_sena || "").trim(),
             dia: String(r.dia || "Lunes").trim(),
             rol: String(r.rol || "Instructor").trim(),
-            // Asignamos fechas por defecto de manera interna para que la UI no falle
             fecha_de_inicio: "20/01/2026",
             fecha_terminacion: "03/12/2026"
           }));
@@ -235,11 +239,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           updatedData.equipo_instructores = newInstructors;
         }
       }
-    }
-
-    // Blindaje de respaldo para instructores
-    if (!updatedData.equipo_instructores || !Array.isArray(updatedData.equipo_instructores) || updatedData.equipo_instructores.length === 0) {
-      updatedData.equipo_instructores = baseData.equipo_instructores || [];
     }
 
     // 3. Parsear Aprendices, fechas y asistencias
@@ -272,7 +271,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           updatedData.fechas_asistencia = normalizedDates;
         }
 
-        updatedData.asistencias_aprendices = rawRows
+        const parsedAprendices = rawRows
           .filter(r => {
             const docRow = String(r.numero_documento || r.documento || "").trim();
             const nombresRow = String(r.nombres || r.nombre || "").trim();
@@ -322,11 +321,15 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
               registros: registrosActuales
             };
           });
+
+        if (parsedAprendices.length > 0) {
+          updatedData.asistencias_aprendices = parsedAprendices;
+        }
       }
     }
 
     // ==========================================
-    // BLINDAJE CRÍTICO CONTRA PROPIEDADES UNDEFINED
+    // BLINDAJE CRÍTICO DEFINITIVO CONTRA UNDEFINED
     // ==========================================
     updatedData.asistencias_aprendices = Array.isArray(updatedData.asistencias_aprendices) 
       ? updatedData.asistencias_aprendices 
@@ -342,21 +345,13 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     return {
       success: true,
-      message: `Archivo procesado con éxito para la Ficha ${updatedData.ficha_de_caracterizacion}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
+      message: `Configuración cargada con éxito para la Ficha ${updatedData.ficha_de_caracterizacion || "SENA"}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
       data: updatedData,
       counts: {
         aprendices: updatedData.asistencias_aprendices.length
       }
     };
-    
-    return {
-      success: true,
-      message: `Archivo procesado con éxito para la Ficha ${updatedData.ficha_de_caracterizacion}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
-      data: updatedData,
-      counts: {
-        aprendices: updatedData.asistencias_aprendices.length
-      }
-    };
+
   } catch (error: any) {
     return {
       success: false,
