@@ -56,7 +56,7 @@ function toStrictDDMMYYYY(key: string | number): string {
 }
 
 /**
- * 1. Genera la Plantilla Simplificada (2 Pestañas: Ficha y Aprendices) 
+ * 1. Genera la Plantilla Simplificada (Ficha y Aprendices con fechas de asistencia)
  */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
@@ -98,16 +98,18 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
 }
 
 /**
- * 2. Genera el Formato Completo de Configuración
+ * 2. Genera el Formato Completo de Configuración Inicial (Ficha, Equipo_Ejecutor y Aprendices)
  */
 export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
+  // Hoja 1: Ficha
   const fichaHeaders = ["ficha_de_caracterizacion", "programa", "centro", "denominacion", "fecha_inicio", "fecha_terminacion", "jornada"];
   const fichaRows = [fichaHeaders, ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
+  // Hoja 2: Equipo_Ejecutor
   const equipoHeaders = [
     "competencia", 
     "nombre_del_instructor", 
@@ -123,8 +125,12 @@ export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-  const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"];
-  const aprendicesRows = [aprendicesHeaders, ["", "", "", "", "", "", ""]];
+  // Hoja 3: Aprendices (con estructura limpia y una columna de fecha inicial por defecto)
+  const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado", "20/01/2026"];
+  const aprendicesRows = [
+    aprendicesHeaders, 
+    ["CC", "", "", "", "", "", "En formación", "Presente"]
+  ];
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
   XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
 
@@ -171,7 +177,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo de configuración general con blindaje total de propiedades y arrays.
+ * Parsea el archivo de configuración inicial o asistencia con blindaje completo de datos.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -194,21 +200,21 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       };
     }
 
-    // Clonar baseData garantizando que ninguna propiedad clave quede indefinida
+    // Clonar baseData garantizando que la estructura completa exista
     const updatedData = JSON.parse(JSON.stringify(baseData || {}));
 
     // =========================================================================
-    // BLINDAJE INICIAL DE ARRAYS Y PROPIEDADES EN EL OBJETO DE DATOS
+    // INICIALIZACIÓN Y BLINDAJE DE PROPIEDADES (EVITA CUALQUIER 'UNDEFINED')
     // =========================================================================
-    updatedData.asistencias_aprendices = Array.isArray(baseData?.asistencias_aprendices) ? baseData.asistencias_aprendices : [];
-    updatedData.fechas_asistencia = Array.isArray(baseData?.fechas_asistencia) ? baseData.fechas_asistencia : [];
+    updatedData.asistencias_aprendices = [];
+    updatedData.fechas_asistencia = ["20/01/2026"];
     updatedData.equipo_instructores = Array.isArray(baseData?.equipo_instructores) ? baseData.equipo_instructores : [];
     updatedData.competencias = Array.isArray(baseData?.competencias) ? baseData.competencias : [];
     updatedData.aprendices = Array.isArray(baseData?.aprendices) ? baseData.aprendices : [];
     
     updatedData.ficha_de_caracterizacion = updatedData.ficha_de_caracterizacion || "";
     updatedData.programa = updatedData.programa || "";
-    updatedData.centro = updatedData.centro || "";
+    updatedData.centro = updatedData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico";
     updatedData.denominacion = updatedData.denominacion || "";
     updatedData.instructor_titular = updatedData.instructor_titular || "";
     updatedData.competencia_activa = updatedData.competencia_activa || "";
@@ -292,11 +298,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           })
           .map(uploadedRow => {
             const docNum = String(uploadedRow.numero_documento || uploadedRow.documento || "").trim();
-            
-            const cloudStudent = updatedData.asistencias_aprendices.find((s: any) => 
-              String(s?.numero_documento || "").trim() === docNum
-            ) || {};
-
             const registrosActuales: Record<string, string> = {};
 
             dateMapping.forEach(({ original, normalized }) => {
@@ -304,7 +305,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
               if (val !== null && val !== undefined) {
                 const valStr = String(val).trim();
                 if (valStr !== '' && valStr !== '·' && valStr !== '-') {
-                  
                   let finalVal = valStr;
                   const lowerVal = valStr.toLowerCase();
                   
@@ -324,28 +324,26 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             });
 
             return {
-              tipo_documento: String(uploadedRow.tipo_documento || cloudStudent.tipo_documento || "CC").trim(),
+              tipo_documento: String(uploadedRow.tipo_documento || "CC").trim(),
               numero_documento: docNum,
-              nombres: String(uploadedRow.nombres || uploadedRow.nombre || cloudStudent.nombres || "").trim().toUpperCase(),
-              apellidos: String(uploadedRow.apellidos || uploadedRow.apellido || cloudStudent.apellidos || "").trim().toUpperCase(),
-              correo_electronico: String(uploadedRow.correo_electronico || cloudStudent.correo || cloudStudent.correo_electronico || "").trim().toLowerCase(),
-              telefono: String(uploadedRow.telefono || cloudStudent.telefono || "").trim(),
-              estado: String(uploadedRow.estado || cloudStudent.estado || "En formación").trim(),
+              nombres: String(uploadedRow.nombres || uploadedRow.nombre || "").trim().toUpperCase(),
+              apellidos: String(uploadedRow.apellidos || uploadedRow.apellido || "").trim().toUpperCase(),
+              correo_electronico: String(uploadedRow.correo_electronico || uploadedRow.correo || "").trim().toLowerCase(),
+              telefono: String(uploadedRow.telefono || "").trim(),
+              estado: String(uploadedRow.estado || "En formación").trim(),
               registros: registrosActuales
             };
           });
 
-        if (parsedAprendices.length > 0) {
-          updatedData.asistencias_aprendices = parsedAprendices;
-        }
+        updatedData.asistencias_aprendices = parsedAprendices;
       }
     }
 
     // =========================================================================
-    // DOBLE VERIFICACIÓN FINAL (EVITA CUALQUIER CASO DE UNDEFINED EN RENDERIZADOS)
+    // GARANTÍA FINAL DE TIPOS (EVITA CUALQUIER 'LENGTH OF UNDEFINED')
     // =========================================================================
     updatedData.asistencias_aprendices = Array.isArray(updatedData.asistencias_aprendices) ? updatedData.asistencias_aprendices : [];
-    updatedData.fechas_asistencia = Array.isArray(updatedData.fechas_asistencia) ? updatedData.fechas_asistencia : [];
+    updatedData.fechas_asistencia = Array.isArray(updatedData.fechas_asistencia) && updatedData.fechas_asistencia.length > 0 ? updatedData.fechas_asistencia : ["20/01/2026"];
     updatedData.equipo_instructores = Array.isArray(updatedData.equipo_instructores) ? updatedData.equipo_instructores : [];
     updatedData.competencias = Array.isArray(updatedData.competencias) ? updatedData.competencias : [];
     updatedData.aprendices = Array.isArray(updatedData.aprendices) ? updatedData.aprendices : [];
