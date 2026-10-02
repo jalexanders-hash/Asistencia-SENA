@@ -171,7 +171,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo subido inyectando por defecto las propiedades que la UI espera (fechas de instructor, correos, etc.)
+ * Parsea el archivo de configuración general adaptado al nuevo formato sin fechas de instructores.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -212,7 +212,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 2. Parsear Equipo Ejecutor asegurando campos obligatorios para evitar errores en la UI
+    // 2. Parsear Equipo Ejecutor adaptado al formato actual (sin requerir fechas en el Excel)
     if (equipoSheetName) {
       const ws = wb.Sheets[equipoSheetName];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -226,7 +226,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             correo_institucional_sena: String(r.correo_institucional_sena || "").trim(),
             dia: String(r.dia || "Lunes").trim(),
             rol: String(r.rol || "Instructor").trim(),
-            // Se inyectan por defecto para evitar que la UI falle al buscar estas propiedades
+            // Asignamos fechas por defecto de manera interna para que la UI no falle
             fecha_de_inicio: "20/01/2026",
             fecha_terminacion: "03/12/2026"
           }));
@@ -235,6 +235,11 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           updatedData.equipo_instructores = newInstructors;
         }
       }
+    }
+
+    // Blindaje de respaldo para instructores
+    if (!updatedData.equipo_instructores || !Array.isArray(updatedData.equipo_instructores) || updatedData.equipo_instructores.length === 0) {
+      updatedData.equipo_instructores = baseData.equipo_instructores || [];
     }
 
     // 3. Parsear Aprendices, fechas y asistencias
