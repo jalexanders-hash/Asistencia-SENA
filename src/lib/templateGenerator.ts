@@ -17,7 +17,6 @@ export interface ParsedTemplateResult {
 function toStrictDDMMYYYY(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
 
-  // Si es un número serial de Excel (ej: 45700)
   if (typeof key === 'number' || /^\d{5}$/.test(String(key).trim())) {
     const excelEpoch = new Date(1899, 11, 30);
     const dateObj = new Date(excelEpoch.getTime() + Number(key) * 24 * 60 * 60 * 1000);
@@ -35,7 +34,6 @@ function toStrictDDMMYYYY(key: string | number): string {
   if (parts.length === 3) {
     let day: number, month: number, year: number;
     
-    // Si viene en formato YYYY/MM/DD o YYYY-MM-DD
     if (parts[0].length === 4) {
       year = Number(parts[0]);
       month = Number(parts[1]);
@@ -59,12 +57,10 @@ function toStrictDDMMYYYY(key: string | number): string {
 
 /**
  * 1. Genera la Plantilla Simplificada (2 Pestañas: Ficha y Aprendices) 
- * Usada para el botón "Descargar Plantilla en Blanco" (Inasistencias).
  */
 export function generateGoogleSheetsTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // Pestaña Ficha
   const fichaHeaders = [
     "ficha_de_caracterizacion", 
     "programa", 
@@ -80,7 +76,6 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // Pestaña Aprendices
   const aprendicesHeaders = [
     "tipo_documento", 
     "numero_documento", 
@@ -103,19 +98,16 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
 }
 
 /**
- * 2. Genera el Formato Completo de Configuración (Múltiples pestañas incluyendo Equipo_Ejecutor sin fechas individuales)
- * Usado para el botón "Descargar Formato Completo" (Fichas nuevas y configuración inicial).
+ * 2. Genera el Formato Completo de Configuración (Equipo_Ejecutor sin fechas individuales)
  */
 export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // Pestaña 1: Ficha
   const fichaHeaders = ["ficha_de_caracterizacion", "programa", "centro", "denominacion", "fecha_inicio", "fecha_terminacion", "jornada"];
   const fichaRows = [fichaHeaders, ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // Pestaña 2: Equipo Ejecutor (SIN columnas de fechas por instructor)
   const equipoHeaders = [
     "competencia", 
     "nombre_del_instructor", 
@@ -131,7 +123,6 @@ export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-  // Pestaña 3: Aprendices
   const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"];
   const aprendicesRows = [aprendicesHeaders, ["", "", "", "", "", "", ""]];
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
@@ -153,9 +144,6 @@ export function downloadGoogleSheetsTemplate() {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Función auxiliar para conectar con el botón de Formato Completo en la interfaz
- */
 export function downloadCompleteConfigurationTemplate() {
   const data = generateCompleteConfigurationTemplate();
   const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -183,7 +171,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo subido, soportando tanto el formato simplificado como el completo de forma segura.
+ * Parsea el archivo subido inyectando por defecto las propiedades que la UI espera (fechas de instructor, correos, etc.)
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -224,8 +212,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 2. Parsear Equipo Ejecutor (Si el archivo subido es un formato completo)
-    let totalInstructores = updatedData.equipo_instructores?.length || 0;
+    // 2. Parsear Equipo Ejecutor asegurando campos obligatorios para evitar errores en la UI
     if (equipoSheetName) {
       const ws = wb.Sheets[equipoSheetName];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -235,19 +222,22 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           .map(r => ({
             competencia: String(r.competencia).trim(),
             nombre_del_instructor: String(r.nombre_del_instructor || r.nombre || r.instructor).trim(),
+            correo_google: String(r.correo_google || r.correo || "").trim(),
+            correo_institucional_sena: String(r.correo_institucional_sena || "").trim(),
             dia: String(r.dia || "Lunes").trim(),
             rol: String(r.rol || "Instructor").trim(),
-            correo: String(r.correo_google || r.correo_institucional_sena || r.correo || "").trim()
+            // Se inyectan por defecto para evitar que la UI falle al buscar estas propiedades
+            fecha_de_inicio: "20/01/2026",
+            fecha_terminacion: "03/12/2026"
           }));
 
         if (newInstructors.length > 0) {
           updatedData.equipo_instructores = newInstructors;
-          totalInstructores = newInstructors.length;
         }
       }
     }
 
-    // 3. Parsear Aprendices, fechas y asistencias con normalización de "X" a "Inasistencia"
+    // 3. Parsear Aprendices, fechas y asistencias
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
