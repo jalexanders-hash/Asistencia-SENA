@@ -103,7 +103,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
 }
 
 /**
- * 2. Genera el Formato Completo de Configuración (Múltiples pestañas incluyendo Equipo_Ejecutor)
+ * 2. Genera el Formato Completo de Configuración (Múltiples pestañas incluyendo Equipo_Ejecutor sin fechas individuales)
  * Usado para el botón "Descargar Formato Completo" (Fichas nuevas y configuración inicial).
  */
 export function generateCompleteConfigurationTemplate(): Uint8Array {
@@ -115,9 +115,19 @@ export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // Pestaña 2: Equipo Ejecutor (Restaurada para configuración completa de instructores)
-  const equipoHeaders = ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "fecha_de_inicio", "fecha_terminacion", "rol"];
-  const equipoRows = [equipoHeaders, ["", "", "", "", "", "", "", ""]];
+  // Pestaña 2: Equipo Ejecutor (SIN columnas de fechas por instructor)
+  const equipoHeaders = [
+    "competencia", 
+    "nombre_del_instructor", 
+    "correo_google", 
+    "correo_institucional_sena", 
+    "dia", 
+    "rol"
+  ];
+  const equipoRows = [
+    equipoHeaders, 
+    ["", "", "", "", "", ""]
+  ];
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
@@ -225,9 +235,8 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           .map(r => ({
             competencia: String(r.competencia).trim(),
             nombre_del_instructor: String(r.nombre_del_instructor || r.nombre || r.instructor).trim(),
-            fecha_de_inicio: toStrictDDMMYYYY(r.fecha_de_inicio || r.fecha_inicio || "20/01/2026"),
-            fecha_terminacion: toStrictDDMMYYYY(r.fecha_terminacion || r.fecha_fin || "03/12/2026"),
             dia: String(r.dia || "Lunes").trim(),
+            rol: String(r.rol || "Instructor").trim(),
             correo: String(r.correo_google || r.correo_institucional_sena || r.correo || "").trim()
           }));
 
