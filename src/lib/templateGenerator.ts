@@ -98,7 +98,7 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
 }
 
 /**
- * 2. Genera el Formato Completo de Configuración (Equipo_Ejecutor sin fechas individuales)
+ * 2. Genera el Formato Completo de Configuración
  */
 export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
@@ -171,7 +171,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo de configuración general adaptado al nuevo formato sin fechas de instructores.
+ * Parsea el archivo de configuración general con blindaje total de propiedades y arrays.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -194,12 +194,24 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       };
     }
 
-    const updatedData = JSON.parse(JSON.stringify(baseData));
+    // Clonar baseData garantizando que ninguna propiedad clave quede indefinida
+    const updatedData = JSON.parse(JSON.stringify(baseData || {}));
 
-    // Asegurar estructura base en memoria desde el inicio para evitar undefined
-    updatedData.asistencias_aprendices = Array.isArray(baseData.asistencias_aprendices) ? baseData.asistencias_aprendices : [];
-    updatedData.fechas_asistencia = Array.isArray(baseData.fechas_asistencia) ? baseData.fechas_asistencia : [];
-    updatedData.equipo_instructores = Array.isArray(baseData.equipo_instructores) ? baseData.equipo_instructores : [];
+    // =========================================================================
+    // BLINDAJE INICIAL DE ARRAYS Y PROPIEDADES EN EL OBJETO DE DATOS
+    // =========================================================================
+    updatedData.asistencias_aprendices = Array.isArray(baseData?.asistencias_aprendices) ? baseData.asistencias_aprendices : [];
+    updatedData.fechas_asistencia = Array.isArray(baseData?.fechas_asistencia) ? baseData.fechas_asistencia : [];
+    updatedData.equipo_instructores = Array.isArray(baseData?.equipo_instructores) ? baseData.equipo_instructores : [];
+    updatedData.competencias = Array.isArray(baseData?.competencias) ? baseData.competencias : [];
+    updatedData.aprendices = Array.isArray(baseData?.aprendices) ? baseData.aprendices : [];
+    
+    updatedData.ficha_de_caracterizacion = updatedData.ficha_de_caracterizacion || "";
+    updatedData.programa = updatedData.programa || "";
+    updatedData.centro = updatedData.centro || "";
+    updatedData.denominacion = updatedData.denominacion || "";
+    updatedData.instructor_titular = updatedData.instructor_titular || "";
+    updatedData.competencia_activa = updatedData.competencia_activa || "";
 
     // 1. Parsear Ficha
     if (fichaSheetName) {
@@ -217,13 +229,13 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 2. Parsear Equipo Ejecutor adaptado al formato actual
+    // 2. Parsear Equipo Ejecutor
     if (equipoSheetName) {
       const ws = wb.Sheets[equipoSheetName];
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (rows.length > 0) {
         const newInstructors = rows
-          .filter(r => (r.nombre_del_instructor || r.nombre || r.instructor) && r.competencia)
+          .filter(r => r && (r.nombre_del_instructor || r.nombre || r.instructor) && r.competencia)
           .map(r => ({
             competencia: String(r.competencia).trim(),
             nombre_del_instructor: String(r.nombre_del_instructor || r.nombre || r.instructor).trim(),
@@ -247,7 +259,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       
       if (rawRows.length > 0) {
-        const sampleRow = rawRows[0];
+        const sampleRow = rawRows[0] || {};
         const fixedKeys = [
           'tipo_documento', 'numero_documento', 'documento', 
           'nombres', 'nombre', 'apellidos', 'apellido', 
@@ -273,6 +285,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
         const parsedAprendices = rawRows
           .filter(r => {
+            if (!r) return false;
             const docRow = String(r.numero_documento || r.documento || "").trim();
             const nombresRow = String(r.nombres || r.nombre || "").trim();
             return docRow !== "" || nombresRow !== "";
@@ -281,7 +294,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             const docNum = String(uploadedRow.numero_documento || uploadedRow.documento || "").trim();
             
             const cloudStudent = updatedData.asistencias_aprendices.find((s: any) => 
-              String(s.numero_documento || "").trim() === docNum
+              String(s?.numero_documento || "").trim() === docNum
             ) || {};
 
             const registrosActuales: Record<string, string> = {};
@@ -328,20 +341,14 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // ==========================================
-    // BLINDAJE CRÍTICO DEFINITIVO CONTRA UNDEFINED
-    // ==========================================
-    updatedData.asistencias_aprendices = Array.isArray(updatedData.asistencias_aprendices) 
-      ? updatedData.asistencias_aprendices 
-      : [];
-      
-    updatedData.fechas_asistencia = Array.isArray(updatedData.fechas_asistencia) 
-      ? updatedData.fechas_asistencia 
-      : [];
-      
-    updatedData.equipo_instructores = Array.isArray(updatedData.equipo_instructores) 
-      ? updatedData.equipo_instructores 
-      : [];
+    // =========================================================================
+    // DOBLE VERIFICACIÓN FINAL (EVITA CUALQUIER CASO DE UNDEFINED EN RENDERIZADOS)
+    // =========================================================================
+    updatedData.asistencias_aprendices = Array.isArray(updatedData.asistencias_aprendices) ? updatedData.asistencias_aprendices : [];
+    updatedData.fechas_asistencia = Array.isArray(updatedData.fechas_asistencia) ? updatedData.fechas_asistencia : [];
+    updatedData.equipo_instructores = Array.isArray(updatedData.equipo_instructores) ? updatedData.equipo_instructores : [];
+    updatedData.competencias = Array.isArray(updatedData.competencias) ? updatedData.competencias : [];
+    updatedData.aprendices = Array.isArray(updatedData.aprendices) ? updatedData.aprendices : [];
 
     return {
       success: true,
