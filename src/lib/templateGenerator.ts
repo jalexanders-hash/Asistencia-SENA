@@ -11,8 +11,8 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Convierte cualquier fecha, texto, número serial de Excel o formato M/D/YYYY 
- * al formato estricto colombiano DD/MM/YYYY asegurando sincronización limpia.
+ * Convierte cualquier fecha, texto, número serial de Excel 
+ * al formato estricto colombiano DD/MM/YYYY
  */
 function toStrictDDMMYYYY(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
@@ -41,21 +41,11 @@ function toStrictDDMMYYYY(key: string | number): string {
       month = Number(parts[1]);
       day = Number(parts[2]);
     } else {
-      const p0 = Number(parts[0]);
-      const p1 = Number(parts[1]);
-      let possibleYear = Number(parts[2]);
-      if (possibleYear < 100) possibleYear += 2000;
-
-      // Validación robusta: Manejo inteligente de M/D/YYYY vs DD/MM/YYYY
-      if (p0 <= 12 && p1 > 12) {
-        month = p0;
-        day = p1;
-        year = possibleYear;
-      } else {
-        day = p0;
-        month = p1;
-        year = possibleYear;
-      }
+      // Formato estándar colombiano DD/MM/YYYY asegurado
+      day = Number(parts[0]);
+      month = Number(parts[1]);
+      year = Number(parts[2]);
+      if (year < 100) year += 2000;
     }
 
     if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
@@ -230,7 +220,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
               const valStr = String(val).trim();
               if (valStr !== '' && valStr !== '·' && valStr !== '-') {
                 
-                // Mapeo robusto de inasistencias, tardanzas, excusas y presentes
+                // Mapeo robusto de inasistencias ("X"), tardanzas, excusas y presentes
                 let finalVal = valStr;
                 const lowerVal = valStr.toLowerCase();
                 
