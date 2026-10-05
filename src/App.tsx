@@ -148,7 +148,7 @@ export default function App() {
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
-  // CORRECCIÓN: Se define el estado del filtro de instructor antes de ser utilizado en los cálculos y componentes
+  // Estado del filtro de instructor definido correctamente antes de su uso
   const [instructorFiltroReporte, setInstructorFiltroReporte] = useState<string>('todos');
 
   const instructoresFiltradosReporte = instructorFiltroReporte === 'todos' 
