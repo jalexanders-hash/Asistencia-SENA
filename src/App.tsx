@@ -60,21 +60,43 @@ const displayAsDDMMYYYY = (dateStr: string) => {
   return dateStr;
 };
 
+const sanitizeFicha = (ficha: any, fichaId: string) => {
+  const base = JSON.parse(JSON.stringify(initialCourseData));
+  if (!ficha || typeof ficha !== 'object') {
+    return { ...base, ficha_de_caracterizacion: fichaId };
+  }
+  return {
+    ...base,
+    ...ficha,
+    ficha_de_caracterizacion: ficha.ficha_de_caracterizacion || fichaId,
+    fechas_asistencia: Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia : [],
+    asistencias_aprendices: Array.isArray(ficha.asistencias_aprendices) ? ficha.asistencias_aprendices : [],
+    equipo_instructores: Array.isArray(ficha.equipo_instructores) ? ficha.equipo_instructores : [],
+    competencias: Array.isArray(ficha.competencias) ? ficha.competencias : [],
+    aprendices: Array.isArray(ficha.aprendices) ? ficha.aprendices : []
+  };
+};
+
 export default function App() {
   const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
   
-  // Base de datos indexada por Ficha para evitar traslapes de fechas y registros
+  // Base de datos indexada por Ficha saneada para evitar traslapes de fechas y registros
   const [fichasDataMap, setFichasDataMap] = useState<Record<string, any>>(() => {
     const saved = localStorage.getItem('sena_all_fichas_database');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsedMap = JSON.parse(saved);
+        const sanitizedMap: Record<string, any> = {};
+        Object.keys(parsedMap).forEach(key => {
+          sanitizedMap[key] = sanitizeFicha(parsedMap[key], key);
+        });
+        return sanitizedMap;
       } catch (e) {}
     }
     return {
-      "3387401": JSON.parse(JSON.stringify(initialCourseData)),
-      "3407860": {
-        ...JSON.parse(JSON.stringify(initialCourseData)),
+      "3387401": sanitizeFicha(initialCourseData, "3387401"),
+      "3407860": sanitizeFicha({
+        ...initialCourseData,
         ficha_de_caracterizacion: "3407860",
         denominacion: "GESTIÓN ADMINISTRATIVA (Nuevo Grupo)",
         fechas_asistencia: [],
@@ -82,24 +104,26 @@ export default function App() {
           ...a,
           registros: {}
         }))
-      }
+      }, "3407860")
     };
   });
 
   const courseData = useMemo(() => {
-    return fichasDataMap[currentFichaId] || {
+    const rawData = fichasDataMap[currentFichaId] || {
       ...JSON.parse(JSON.stringify(initialCourseData)),
       ficha_de_caracterizacion: currentFichaId,
       fechas_asistencia: [],
       asistencias_aprendices: initialCourseData.asistencias_aprendices.map(a => ({ ...a, registros: {} }))
     };
+    return sanitizeFicha(rawData, currentFichaId);
   }, [fichasDataMap, currentFichaId]);
 
   const updateCurrentFichaData = (newData: any) => {
+    const cleanData = sanitizeFicha(newData, currentFichaId);
     setFichasDataMap(prev => {
       const updated = {
         ...prev,
-        [currentFichaId]: newData
+        [currentFichaId]: cleanData
       };
       localStorage.setItem('sena_all_fichas_database', JSON.stringify(updated));
       return updated;
