@@ -559,9 +559,11 @@ CC: ${correoInstructorActual}`;
                   onChange={(e) => setCurrentFichaId(e.target.value)}
                   className="bg-emerald-50 text-[#39a900] text-xs font-bold px-2 py-0.5 rounded border border-[#39a900]/30 focus:outline-none cursor-pointer"
                 >
-                  <option value="3387401">Ficha: 3387401</option>
-                  <option value="3407860">Ficha: 3407860 (Nuevo Grupo)</option>
-                  <option value={courseData.ficha_de_caracterizacion}>{courseData.ficha_de_caracterizacion} (Actual)</option>
+                  {Object.keys(fichasDataMap).map((fichaKey) => (
+                    <option key={fichaKey} value={fichaKey}>
+                      Ficha: {fichaKey} {fichaKey === "3407860" ? "(Nuevo Grupo)" : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
