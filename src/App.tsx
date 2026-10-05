@@ -89,7 +89,7 @@ export default function App() {
   const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
   
   // Base de datos indexada por Ficha saneada para evitar traslapes de fechas y registros
-  const [fichasDataMap, setFichasDataMap] = useState<Record<string, any>>(() => {
+ const [fichasDataMap, setFichasDataMap] = useState<Record<string, any>>(() => {
     const saved = localStorage.getItem('sena_all_fichas_database');
     if (saved) {
       try {
@@ -107,11 +107,13 @@ export default function App() {
         ...initialCourseData,
         ficha_de_caracterizacion: "3407860",
         denominacion: "GESTIÓN ADMINISTRATIVA (Nuevo Grupo)",
+        programa: "Tecnología en Gestión Administrativa",
+        equipo_instructores: [
+          // Agrega aquí los instructores específicos de esta ficha si no vienen de Firestore, 
+          // o déjalo vacío [] si se cargan desde tu base de datos.
+        ],
         fechas_asistencia: [],
-        asistencias_aprendices: initialCourseData.asistencias_aprendices.map(a => ({
-          ...a,
-          registros: {}
-        }))
+        asistencias_aprendices: []
       }, "3407860")
     };
   });
