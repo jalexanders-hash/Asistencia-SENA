@@ -11,15 +11,18 @@ export interface ParsedTemplateResult {
 }
 
 /**
- * Convierte cualquier fecha, texto o número serial de Excel 
+ * Convierte cualquier fecha, texto, número serial de Excel o formato YYYY-MM-DD
  * al formato estricto colombiano DD/MM/YYYY
  */
 function toStrictDDMMYYYY(key: string | number): string {
   if (key === null || key === undefined || key === "") return "";
 
-  if (typeof key === 'number' || /^\d{5}$/.test(String(key).trim())) {
+  // Limpiar sufijos duplicados generados por Excel (ej: "2026-04-13.1" -> "2026-04-13")
+  const cleanKey = String(key).replace(/\.\d+$/, '').trim();
+
+  if (typeof key === 'number' || /^\d{5}$/.test(cleanKey)) {
     const excelEpoch = new Date(1899, 11, 30);
-    const dateObj = new Date(excelEpoch.getTime() + Number(key) * 24 * 60 * 60 * 1000);
+    const dateObj = new Date(excelEpoch.getTime() + Number(cleanKey) * 24 * 60 * 60 * 1000);
     if (!isNaN(dateObj.getTime())) {
       const d = String(dateObj.getDate()).padStart(2, '0');
       const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -28,17 +31,18 @@ function toStrictDDMMYYYY(key: string | number): string {
     }
   }
 
-  const trimmed = String(key).trim();
-  const parts = trimmed.split(/[\/\-\.]/);
+  const parts = cleanKey.split(/[\/\-\.]/);
   
   if (parts.length === 3) {
     let day: number, month: number, year: number;
     
+    // Si viene en formato YYYY-MM-DD
     if (parts[0].length === 4) {
       year = Number(parts[0]);
       month = Number(parts[1]);
       day = Number(parts[2]);
     } else {
+      // Si viene en formato DD/MM/YYYY o DD-MM-YYYY
       day = Number(parts[0]);
       month = Number(parts[1]);
       year = Number(parts[2]);
@@ -52,7 +56,7 @@ function toStrictDDMMYYYY(key: string | number): string {
     }
   }
 
-  return trimmed;
+  return cleanKey;
 }
 
 /**
@@ -103,13 +107,11 @@ export function generateGoogleSheetsTemplate(): Uint8Array {
 export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wb = XLSX.utils.book_new();
 
-  // Hoja 1: Ficha
   const fichaHeaders = ["ficha_de_caracterizacion", "programa", "centro", "denominacion", "fecha_inicio", "fecha_terminacion", "jornada"];
   const fichaRows = [fichaHeaders, ["", "", "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "", ""]];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // Hoja 2: Equipo_Ejecutor
   const equipoHeaders = [
     "competencia", 
     "nombre_del_instructor", 
@@ -125,11 +127,10 @@ export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-  // Hoja 3: Aprendices (con estructura limpia y una columna de fecha inicial por defecto)
-  const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado", "20/01/2026"];
+  const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado", "2026-02-09"];
   const aprendicesRows = [
     aprendicesHeaders, 
-    ["CC", "", "", "", "", "", "En formación", "Presente"]
+    ["CC", "", "", "", "", "", "En formación", ""]
   ];
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
   XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
@@ -177,7 +178,7 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo de configuración inicial o asistencia con blindaje completo de datos.
+ * Parsea el archivo de configuración inicial o asistencia con blindaje completo de fechas y registros.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -200,14 +201,10 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       };
     }
 
-    // Clonar baseData garantizando que la estructura completa exista
     const updatedData = JSON.parse(JSON.stringify(baseData || {}));
 
-    // =========================================================================
-    // INICIALIZACIÓN Y BLINDAJE DE PROPIEDADES (EVITA CUALQUIER 'UNDEFINED')
-    // =========================================================================
     updatedData.asistencias_aprendices = [];
-    updatedData.fechas_asistencia = ["20/01/2026"];
+    updatedData.fechas_asistencia = [];
     updatedData.equipo_instructores = Array.isArray(baseData?.equipo_instructores) ? baseData.equipo_instructores : [];
     updatedData.competencias = Array.isArray(baseData?.competencias) ? baseData.competencias : [];
     updatedData.aprendices = Array.isArray(baseData?.aprendices) ? baseData.aprendices : [];
@@ -283,7 +280,10 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           normalized: toStrictDDMMYYYY(col)
         })).filter(d => d.normalized !== "");
 
-        const normalizedDates = dateMapping.map(d => d.normalized);
+        // Consolidar fechas únicas normalizadas cronológicamente
+        const uniqueDatesMap = new Set<string>();
+        dateMapping.forEach(d => uniqueDatesMap.add(d.normalized));
+        const normalizedDates = Array.from(uniqueDatesMap);
         
         if (normalizedDates.length > 0) {
           updatedData.fechas_asistencia = normalizedDates;
@@ -309,16 +309,19 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                   const lowerVal = valStr.toLowerCase();
                   
                   if (lowerVal === 'x' || lowerVal.includes('falla') || lowerVal.includes('inasistencia')) {
-                    finalVal = 'Inasistencia';
+                    finalVal = 'X';
                   } else if (lowerVal.includes('tarde') || lowerVal === 't') {
-                    finalVal = 'Tardanza';
+                    finalVal = 'Tarde';
                   } else if (lowerVal.includes('excusa') || lowerVal === 'e') {
                     finalVal = 'Excusa';
                   } else if (lowerVal.includes('presente') || lowerVal === 'p') {
                     finalVal = 'Presente';
                   }
 
-                  registrosActuales[normalized] = finalVal;
+                  // Si hay múltiples registros para el mismo día normalizado, priorizar fallas/tardanzas sobre nulos
+                  if (finalVal !== 'Presente' || !registrosActuales[normalized]) {
+                    registrosActuales[normalized] = finalVal;
+                  }
                 }
               }
             });
@@ -329,8 +332,8 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
               nombres: String(uploadedRow.nombres || uploadedRow.nombre || "").trim().toUpperCase(),
               apellidos: String(uploadedRow.apellidos || uploadedRow.apellido || "").trim().toUpperCase(),
               correo_electronico: String(uploadedRow.correo_electronico || uploadedRow.correo || "").trim().toLowerCase(),
-              telefono: String(uploadedRow.telefono || "").trim(),
-              estado: String(uploadedRow.estado || "En formación").trim(),
+              telefono: uploadedRow.telefono ? String(uploadedRow.telefono).trim() : "",
+              estado: uploadedRow.estado ? String(uploadedRow.estado).trim() : "En formación",
               registros: registrosActuales
             };
           });
@@ -339,18 +342,13 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // =========================================================================
-    // GARANTÍA FINAL DE TIPOS (EVITA CUALQUIER 'LENGTH OF UNDEFINED')
-    // =========================================================================
     updatedData.asistencias_aprendices = Array.isArray(updatedData.asistencias_aprendices) ? updatedData.asistencias_aprendices : [];
-    updatedData.fechas_asistencia = Array.isArray(updatedData.fechas_asistencia) && updatedData.fechas_asistencia.length > 0 ? updatedData.fechas_asistencia : ["20/01/2026"];
+    updatedData.fechas_asistencia = Array.isArray(updatedData.fechas_asistencia) ? updatedData.fechas_asistencia : [];
     updatedData.equipo_instructores = Array.isArray(updatedData.equipo_instructores) ? updatedData.equipo_instructores : [];
-    updatedData.competencias = Array.isArray(updatedData.competencias) ? updatedData.competencias : [];
-    updatedData.aprendices = Array.isArray(updatedData.aprendices) ? updatedData.aprendices : [];
 
     return {
       success: true,
-      message: `Configuración cargada con éxito para la Ficha ${updatedData.ficha_de_caracterizacion || "SENA"}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
+      message: `Configuración y asistencias cargadas con éxito para la Ficha ${updatedData.ficha_de_caracterizacion || "SENA"}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
       data: updatedData,
       counts: {
         aprendices: updatedData.asistencias_aprendices.length
