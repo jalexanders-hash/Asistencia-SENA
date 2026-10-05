@@ -39,11 +39,26 @@ function mergeInstructorAttendance(
   uploadedData: typeof initialCourseData,
   currentInstructorName: string
 ): typeof initialCourseData {
+  // 1. Verificamos si las fichas coinciden para evitar arrastrar datos cruzados entre fichas distintas
+  const cloudFicha = String(currentCloudData.ficha_de_caracterizacion || '').trim();
+  const uploadedFicha = String(uploadedData.ficha_de_caracterizacion || '').trim();
+  
+  const isDifferentFicha = uploadedFicha && cloudFicha && uploadedFicha !== cloudFicha;
+
+  // Si es una ficha distinta, partimos de una base limpia para esa ficha específica
+  const baseData = isDifferentFicha ? {
+    ...initialCourseData,
+    ficha_de_caracterizacion: uploadedFicha,
+    fechas_asistencia: [],
+    fechas_por_instructor: {},
+    asistencias_aprendices: uploadedData.asistencias_aprendices || []
+  } : JSON.parse(JSON.stringify(currentCloudData));
+
   const fechasDelInstructor = uploadedData.fechas_por_instructor?.[currentInstructorName] 
     || uploadedData.fechas_asistencia 
     || [];
 
-  const mergedData = JSON.parse(JSON.stringify(currentCloudData));
+  const mergedData = baseData;
 
   if (!mergedData.fechas_asistencia) {
     mergedData.fechas_asistencia = [];
@@ -66,31 +81,34 @@ function mergeInstructorAttendance(
     mergedData.asistencias_aprendices = [];
   }
 
-  mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
-    const uploadedStudent = uploadedData.asistencias_aprendices?.find(
-      (s: any) => String(s.numero_documento).trim() === String(cloudStudent.numero_documento).trim()
-    );
+  // Si es diferente ficha, evitamos cruzar aprendices de la ficha anterior
+  if (!isDifferentFicha) {
+    mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
+      const uploadedStudent = uploadedData.asistencias_aprendices?.find(
+        (s: any) => String(s.numero_documento).trim() === String(cloudStudent.numero_documento).trim()
+      );
 
-    if (!uploadedStudent) return cloudStudent;
+      if (!uploadedStudent) return cloudStudent;
 
-    const cloudRegistros = { ...(cloudStudent.registros || {}) };
+      const cloudRegistros = { ...(cloudStudent.registros || {}) };
 
-    fechasDelInstructor.forEach((fecha: string) => {
-      if (uploadedStudent.registros && uploadedStudent.registros[fecha] !== undefined) {
-        const val = uploadedStudent.registros[fecha];
-        if (val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '·' && String(val).trim() !== '-') {
-          cloudRegistros[fecha] = String(val).trim();
-        } else {
-          delete cloudRegistros[fecha];
+      fechasDelInstructor.forEach((fecha: string) => {
+        if (uploadedStudent.registros && uploadedStudent.registros[fecha] !== undefined) {
+          const val = uploadedStudent.registros[fecha];
+          if (val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '·' && String(val).trim() !== '-') {
+            cloudRegistros[fecha] = String(val).trim();
+          } else {
+            delete cloudRegistros[fecha];
+          }
         }
-      }
-    });
+      });
 
-    return {
-      ...cloudStudent,
-      registros: cloudRegistros
-    };
-  });
+      return {
+        ...cloudStudent,
+        registros: cloudRegistros
+      };
+    });
+  }
 
   return mergedData;
 }
@@ -316,7 +334,7 @@ export function SheetsTemplateModal({
                       Descargar Plantilla en Blanco
                     </button>
                   </div>
-                </div>
+            </div>
 
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-300 transition-all group">
                   <div>
@@ -514,7 +532,7 @@ export function SheetsTemplateModal({
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             Compatible con Google Sheets, Microsoft Excel y LibreOffice Calc
-          </span>
+        </span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md font-medium transition-colors"
