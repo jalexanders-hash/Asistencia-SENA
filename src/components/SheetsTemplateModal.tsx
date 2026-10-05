@@ -19,7 +19,7 @@ import {
   ParsedTemplateResult
 } from '../lib/templateGenerator';
 import { downloadBlankAttendanceTemplate } from '../lib/blankTemplateGenerator';
-import { updateFichaCompleteData } from '../lib/firebase';
+import { replaceFichaCompleteData } from '../lib/firebase';
 import { courseData as initialCourseData } from '../data';
 
 interface SheetsTemplateModalProps {
@@ -179,13 +179,13 @@ export function SheetsTemplateModal({
 
       finalDataToSave.ficha_de_caracterizacion = excelFichaId;
 
-      // 1. Guardar persistentemente en Firebase
-      await updateFichaCompleteData(finalDataToSave, excelFichaId);
+      // 1. Guardar persistentemente en Firebase usando replace para evitar cruces entre fichas
+      await replaceFichaCompleteData(finalDataToSave, excelFichaId);
 
       // 2. Generar clon profundo para asegurar la reactividad inmediata en React
       const refreshedData = JSON.parse(JSON.stringify(finalDataToSave));
 
-      // 3. Notificar a la app principal con los datos frescos
+      // 3. Notificar a la app principal con los datos frescos y la ficha correcta
       onDataLoaded(refreshedData, excelFichaId);
      
       const mensajeExito = uploadType === 'inasistencias' 
