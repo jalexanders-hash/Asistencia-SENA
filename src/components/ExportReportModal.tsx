@@ -34,18 +34,14 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
     if (selectedInstructorFilter === 'todos') {
       return allDates;
     } else {
-      // Buscar la información del instructor seleccionado en el equipo ejecutor
       const inst = instructores.find((i: any) => i.nombre_del_instructor === selectedInstructorFilter);
       
-      // Si el instructor no existe o no tiene un día asignado, retornamos un arreglo vacío
       if (!inst || !inst.dia) {
         return []; 
       }
 
-      // Normalizar el día guardado en el equipo ejecutor (ej: "Lunes", "Miércoles")
       const diaInstructor = inst.dia.toLowerCase().trim();
 
-      // Filtrar estrictamente las fechas cuyo día de la semana coincida con el del instructor
       return allDates.filter((dateStr: string) => {
         const diaDeLaFecha = getDayNameFromDate(dateStr).toLowerCase();
         return diaDeLaFecha === diaInstructor;
