@@ -22,16 +22,33 @@ export const auth = getAuth(app);
 const DEFAULT_FICHA_ID = "3387401";
 
 /**
- * Convierte cualquier fecha en formato YYYY-MM-DD o ISO a DD/MM/YYYY
+ * Convierte cualquier formato de fecha (YYYY-MM-DD, M/D/YYYY, etc.)
+ * al formato estricto colombiano DD/MM/YYYY
  */
 function normalizeDateToDDMMYYYY(dateStr: string): string {
   if (!dateStr) return "";
   const clean = String(dateStr).trim();
   
-  // Si viene en formato YYYY-MM-DD
+  // Si viene en formato YYYY-MM-DD o YYYY/MM/DD
   if (/^\d{4}[\-\/]\d{1,2}[\-\/]\d{1,2}$/.test(clean)) {
     const [y, m, d] = clean.split(/[\-\/]/);
     return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+  }
+  
+  // Si viene en formato M/D/YYYY o MM/DD/YYYY
+  const parts = clean.split('/');
+  if (parts.length === 3) {
+    let p0 = Number(parts[0]);
+    let p1 = Number(parts[1]);
+    let year = Number(parts[2]);
+    if (year < 100) year += 2000;
+
+    let day = p0 > 12 ? p0 : p1;
+    let month = p0 > 12 ? p1 : p0;
+
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    }
   }
   
   return clean;
