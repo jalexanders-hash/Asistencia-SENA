@@ -63,15 +63,23 @@ const displayAsDDMMYYYY = (dateStr: string) => {
 const sanitizeFicha = (ficha: any, fichaId: string) => {
   const base = JSON.parse(JSON.stringify(initialCourseData));
   if (!ficha || typeof ficha !== 'object') {
-    return { ...base, ficha_de_caracterizacion: fichaId };
+    return { 
+      ...base, 
+      ficha_de_caracterizacion: fichaId,
+      equipo_instructores: [], // Evita arrastrar instructores genéricos
+      programa: "Tecnología en Gestión Administrativa", // O el correspondiente
+    };
   }
   return {
     ...base,
     ...ficha,
     ficha_de_caracterizacion: ficha.ficha_de_caracterizacion || fichaId,
+    // Asegurar que si la ficha trae su propio equipo de instructores, se respete estrictamente
+    equipo_instructores: Array.isArray(ficha.equipo_instructores) && ficha.equipo_instructores.length > 0 
+      ? ficha.equipo_instructores 
+      : (fichaId === "3407860" ? [] : base.equipo_instructores),
     fechas_asistencia: Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia : [],
     asistencias_aprendices: Array.isArray(ficha.asistencias_aprendices) ? ficha.asistencias_aprendices : [],
-    equipo_instructores: Array.isArray(ficha.equipo_instructores) ? ficha.equipo_instructores : [],
     competencias: Array.isArray(ficha.competencias) ? ficha.competencias : [],
     aprendices: Array.isArray(ficha.aprendices) ? ficha.aprendices : []
   };
