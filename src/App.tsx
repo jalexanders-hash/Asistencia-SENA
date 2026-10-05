@@ -152,7 +152,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
-  const [instructorFiltroReporte, setInstructorFiltroReporte] = useState<string>('todos');
+  const instructoresFiltradosReporte = instructorFiltroReporte === 'todos' 
+  ? courseData.equipo_instructores 
+  : courseData.equipo_instructores.filter((inst: any) => inst.nombre_del_instructor === instructorFiltroReporte);
 
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
