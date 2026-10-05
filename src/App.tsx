@@ -66,15 +66,14 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     return { 
       ...base, 
       ficha_de_caracterizacion: fichaId,
-      equipo_instructores: [], // Evita arrastrar instructores genéricos
-      programa: "Tecnología en Gestión Administrativa", // O el correspondiente
+      equipo_instructores: [],
+      programa: "Tecnología en Gestión Administrativa",
     };
   }
   return {
     ...base,
     ...ficha,
     ficha_de_caracterizacion: ficha.ficha_de_caracterizacion || fichaId,
-    // Asegurar que si la ficha trae su propio equipo de instructores, se respete estrictamente
     equipo_instructores: Array.isArray(ficha.equipo_instructores) && ficha.equipo_instructores.length > 0 
       ? ficha.equipo_instructores 
       : (fichaId === "3407860" ? [] : base.equipo_instructores),
@@ -88,8 +87,7 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
 export default function App() {
   const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
   
-  // Base de datos indexada por Ficha saneada para evitar traslapes de fechas y registros
- const [fichasDataMap, setFichasDataMap] = useState<Record<string, any>>(() => {
+  const [fichasDataMap, setFichasDataMap] = useState<Record<string, any>>(() => {
     const saved = localStorage.getItem('sena_all_fichas_database');
     if (saved) {
       try {
@@ -108,10 +106,7 @@ export default function App() {
         ficha_de_caracterizacion: "3407860",
         denominacion: "GESTIÓN ADMINISTRATIVA (Nuevo Grupo)",
         programa: "Tecnología en Gestión Administrativa",
-        equipo_instructores: [
-          // Agrega aquí los instructores específicos de esta ficha si no vienen de Firestore, 
-          // o déjalo vacío [] si se cargan desde tu base de datos.
-        ],
+        equipo_instructores: [],
         fechas_asistencia: [],
         asistencias_aprendices: []
       }, "3407860")
@@ -152,9 +147,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+
+  // CORRECCIÓN: Se define el estado del filtro de instructor antes de ser utilizado en los cálculos y componentes
+  const [instructorFiltroReporte, setInstructorFiltroReporte] = useState<string>('todos');
+
   const instructoresFiltradosReporte = instructorFiltroReporte === 'todos' 
-  ? courseData.equipo_instructores 
-  : courseData.equipo_instructores.filter((inst: any) => inst.nombre_del_instructor === instructorFiltroReporte);
+    ? courseData.equipo_instructores 
+    : courseData.equipo_instructores.filter((inst: any) => inst.nombre_del_instructor === instructorFiltroReporte);
 
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
