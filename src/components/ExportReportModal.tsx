@@ -8,6 +8,17 @@ interface ExportReportModalProps {
   students: any[];
 }
 
+// Función auxiliar para obtener el nombre del día en español a partir de una fecha "DD/MM/YYYY"
+function getDayNameFromDate(dateStr: string): string {
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return days[d.getDay()] || '';
+  }
+  return '';
+}
+
 export default function ExportReportModal({ isOpen, onClose, courseData, students }: ExportReportModalProps) {
   const [reportType, setReportType] = useState<'inasistencias' | 'tardanzas'>('inasistencias');
   const [selectedInstructorFilter, setSelectedInstructorFilter] = useState<string>('todos');
@@ -16,22 +27,29 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   const instructores = courseData.equipo_instructores || [];
 
-  // Obtener fechas según el instructor seleccionado
+  // Obtener fechas según el día asignado al instructor seleccionado
   const getDatesForFilter = () => {
+    const allDates = courseData.fechas_asistencia || [];
+
     if (selectedInstructorFilter === 'todos') {
-      let allDates: string[] = [];
-      if (courseData.fechas_por_instructor) {
-        Object.values(courseData.fechas_por_instructor).forEach((dates: any) => {
-          allDates = [...allDates, ...dates];
-        });
-      }
-      return Array.from(new Set([...courseData.fechas_asistencia, ...allDates]));
+      return allDates;
     } else {
+      // Buscar la información del instructor seleccionado en el equipo ejecutor
       const inst = instructores.find((i: any) => i.nombre_del_instructor === selectedInstructorFilter);
-      if (inst && courseData.fechas_por_instructor?.[selectedInstructorFilter]) {
-        return courseData.fechas_por_instructor[selectedInstructorFilter];
+      
+      // Si el instructor no existe o no tiene un día asignado, retornamos un arreglo vacío
+      if (!inst || !inst.dia) {
+        return []; 
       }
-      return courseData.fechas_asistencia;
+
+      // Normalizar el día guardado en el equipo ejecutor (ej: "Lunes", "Miércoles")
+      const diaInstructor = inst.dia.toLowerCase().trim();
+
+      // Filtrar estrictamente las fechas cuyo día de la semana coincida con el del instructor
+      return allDates.filter((dateStr: string) => {
+        const diaDeLaFecha = getDayNameFromDate(dateStr).toLowerCase();
+        return diaDeLaFecha === diaInstructor;
+      });
     }
   };
 
@@ -101,47 +119,51 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
             {reportType === 'inasistencias' ? (
               <div className="space-y-6">
-                {activeDates.map((date: string) => {
-                  const ausentesFecha = students.filter(s => s.registros[date] === 'X');
-                  const excusadosFecha = students.filter(s => s.registros[date] === 'Excusa' || s.registros[date] === 'Evento');
-                  
-                  if (ausentesFecha.length === 0 && excusadosFecha.length === 0) return null;
+                {activeDates.length === 0 ? (
+                  <p className="text-center text-slate-400 italic text-xs py-4">No hay fechas registradas para este instructor según su día asignado.</p>
+                ) : (
+                  activeDates.map((date: string) => {
+                    const ausentesFecha = students.filter(s => s.registros[date] === 'X');
+                    const excusadosFecha = students.filter(s => s.registros[date] === 'Excusa' || s.registros[date] === 'Evento');
+                    
+                    if (ausentesFecha.length === 0 && excusadosFecha.length === 0) return null;
 
-                  return (
-                    <div key={date} className="border border-slate-200 rounded-lg overflow-hidden">
-                      <div className="bg-slate-100 px-4 py-2 text-xs font-bold text-slate-800 border-b border-slate-200 flex justify-between">
-                        <span>Fecha de Sesión: {date}</span>
-                        <span className="text-red-600">Faltas: {ausentesFecha.length} | Excusas: {excusadosFecha.length}</span>
-                      </div>
-                      <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <span className="font-bold text-red-700 block mb-1">Sin Excusa (Inasistencias):</span>
-                          {ausentesFecha.length > 0 ? (
-                            <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
-                              {ausentesFecha.map(s => (
-                                <li key={s.numero_documento}>{s.apellidos} {s.nombres} ({s.numero_documento})</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-slate-400 italic">Ninguna inasistencia sin excusa.</p>
-                          )}
+                    return (
+                      <div key={date} className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="bg-slate-100 px-4 py-2 text-xs font-bold text-slate-800 border-b border-slate-200 flex justify-between">
+                          <span>Fecha de Sesión: {date}</span>
+                          <span className="text-red-600">Faltas: {ausentesFecha.length} | Excusas: {excusadosFecha.length}</span>
                         </div>
-                        <div>
-                          <span className="font-bold text-blue-700 block mb-1">Con Excusa / Justificadas:</span>
-                          {excusadosFecha.length > 0 ? (
-                            <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
-                              {excusadosFecha.map(s => (
-                                <li key={s.numero_documento}>{s.apellidos} {s.nombres} ({s.numero_documento})</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-slate-400 italic">Ninguna excusa registrada.</p>
-                          )}
+                        <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <span className="font-bold text-red-700 block mb-1">Sin Excusa (Inasistencias):</span>
+                            {ausentesFecha.length > 0 ? (
+                              <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                                {ausentesFecha.map(s => (
+                                  <li key={s.numero_documento}>{s.apellidos} {s.nombres} ({s.numero_documento})</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-slate-400 italic">Ninguna inasistencia sin excusa.</p>
+                            )}
+                          </div>
+                          <div>
+                            <span className="font-bold text-blue-700 block mb-1">Con Excusa / Justificadas:</span>
+                            {excusadosFecha.length > 0 ? (
+                              <ul className="list-disc pl-4 space-y-0.5 text-slate-700">
+                                {excusadosFecha.map(s => (
+                                  <li key={s.numero_documento}>{s.apellidos} {s.nombres} ({s.numero_documento})</li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-slate-400 italic">Ninguna excusa registrada.</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             ) : (
               <div className="space-y-4">
