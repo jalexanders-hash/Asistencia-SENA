@@ -22,8 +22,56 @@ export const auth = getAuth(app);
 const DEFAULT_FICHA_ID = "3387401";
 
 /**
+ * Convierte cualquier fecha en formato YYYY-MM-DD o ISO a DD/MM/YYYY
+ */
+function normalizeDateToDDMMYYYY(dateStr: string): string {
+  if (!dateStr) return "";
+  const clean = String(dateStr).trim();
+  
+  // Si viene en formato YYYY-MM-DD
+  if (/^\d{4}[\-\/]\d{1,2}[\-\/]\d{1,2}$/.test(clean)) {
+    const [y, m, d] = clean.split(/[\-\/]/);
+    return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+  }
+  
+  return clean;
+}
+
+/**
+ * Normaliza las fechas de la estructura de la ficha para asegurar formato DD/MM/YYYY
+ */
+const sanitizeFichaDates = (data: any) => {
+  if (!data) return data;
+
+  // Normalizar array de fechas de asistencia
+  const rawFechas = Array.isArray(data.fechas_asistencia) ? data.fechas_asistencia : [];
+  const normalizedFechas = Array.from(new Set(rawFechas.map((f: string) => normalizeDateToDDMMYYYY(f))));
+
+  // Normalizar registros dentro de cada aprendiz
+  const normalizedAprendices = (Array.isArray(data.asistencias_aprendices) ? data.asistencias_aprendices : []).map((student: any) => {
+    const oldRegistros = student.registros || {};
+    const newRegistros: Record<string, string> = {};
+    
+    Object.keys(oldRegistros).forEach(dateKey => {
+      const fixedDateKey = normalizeDateToDDMMYYYY(dateKey);
+      newRegistros[fixedDateKey] = oldRegistros[dateKey];
+    });
+
+    return {
+      ...student,
+      registros: newRegistros
+    };
+  });
+
+  return {
+    ...data,
+    fechas_asistencia: normalizedFechas,
+    asistencias_aprendices: normalizedAprendices
+  };
+};
+
+/**
  * Se suscribe en tiempo real a los cambios de una ficha específica en Firestore.
- * Si el documento no existe, lo inicializa con los datos por defecto completos.
  */
 export const subscribeToFichaData = (callback: (data: typeof defaultData) => void, fichaId: string = DEFAULT_FICHA_ID) => {
   const targetFichaId = String(fichaId || DEFAULT_FICHA_ID);
@@ -43,14 +91,14 @@ export const subscribeToFichaData = (callback: (data: typeof defaultData) => voi
   return onSnapshot(docRef, (snap) => {
     if (snap.exists()) {
       const data = snap.data();
-      // Aseguramos que la estructura nunca rompa la UI si algún campo viene vacío
+      const sanitized = sanitizeFichaDates(data);
       const completeData = {
         ...defaultData,
-        ...data,
+        ...sanitized,
         ficha_de_caracterizacion: targetFichaId,
-        asistencias_aprendices: data.asistencias_aprendices || [],
-        fechas_asistencia: data.fechas_asistencia || [],
-        equipo_instructores: data.equipo_instructores || []
+        asistencias_aprendices: sanitized.asistencias_aprendices || [],
+        fechas_asistencia: sanitized.fechas_asistencia || [],
+        equipo_instructores: sanitized.equipo_instructores || []
       };
       callback(completeData as typeof defaultData);
     }
@@ -71,9 +119,15 @@ export const saveAttendanceData = async (
   try {
     const targetFichaId = String(fichaId || DEFAULT_FICHA_ID);
     const docRef = doc(db, "fichas", targetFichaId);
-    await updateDoc(docRef, {
+
+    const sanitized = sanitizeFichaDates({
       fechas_asistencia,
-      asistencias_aprendices,
+      asistencias_aprendices
+    });
+
+    await updateDoc(docRef, {
+      fechas_asistencia: sanitized.fechas_asistencia,
+      asistencias_aprendices: sanitized.asistencias_aprendices,
       ...(fechas_por_instructor && { fechas_por_instructor })
     });
   } catch (error) {
@@ -94,19 +148,18 @@ export const updateFichaCompleteData = async (newData: typeof defaultData, ficha
     }
 
     const docRef = doc(db, "fichas", targetFichaId);
+    const sanitizedInput = sanitizeFichaDates(newData);
     
-    // Fusionamos con defaultData para garantizar que ningún arreglo crítico quede en undefined
     const sanitizedData = {
       ...defaultData,
-      ...newData,
+      ...sanitizedInput,
       ficha_de_caracterizacion: targetFichaId,
-      asistencias_aprendices: newData.asistencias_aprendices || defaultData.asistencias_aprendices,
-      fechas_asistencia: newData.fechas_asistencia || defaultData.fechas_asistencia,
-      equipo_instructores: newData.equipo_instructores || defaultData.equipo_instructores
+      asistencias_aprendices: sanitizedInput.asistencias_aprendices || defaultData.asistencias_aprendices,
+      fechas_asistencia: sanitizedInput.fechas_asistencia || defaultData.fechas_asistencia,
+      equipo_instructores: sanitizedInput.equipo_instructores || defaultData.equipo_instructores
     };
 
     await setDoc(docRef, sanitizedData, { merge: true });
-
     console.log(`Ficha ${targetFichaId} actualizada exitosamente en Firestore.`);
   } catch (error) {
     console.error("Error al actualizar la ficha completa en Firebase:", error);
@@ -126,19 +179,18 @@ export const replaceFichaCompleteData = async (newData: typeof defaultData, fich
     }
 
     const docRef = doc(db, "fichas", targetFichaId);
+    const sanitizedInput = sanitizeFichaDates(newData);
     
-    // Sanitizamos para asegurar que la UI reciba arreglos válidos y nunca se quede en blanco
     const sanitizedData = {
       ...defaultData,
-      ...newData,
+      ...sanitizedInput,
       ficha_de_caracterizacion: targetFichaId,
-      asistencias_aprendices: newData.asistencias_aprendices || [],
-      fechas_asistencia: newData.fechas_asistencia || [],
-      equipo_instructores: newData.equipo_instructores || []
+      asistencias_aprendices: sanitizedInput.asistencias_aprendices || [],
+      fechas_asistencia: sanitizedInput.fechas_asistencia || [],
+      equipo_instructores: sanitizedInput.equipo_instructores || []
     };
 
     await setDoc(docRef, sanitizedData);
-
     console.log(`Ficha ${targetFichaId} reemplazada y limpiada exitosamente en Firestore con los datos del Excel.`);
   } catch (error) {
     console.error("Error al reemplazar la ficha completa en Firebase:", error);
