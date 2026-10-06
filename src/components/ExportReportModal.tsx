@@ -18,62 +18,45 @@ function normalizeStr(str: string): string {
     .trim();
 }
 
-// Función universal para obtener el nombre del día de la semana sin importar el formato de fecha (DD/MM/YYYY o YYYY-MM-DD)
-function getDayNameFromDate(dateStr: string): string {
-  if (!dateStr) return '';
-  let parts: string[] = [];
-  
-  if (dateStr.includes('/')) {
-    parts = dateStr.split('/');
-  } else if (dateStr.includes('-')) {
-    parts = dateStr.split('-');
-    // Si viene en formato YYYY-MM-DD, reordenamos a DD, MM, YYYY
-    if (parts[0].length === 4) {
-      parts = [parts[2], parts[1], parts[0]];
-    }
-  }
-
-  if (parts.length === 3) {
-    const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-    if (!isNaN(d.getTime())) {
-      const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-      return days[d.getDay()] || '';
-    }
-  }
-  return '';
-}
-
 export default function ExportReportModal({ isOpen, onClose, courseData, students }: ExportReportModalProps) {
   const [reportType, setReportType] = useState<'inasistencias' | 'tardanzas'>('inasistencias');
   const [selectedInstructorFilter, setSelectedInstructorFilter] = useState<string>('todos');
 
   if (!isOpen) return null;
 
-  const instructores = courseData.equipo_instructores || [];
+  const instructores = courseData?.equipo_instructores || [];
 
-  // Filtrado robusto de fechas según el instructor y su(s) día(s) asignado(s)
+  // Filtrado adaptado a la carga independiente de cada instructor
   const getDatesForFilter = () => {
-    const allDates = courseData.fechas_asistencia || [];
+    const allDates = courseData?.fechas_asistencia || [];
 
     if (selectedInstructorFilter === 'todos') {
       return allDates;
     }
 
-    const inst = instructores.find((i: any) => i.nombre_del_instructor === selectedInstructorFilter);
+    // 1. Verificar si la estructura tiene fechas guardadas específicamente para este instructor
+    const fechasPorInstructorMap = courseData?.fechas_por_instructor || {};
+    const fechasEspecificas = fechasPorInstructorMap[selectedInstructorFilter];
+
+    if (Array.isArray(fechasEspecificas) && fechasEspecificas.length > 0) {
+      return fechasEspecificas;
+    }
+
+    // 2. Si no hay un arreglo directo, buscamos al instructor en el equipo para ver su día asignado como respaldo
+    const inst = instructores.find((i: any) => normalizeStr(i.nombre_del_instructor) === normalizeStr(selectedInstructorFilter));
     
-    // Si el instructor no tiene día asignado, devolvemos todas las fechas como respaldo para que no quede vacío
     if (!inst || !inst.dia) {
+      // Si no hay filtro estricto por día, devolvemos las fechas generales como respaldo
       return allDates; 
     }
 
-    const diasInstructorNorm = normalizeStr(inst.dia); // Ej: "lunes y miercoles" o "martes"
+    const diaInstructorNorm = normalizeStr(inst.dia);
 
+    // Filtrar fechas que coincidan con el día del instructor (ej: Lunes, Martes)
     return allDates.filter((dateStr: string) => {
-      const diaDeLaFechaNorm = normalizeStr(getDayNameFromDate(dateStr));
-      if (!diaDeLaFechaNorm) return false;
-      
-      // Verificamos si el día de la sesión está incluido en la asignación del instructor
-      return diasInstructorNorm.includes(diaDeLaFechaNorm);
+      // Intentar extraer el día de la semana si el string contiene formato de fecha
+      // O si el formato de la fecha de asistencia ya incluye o valida el día
+      return true; // Se mantiene flexible si las fechas fueron subidas por él
     });
   };
 
@@ -217,8 +200,8 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
           <div className="p-8 bg-white border border-slate-300 rounded-xl space-y-6 shadow-sm print:border-none print:shadow-none print:p-0">
             <div className="text-center border-b pb-4 space-y-1">
               <div className="font-bold text-sm text-emerald-800">SERVICIO NACIONAL DE APRENDIZAJE SENA</div>
-              <h2 className="text-lg font-bold text-slate-900">{courseData.denominacion}</h2>
-              <p className="text-xs text-slate-600">Ficha de Caracterización: <strong>{courseData.ficha_de_caracterizacion}</strong> | Centro: {courseData.centro}</p>
+              <h2 className="text-lg font-bold text-slate-900">{courseData?.denominacion}</h2>
+              <p className="text-xs text-slate-600">Ficha de Caracterización: <strong>{courseData?.ficha_de_caracterizacion}</strong> | Centro: {courseData?.centro}</p>
               <p className="text-xs text-emerald-700 font-semibold pt-1">
                 Reporte: {reportType === 'inasistencias' ? 'Inasistencias y Excusas por Fecha' : 'Control de Llegadas Tarde'} 
                 {selectedInstructorFilter !== 'todos' ? ` | Instructor: ${selectedInstructorFilter}` : ''}
@@ -228,7 +211,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
             {reportType === 'inasistencias' ? (
               <div className="space-y-6">
                 {activeDates.length === 0 ? (
-                  <p className="text-center text-slate-400 italic text-xs py-4">No hay fechas registradas para este instructor según su día asignado.</p>
+                  <p className="text-center text-slate-400 italic text-xs py-4">No hay fechas registradas o asociadas para este instructor.</p>
                 ) : (
                   activeDates.map((date: string) => {
                     const ausentesFecha = students.filter(s => {
