@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Printer, FileText, Filter } from 'lucide-react';
+import { X, Printer, FileText, Filter, Download } from 'lucide-react';
 
 interface ExportReportModalProps {
   isOpen: boolean;
@@ -53,6 +53,111 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // ==========================================
+  // FUNCIONES DE EXPORTACIÓN A CSV / EXCEL
+  // ==========================================
+  const exportToCSV = (data: any[], fileName: string) => {
+    if (!data || data.length === 0) {
+      alert("No hay datos disponibles para exportar.");
+      return;
+    }
+
+    const headers = Object.keys(data[0]);
+    const csvRows = [];
+
+    // Agregar encabezados
+    csvRows.push(headers.join(';'));
+
+    // Agregar filas de datos de forma segura
+    for (const row of data) {
+      const values = headers.map(header => {
+        const val = row[header] !== undefined && row[header] !== null ? row[header] : '';
+        const escaped = String(val).replace(/"/g, '""');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(';'));
+    }
+
+    // Crear archivo blob y descargar con soporte de codificación UTF-8 para Excel
+    const blob = new Blob(["\ufeff" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${fileName}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // 1. Generar Reporte Global por Fecha (Respetando filtros activos)
+  const handleDownloadGlobalByDateReport = () => {
+    try {
+      const dates = activeDates || [];
+      const listaEstudiantes = students || [];
+
+      if (dates.length === 0 || listaEstudiantes.length === 0) {
+        alert("No hay registros suficientes para generar el reporte global.");
+        return;
+      }
+
+      const reportData = listaEstudiantes.map((student: any) => {
+        const row: any = {
+          "Documento": student.numero_documento,
+          "Nombres": student.nombres,
+          "Apellidos": student.apellidos,
+        };
+
+        dates.forEach((date: string) => {
+          row[`Fecha_${date}`] = student.registros?.[date] || "Sin Registro";
+        });
+
+        return row;
+      });
+
+      exportToCSV(reportData, `Reporte_Global_Ficha_${courseData?.ficha_de_caracterizacion || 'General'}`);
+    } catch (error) {
+      console.error("Error al generar reporte global:", error);
+      alert("Ocurrió un error al generar el reporte.");
+    }
+  };
+
+  // 2. Generar Reporte Filtrado por Instructor con Totales
+  const handleDownloadInstructorReport = () => {
+    try {
+      const listaEstudiantes = students || [];
+      const instructorNameFilter = selectedInstructorFilter === 'todos' ? 'Consolidado_General' : selectedInstructorFilter;
+      const dates = activeDates || [];
+
+      const reportData = listaEstudiantes.map((student: any) => {
+        let totalAsistencias = 0;
+        let totalFallas = 0;
+        let totalTardanzas = 0;
+
+        dates.forEach((date: string) => {
+          const estado = (student.registros?.[date] || '').toLowerCase().trim();
+          if (estado === 'asistio' || estado === 'asistió') totalAsistencias++;
+          if (estado === 'x' || estado === 'faltó') totalFallas++;
+          if (estado === 'tarde' || estado === 'tardanza') totalTardanzas++;
+        });
+
+        return {
+          "Documento": student.numero_documento,
+          "Nombres": student.nombres,
+          "Apellidos": student.apellidos,
+          "Instructor_Filtro": instructorNameFilter,
+          "Total_Asistencias": totalAsistencias,
+          "Total_Fallas": totalFallas,
+          "Total_Tardanzas": totalTardanzas,
+        };
+      });
+
+      exportToCSV(reportData, `Reporte_Instructor_${instructorNameFilter.replace(/\s+/g, '_')}_Ficha_${courseData?.ficha_de_caracterizacion || ''}`);
+    } catch (error) {
+      console.error("Error al generar reporte por instructor:", error);
+      alert("Ocurrió un error al generar el reporte por instructor.");
+    }
   };
 
   return (
@@ -119,8 +224,8 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
                   <p className="text-center text-slate-400 italic text-xs py-4">No hay fechas registradas para este instructor según su día asignado.</p>
                 ) : (
                   activeDates.map((date: string) => {
-                    const ausentesFecha = students.filter(s => s.registros[date] === 'X');
-                    const excusadosFecha = students.filter(s => s.registros[date] === 'Excusa' || s.registros[date] === 'Evento');
+                    const ausentesFecha = students.filter(s => s.registros?.[date] === 'X');
+                    const excusadosFecha = students.filter(s => s.registros?.[date] === 'Excusa' || s.registros?.[date] === 'Evento');
                     
                     if (ausentesFecha.length === 0 && excusadosFecha.length === 0) return null;
 
@@ -175,7 +280,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
                   <tbody className="divide-y divide-slate-100">
                     {activeDates.flatMap((date: string) => 
                       students
-                        .filter(s => s.registros[date] === 'Tarde')
+                        .filter(s => s.registros?.[date] === 'Tarde')
                         .map(s => ({ date, student: s }))
                     ).map(({ date, student }, idx) => (
                       <tr key={idx} className="hover:bg-slate-50">
@@ -194,19 +299,37 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
           </div>
         </div>
 
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 print:hidden">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100"
-          >
-            Cerrar
-          </button>
-          <button 
-            onClick={handlePrint}
-            className="px-5 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 flex items-center gap-2 shadow-sm transition-colors"
-          >
-            <Printer className="w-4 h-4" /> Imprimir / Guardar PDF
-          </button>
+        {/* PIE DEL MODAL CON BOTONES DE EXPORTACIÓN, IMPRESIÓN Y CIERRE */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 print:hidden">
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleDownloadGlobalByDateReport}
+              className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" /> CSV Global (Excel)
+            </button>
+            <button 
+              onClick={handleDownloadInstructorReport}
+              className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" /> CSV por Instructor
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={onClose}
+              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100"
+            >
+              Cerrar
+            </button>
+            <button 
+              onClick={handlePrint}
+              className="px-5 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 flex items-center gap-2 shadow-sm transition-colors"
+            >
+              <Printer className="w-4 h-4" /> Imprimir / Guardar PDF
+            </button>
+          </div>
         </div>
       </div>
     </div>
