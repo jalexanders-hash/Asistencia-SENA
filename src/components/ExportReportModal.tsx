@@ -8,13 +8,37 @@ interface ExportReportModalProps {
   students: any[];
 }
 
-// Función auxiliar para obtener el nombre del día en español a partir de una fecha "DD/MM/YYYY"
+// Función robusta para normalizar textos (quita tildes, espacios y pasa a minúsculas)
+function normalizeStr(str: string): string {
+  if (!str) return '';
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+// Función universal para obtener el nombre del día de la semana sin importar el formato de fecha (DD/MM/YYYY o YYYY-MM-DD)
 function getDayNameFromDate(dateStr: string): string {
-  const parts = dateStr.split('/');
+  if (!dateStr) return '';
+  let parts: string[] = [];
+  
+  if (dateStr.includes('/')) {
+    parts = dateStr.split('/');
+  } else if (dateStr.includes('-')) {
+    parts = dateStr.split('-');
+    // Si viene en formato YYYY-MM-DD, reordenamos a DD, MM, YYYY
+    if (parts[0].length === 4) {
+      parts = [parts[2], parts[1], parts[0]];
+    }
+  }
+
   if (parts.length === 3) {
     const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    return days[d.getDay()] || '';
+    if (!isNaN(d.getTime())) {
+      const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+      return days[d.getDay()] || '';
+    }
   }
   return '';
 }
@@ -27,26 +51,30 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   const instructores = courseData.equipo_instructores || [];
 
-  // Obtener fechas según el día asignado al instructor seleccionado (Solución al filtro por instructor)
+  // Filtrado robusto de fechas según el instructor y su(s) día(s) asignado(s)
   const getDatesForFilter = () => {
     const allDates = courseData.fechas_asistencia || [];
 
     if (selectedInstructorFilter === 'todos') {
       return allDates;
-    } else {
-      const inst = instructores.find((i: any) => i.nombre_del_instructor === selectedInstructorFilter);
-      
-      if (!inst || !inst.dia) {
-        return []; 
-      }
-
-      const diaInstructor = inst.dia.toLowerCase().trim();
-
-      return allDates.filter((dateStr: string) => {
-        const diaDeLaFecha = getDayNameFromDate(dateStr).toLowerCase();
-        return diaDeLaFecha === diaInstructor;
-      });
     }
+
+    const inst = instructores.find((i: any) => i.nombre_del_instructor === selectedInstructorFilter);
+    
+    // Si el instructor no tiene día asignado, devolvemos todas las fechas como respaldo para que no quede vacío
+    if (!inst || !inst.dia) {
+      return allDates; 
+    }
+
+    const diasInstructorNorm = normalizeStr(inst.dia); // Ej: "lunes y miercoles" o "martes"
+
+    return allDates.filter((dateStr: string) => {
+      const diaDeLaFechaNorm = normalizeStr(getDayNameFromDate(dateStr));
+      if (!diaDeLaFechaNorm) return false;
+      
+      // Verificamos si el día de la sesión está incluido en la asignación del instructor
+      return diasInstructorNorm.includes(diaDeLaFechaNorm);
+    });
   };
 
   const activeDates = getDatesForFilter();
@@ -56,21 +84,19 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
   };
 
   // ==========================================
-  // FUNCIONES DE EXPORTACIÓN A CSV / EXCEL LIMPIO
+  // EXPORTACIÓN A CSV / EXCEL LIMPIO
   // ==========================================
   const exportToCSV = (data: any[], fileName: string) => {
     if (!data || data.length === 0) {
-      alert("No hay datos disponibles para exportar.");
+      alert("No hay datos disponibles para exportar con este filtro.");
       return;
     }
 
     const headers = Object.keys(data[0]);
     const csvRows = [];
 
-    // Agregar encabezados
     csvRows.push(headers.join(';'));
 
-    // Agregar filas de datos de forma segura
     for (const row of data) {
       const values = headers.map(header => {
         const val = row[header] !== undefined && row[header] !== null ? row[header] : '';
@@ -80,7 +106,6 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       csvRows.push(values.join(';'));
     }
 
-    // Crear archivo blob y descargar con soporte UTF-8
     const blob = new Blob(["\ufeff" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -91,7 +116,6 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
     document.body.removeChild(link);
   };
 
-  // 1. Reporte Resumido y Limpio (Reemplaza la sábana gigante por un consolidado ejecutivo)
   const handleDownloadCleanSummaryReport = () => {
     try {
       const listaEstudiantes = students || [];
@@ -109,9 +133,9 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
         let totalTardanzas = 0;
 
         dates.forEach((date: string) => {
-          const estado = (student.registros?.[date] || '').toLowerCase().trim();
+          const estado = normalizeStr(student.registros?.[date]);
           if (estado === 'asistio' || estado === 'asistió') totalAsistencias++;
-          if (estado === 'x' || estado === 'faltó') totalInasistencias++;
+          if (estado === 'x' || estado === 'falto' || estado === 'faltó') totalInasistencias++;
           if (estado === 'excusa' || estado === 'evento') totalExcusas++;
           if (estado === 'tarde' || estado === 'tardanza') totalTardanzas++;
         });
@@ -189,7 +213,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
             </div>
           </div>
 
-          {/* VISTA PREVIA LIMPIA LISTA PARA IMPRIMIR O GUARDAR COMO PDF */}
+          {/* VISTA PREVIA */}
           <div className="p-8 bg-white border border-slate-300 rounded-xl space-y-6 shadow-sm print:border-none print:shadow-none print:p-0">
             <div className="text-center border-b pb-4 space-y-1">
               <div className="font-bold text-sm text-emerald-800">SERVICIO NACIONAL DE APRENDIZAJE SENA</div>
@@ -207,8 +231,14 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
                   <p className="text-center text-slate-400 italic text-xs py-4">No hay fechas registradas para este instructor según su día asignado.</p>
                 ) : (
                   activeDates.map((date: string) => {
-                    const ausentesFecha = students.filter(s => s.registros?.[date] === 'X');
-                    const excusadosFecha = students.filter(s => s.registros?.[date] === 'Excusa' || s.registros?.[date] === 'Evento');
+                    const ausentesFecha = students.filter(s => {
+                      const est = normalizeStr(s.registros?.[date]);
+                      return est === 'x' || est === 'falto' || est === 'faltó';
+                    });
+                    const excusadosFecha = students.filter(s => {
+                      const est = normalizeStr(s.registros?.[date]);
+                      return est === 'excusa' || est === 'evento';
+                    });
                     
                     if (ausentesFecha.length === 0 && excusadosFecha.length === 0) return null;
 
@@ -263,7 +293,10 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
                   <tbody className="divide-y divide-slate-100">
                     {activeDates.flatMap((date: string) => 
                       students
-                        .filter(s => s.registros?.[date] === 'Tarde')
+                        .filter(s => {
+                          const est = normalizeStr(s.registros?.[date]);
+                          return est === 'tarde' || est === 'tardanza';
+                        })
                         .map(s => ({ date, student: s }))
                     ).map(({ date, student }, idx) => (
                       <tr key={idx} className="hover:bg-slate-50">
@@ -282,7 +315,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
           </div>
         </div>
 
-        {/* PIE DEL MODAL CON BOTONES DE DESCARGA LIMPIA Y PDF */}
+        {/* PIE DEL MODAL */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 print:hidden">
           <div className="flex items-center gap-2">
             <button 
