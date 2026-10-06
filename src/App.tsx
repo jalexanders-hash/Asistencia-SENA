@@ -459,7 +459,7 @@ Le recordamos que, conforme al Artículo 28, las inasistencias no programadas de
 
 Atentamente,
 ${instructorName}
-CC: ${correoInstructorActual} / Coordinación Académica`;
+CC: ${correoInstructorActual}`;
 
     } else if (notificationTemplateType === 'llegadas_tarde') {
       const listadoTardanzas = fechasTardanzasInstructor.length > 0 ? fechasTardanzasInstructor.map(f => `- ${displayAsDDMMYYYY(f)}`).join('\n') : 'Ninguna registrada por este instructor';
