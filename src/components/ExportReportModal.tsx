@@ -54,7 +54,12 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   const instructores = courseData?.equipo_instructores || [];
 
-  // SOLUCIÓN DEFINITIVA: Cruce por calendario real entre las fechas de la ficha y el día programado del instructor
+  // Buscar los datos detallados del instructor seleccionado
+  const currentInstructorObj = instructores.find(
+    (i: any) => normalizeStr(i.nombre_del_instructor) === normalizeStr(selectedInstructorFilter)
+  );
+
+  // Cruce por calendario real entre las fechas de la ficha y el día programado del instructor
   const getDatesForFilter = () => {
     const allDates = courseData?.fechas_asistencia || [];
 
@@ -62,27 +67,20 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       return allDates;
     }
 
-    // Buscamos al instructor seleccionado en el equipo ejecutor
-    const inst = instructores.find((i: any) => normalizeStr(i.nombre_del_instructor) === normalizeStr(selectedInstructorFilter));
-    
-    if (!inst) {
+    if (!currentInstructorObj) {
       return allDates; 
     }
 
-    // Si el instructor tiene un día asignado (ej: "Lunes", "Miércoles", "Viernes")
-    const diaProgramado = normalizeStr(inst.dia || '');
+    const diaProgramado = normalizeStr(currentInstructorObj.dia || '');
 
     if (!diaProgramado) {
-      // Si no especificó día, intentamos buscar si hay fechas específicas asociadas al instructor en el objeto
       const fechasMap = courseData?.fechas_por_instructor?.[selectedInstructorFilter];
       if (Array.isArray(fechasMap) && fechasMap.length > 0) return fechasMap;
       return allDates;
     }
 
-    // Filtramos matemáticamente las fechas del calendario de la ficha que coincidan con el día del instructor
     return allDates.filter((dateStr: string) => {
-      const diaRealDeLaFecha = getDayOfWeekFromDate(dateStr); // ej: "lunes"
-      // Verificamos si el día calendario coincide con la programación del instructor (soporta múltiples días como "lunes y miercoles")
+      const diaRealDeLaFecha = getDayOfWeekFromDate(dateStr);
       return diaProgramado.includes(diaRealDeLaFecha);
     });
   };
@@ -160,6 +158,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
           "Nombres": student.nombres,
           "Apellidos": student.apellidos,
           "Instructor_Filtro": selectedInstructorFilter === 'todos' ? 'Consolidado General' : selectedInstructorFilter,
+          "Competencia": currentInstructorObj?.competencia || 'N/A',
           "Sesiones_Evaluadas": totalSesionesEvaluadas,
           "Total_Asistencias": totalAsistencias,
           "Total_Inasistencias": totalInasistencias,
@@ -223,16 +222,40 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
             </div>
           </div>
 
-          {/* VISTA PREVIA */}
+          {/* VISTA PREVIA CON INFORMACIÓN DETALLADA DEL INSTRUCTOR */}
           <div className="p-8 bg-white border border-slate-300 rounded-xl space-y-6 shadow-sm print:border-none print:shadow-none print:p-0">
-            <div className="text-center border-b pb-4 space-y-1">
+            <div className="text-center border-b pb-4 space-y-1.5">
               <div className="font-bold text-sm text-emerald-800">SERVICIO NACIONAL DE APRENDIZAJE SENA</div>
               <h2 className="text-lg font-bold text-slate-900">{courseData?.denominacion}</h2>
-              <p className="text-xs text-slate-600">Ficha de Caracterización: <strong>{courseData?.ficha_de_caracterizacion}</strong> | Centro: {courseData?.centro}</p>
-              <p className="text-xs text-emerald-700 font-semibold pt-1">
-                Reporte: {reportType === 'inasistencias' ? 'Inasistencias y Excusas por Fecha' : 'Control de Llegadas Tarde'} 
-                {selectedInstructorFilter !== 'todos' ? ` | Instructor: ${selectedInstructorFilter}` : ''}
+              <p className="text-xs text-slate-600">
+                Ficha de Caracterización: <strong>{courseData?.ficha_de_caracterizacion}</strong> | Centro: {courseData?.centro}
               </p>
+              
+              {/* Tarjeta de Información del Instructor Seleccionado */}
+              {selectedInstructorFilter !== 'todos' && currentInstructorObj ? (
+                <div className="mt-3 p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg text-left grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-500 font-medium">Instructor:</span>{' '}
+                    <strong className="text-slate-800">{currentInstructorObj.nombre_del_instructor}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Rol:</span>{' '}
+                    <strong className="text-slate-800">{currentInstructorObj.rol || 'Instructor / Tutor'}</strong>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-slate-500 font-medium">Competencia:</span>{' '}
+                    <strong className="text-slate-800">{currentInstructorObj.competencia || 'No especificada'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 font-medium">Día Asignado:</span>{' '}
+                    <strong className="text-emerald-700 uppercase">{currentInstructorObj.dia || 'No definido'}</strong>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-emerald-700 font-semibold pt-1">
+                  Reporte General Consolidado de la Ficha
+                </p>
+              )}
             </div>
 
             {reportType === 'inasistencias' ? (
