@@ -8,7 +8,7 @@ interface ExportReportModalProps {
   students: any[];
 }
 
-// Función robusta para normalizar textos (quita tildes, espacios y pasa a minúsculas)
+// Normaliza textos (elimina tildes, espacios y convierte a minúsculas)
 function normalizeStr(str: string): string {
   if (!str) return '';
   return str
@@ -16,6 +16,34 @@ function normalizeStr(str: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+// Mapeo preciso para convertir cualquier fecha en formato DD/MM/YYYY o YYYY-MM-DD a su día de la semana real
+function getDayOfWeekFromDate(dateStr: string): string {
+  if (!dateStr) return '';
+  let parts: string[] = [];
+  
+  if (dateStr.includes('/')) {
+    parts = dateStr.split('/');
+  } else if (dateStr.includes('-')) {
+    parts = dateStr.split('-');
+    if (parts[0].length === 4) {
+      parts = [parts[2], parts[1], parts[0]]; // YYYY-MM-DD a DD-MM-YYYY
+    }
+  }
+
+  if (parts.length === 3) {
+    const day = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const year = Number(parts[2]);
+    const d = new Date(year, month, day);
+    
+    if (!isNaN(d.getTime())) {
+      const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+      return days[d.getDay()] || '';
+    }
+  }
+  return '';
 }
 
 export default function ExportReportModal({ isOpen, onClose, courseData, students }: ExportReportModalProps) {
@@ -26,7 +54,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   const instructores = courseData?.equipo_instructores || [];
 
-  // Filtrado adaptado a la carga independiente de cada instructor
+  // SOLUCIÓN DEFINITIVA: Cruce por calendario real entre las fechas de la ficha y el día programado del instructor
   const getDatesForFilter = () => {
     const allDates = courseData?.fechas_asistencia || [];
 
@@ -34,29 +62,28 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       return allDates;
     }
 
-    // 1. Verificar si la estructura tiene fechas guardadas específicamente para este instructor
-    const fechasPorInstructorMap = courseData?.fechas_por_instructor || {};
-    const fechasEspecificas = fechasPorInstructorMap[selectedInstructorFilter];
-
-    if (Array.isArray(fechasEspecificas) && fechasEspecificas.length > 0) {
-      return fechasEspecificas;
-    }
-
-    // 2. Si no hay un arreglo directo, buscamos al instructor en el equipo para ver su día asignado como respaldo
+    // Buscamos al instructor seleccionado en el equipo ejecutor
     const inst = instructores.find((i: any) => normalizeStr(i.nombre_del_instructor) === normalizeStr(selectedInstructorFilter));
     
-    if (!inst || !inst.dia) {
-      // Si no hay filtro estricto por día, devolvemos las fechas generales como respaldo
+    if (!inst) {
       return allDates; 
     }
 
-    const diaInstructorNorm = normalizeStr(inst.dia);
+    // Si el instructor tiene un día asignado (ej: "Lunes", "Miércoles", "Viernes")
+    const diaProgramado = normalizeStr(inst.dia || '');
 
-    // Filtrar fechas que coincidan con el día del instructor (ej: Lunes, Martes)
+    if (!diaProgramado) {
+      // Si no especificó día, intentamos buscar si hay fechas específicas asociadas al instructor en el objeto
+      const fechasMap = courseData?.fechas_por_instructor?.[selectedInstructorFilter];
+      if (Array.isArray(fechasMap) && fechasMap.length > 0) return fechasMap;
+      return allDates;
+    }
+
+    // Filtramos matemáticamente las fechas del calendario de la ficha que coincidan con el día del instructor
     return allDates.filter((dateStr: string) => {
-      // Intentar extraer el día de la semana si el string contiene formato de fecha
-      // O si el formato de la fecha de asistencia ya incluye o valida el día
-      return true; // Se mantiene flexible si las fechas fueron subidas por él
+      const diaRealDeLaFecha = getDayOfWeekFromDate(dateStr); // ej: "lunes"
+      // Verificamos si el día calendario coincide con la programación del instructor (soporta múltiples días como "lunes y miercoles")
+      return diaProgramado.includes(diaRealDeLaFecha);
     });
   };
 
@@ -143,7 +170,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       });
 
       const instructorSuffix = selectedInstructorFilter === 'todos' ? 'General' : selectedInstructorFilter.replace(/\s+/g, '_');
-      exportToCSV(reportData, `Reporte_Resumido_Ficha_${courseData?.ficha_de_caracterizacion || ''}_${instructorSuffix}`);
+      exportToCSV(reportData, `Reporte_Ejecutivo_Ficha_${courseData?.ficha_de_caracterizacion || ''}_${instructorSuffix}`);
     } catch (error) {
       console.error("Error al generar reporte limpio:", error);
       alert("Ocurrió un error al generar el reporte.");
@@ -211,7 +238,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
             {reportType === 'inasistencias' ? (
               <div className="space-y-6">
                 {activeDates.length === 0 ? (
-                  <p className="text-center text-slate-400 italic text-xs py-4">No hay fechas registradas o asociadas para este instructor.</p>
+                  <p className="text-center text-slate-400 italic text-xs py-4">No hay sesiones asociadas a los días programados para este instructor.</p>
                 ) : (
                   activeDates.map((date: string) => {
                     const ausentesFecha = students.filter(s => {
