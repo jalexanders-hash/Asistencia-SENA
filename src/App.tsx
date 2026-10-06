@@ -104,7 +104,7 @@ export default function App() {
       "3407860": sanitizeFicha({
         ...initialCourseData,
         ficha_de_caracterizacion: "3407860",
-        denominacion: "GESTIÓN ADMINISTRATIVA (Nuevo Grupo)",
+        denominacion: "GESTIÓN ADMINISTRATIVA",
         programa: "Tecnología en Gestión Administrativa",
         equipo_instructores: [],
         fechas_asistencia: [],
