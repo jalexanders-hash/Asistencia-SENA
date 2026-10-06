@@ -27,7 +27,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   const instructores = courseData.equipo_instructores || [];
 
-  // Obtener fechas según el día asignado al instructor seleccionado
+  // Obtener fechas según el día asignado al instructor seleccionado (Solución al filtro por instructor)
   const getDatesForFilter = () => {
     const allDates = courseData.fechas_asistencia || [];
 
@@ -56,7 +56,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
   };
 
   // ==========================================
-  // FUNCIONES DE EXPORTACIÓN A CSV / EXCEL
+  // FUNCIONES DE EXPORTACIÓN A CSV / EXCEL LIMPIO
   // ==========================================
   const exportToCSV = (data: any[], fileName: string) => {
     if (!data || data.length === 0) {
@@ -80,7 +80,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       csvRows.push(values.join(';'));
     }
 
-    // Crear archivo blob y descargar con soporte de codificación UTF-8 para Excel
+    // Crear archivo blob y descargar con soporte UTF-8
     const blob = new Blob(["\ufeff" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -91,72 +91,55 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
     document.body.removeChild(link);
   };
 
-  // 1. Generar Reporte Global por Fecha (Respetando filtros activos)
-  const handleDownloadGlobalByDateReport = () => {
+  // 1. Reporte Resumido y Limpio (Reemplaza la sábana gigante por un consolidado ejecutivo)
+  const handleDownloadCleanSummaryReport = () => {
     try {
-      const dates = activeDates || [];
       const listaEstudiantes = students || [];
+      const dates = activeDates || [];
 
-      if (dates.length === 0 || listaEstudiantes.length === 0) {
-        alert("No hay registros suficientes para generar el reporte global.");
+      if (listaEstudiantes.length === 0) {
+        alert("No hay registros suficientes para generar el reporte.");
         return;
       }
 
       const reportData = listaEstudiantes.map((student: any) => {
-        const row: any = {
-          "Documento": student.numero_documento,
-          "Nombres": student.nombres,
-          "Apellidos": student.apellidos,
-        };
-
-        dates.forEach((date: string) => {
-          row[`Fecha_${date}`] = student.registros?.[date] || "Sin Registro";
-        });
-
-        return row;
-      });
-
-      exportToCSV(reportData, `Reporte_Global_Ficha_${courseData?.ficha_de_caracterizacion || 'General'}`);
-    } catch (error) {
-      console.error("Error al generar reporte global:", error);
-      alert("Ocurrió un error al generar el reporte.");
-    }
-  };
-
-  // 2. Generar Reporte Filtrado por Instructor con Totales
-  const handleDownloadInstructorReport = () => {
-    try {
-      const listaEstudiantes = students || [];
-      const instructorNameFilter = selectedInstructorFilter === 'todos' ? 'Consolidado_General' : selectedInstructorFilter;
-      const dates = activeDates || [];
-
-      const reportData = listaEstudiantes.map((student: any) => {
         let totalAsistencias = 0;
-        let totalFallas = 0;
+        let totalInasistencias = 0;
+        let totalExcusas = 0;
         let totalTardanzas = 0;
 
         dates.forEach((date: string) => {
           const estado = (student.registros?.[date] || '').toLowerCase().trim();
           if (estado === 'asistio' || estado === 'asistió') totalAsistencias++;
-          if (estado === 'x' || estado === 'faltó') totalFallas++;
+          if (estado === 'x' || estado === 'faltó') totalInasistencias++;
+          if (estado === 'excusa' || estado === 'evento') totalExcusas++;
           if (estado === 'tarde' || estado === 'tardanza') totalTardanzas++;
         });
+
+        const totalSesionesEvaluadas = dates.length;
+        const porcentajeAsistencia = totalSesionesEvaluadas > 0 
+          ? ((totalAsistencias / totalSesionesEvaluadas) * 100).toFixed(1) + '%' 
+          : '0.0%';
 
         return {
           "Documento": student.numero_documento,
           "Nombres": student.nombres,
           "Apellidos": student.apellidos,
-          "Instructor_Filtro": instructorNameFilter,
+          "Instructor_Filtro": selectedInstructorFilter === 'todos' ? 'Consolidado General' : selectedInstructorFilter,
+          "Sesiones_Evaluadas": totalSesionesEvaluadas,
           "Total_Asistencias": totalAsistencias,
-          "Total_Fallas": totalFallas,
+          "Total_Inasistencias": totalInasistencias,
+          "Total_Excusas": totalExcusas,
           "Total_Tardanzas": totalTardanzas,
+          "Porcentaje_Asistencia": porcentajeAsistencia
         };
       });
 
-      exportToCSV(reportData, `Reporte_Instructor_${instructorNameFilter.replace(/\s+/g, '_')}_Ficha_${courseData?.ficha_de_caracterizacion || ''}`);
+      const instructorSuffix = selectedInstructorFilter === 'todos' ? 'General' : selectedInstructorFilter.replace(/\s+/g, '_');
+      exportToCSV(reportData, `Reporte_Resumido_Ficha_${courseData?.ficha_de_caracterizacion || ''}_${instructorSuffix}`);
     } catch (error) {
-      console.error("Error al generar reporte por instructor:", error);
-      alert("Ocurrió un error al generar el reporte por instructor.");
+      console.error("Error al generar reporte limpio:", error);
+      alert("Ocurrió un error al generar el reporte.");
     }
   };
 
@@ -165,7 +148,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center print:hidden">
           <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-            <FileText className="w-5 h-5 text-emerald-600" /> Generador de Reportes Académicos (PDF / Impresión)
+            <FileText className="w-5 h-5 text-emerald-600" /> Generador de Reportes Académicos (SENA)
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />
@@ -173,7 +156,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
         </div>
 
         <div className="p-6 space-y-6 overflow-y-auto flex-grow">
-          {/* Controles de Filtrado (Ocultos al imprimir) */}
+          {/* Controles de Filtrado */}
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 print:hidden">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <label className="text-xs font-bold text-slate-700">Tipo de Reporte:</label>
@@ -182,31 +165,31 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
                 onChange={(e: any) => setReportType(e.target.value)}
                 className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold bg-white text-slate-800"
               >
-                <option value="inasistencias">Inasistencias (Con / Sin Excusa) por Fecha</option>
-                <option value="tardanzas">Reporte de Llegadas Tarde por Fecha</option>
+                <option value="inasistencias">Inasistencias y Excusas por Fecha</option>
+                <option value="tardanzas">Control de Llegadas Tarde por Fecha</option>
               </select>
             </div>
 
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5 text-emerald-600" /> Instructor:
+                <Filter className="w-3.5 h-3.5 text-emerald-600" /> Filtrar por Instructor:
               </span>
               <select 
                 value={selectedInstructorFilter}
                 onChange={(e) => setSelectedInstructorFilter(e.target.value)}
                 className="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold bg-white text-slate-800"
               >
-                <option value="todos">Todos los Instructores</option>
+                <option value="todos">Todos los Instructores (General)</option>
                 {instructores.map((inst: any, idx: number) => (
                   <option key={idx} value={inst.nombre_del_instructor}>
-                    {inst.nombre_del_instructor}
+                    {inst.nombre_del_instructor} {inst.dia ? `(${inst.dia})` : ''}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* DOCUMENTO VISTA PREVIA LISTO PARA IMPRIMIR O GUARDAR COMO PDF */}
+          {/* VISTA PREVIA LIMPIA LISTA PARA IMPRIMIR O GUARDAR COMO PDF */}
           <div className="p-8 bg-white border border-slate-300 rounded-xl space-y-6 shadow-sm print:border-none print:shadow-none print:p-0">
             <div className="text-center border-b pb-4 space-y-1">
               <div className="font-bold text-sm text-emerald-800">SERVICIO NACIONAL DE APRENDIZAJE SENA</div>
@@ -299,20 +282,14 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
           </div>
         </div>
 
-        {/* PIE DEL MODAL CON BOTONES DE EXPORTACIÓN, IMPRESIÓN Y CIERRE */}
+        {/* PIE DEL MODAL CON BOTONES DE DESCARGA LIMPIA Y PDF */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 print:hidden">
           <div className="flex items-center gap-2">
             <button 
-              onClick={handleDownloadGlobalByDateReport}
-              className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+              onClick={handleDownloadCleanSummaryReport}
+              className="px-4 py-2 bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-600" /> CSV Global (Excel)
-            </button>
-            <button 
-              onClick={handleDownloadInstructorReport}
-              className="px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-600" /> CSV por Instructor
+              <Download className="w-4 h-4 text-emerald-700" /> Descargar Reporte Ejecutivo Limpio (.CSV)
             </button>
           </div>
 
