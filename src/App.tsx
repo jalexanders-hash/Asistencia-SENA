@@ -52,7 +52,6 @@ const displayAsDDMMYYYY = (dateStr: string) => {
     let p2 = parts[1].trim().replace(/['"]/g, '');
     let p3 = parts[2].trim().replace(/['"]/g, '');
 
-    // Si el formato viene de un input ISO (YYYY-MM-DD)
     if (p1.length === 4) {
       return `${String(p3).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p1}`;
     }
@@ -82,7 +81,6 @@ const parseDateForSorting = (dateStr: string) => {
     let p2 = parts[1].trim().replace(/['"]/g, '');
     let p3 = parts[2].trim().replace(/['"]/g, '');
 
-    // Si viene en formato ISO (YYYY-MM-DD)
     if (p1.length === 4) {
       return new Date(Number(p1), Number(p2) - 1, Number(p3));
     }
@@ -103,7 +101,6 @@ const formatDateForData = (dateString: string) => {
   if (dateString.includes('-')) {
     const parts = dateString.split('-');
     if (parts.length === 3) {
-      // Si el primer segmento tiene 4 dígitos es YYYY-MM-DD (Input HTML)
       if (parts[0].length === 4) {
         const [year, month, day] = parts;
         return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
@@ -131,7 +128,6 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     };
   }
 
-  // Comprobación estricta: Si la ficha es diferente a la 3387401 o es nueva, nace completamente limpia de registros
   const isDefaultBaseFicha = String(fichaId) === "3387401" || String(ficha.ficha_de_caracterizacion) === "3387401";
   const shouldCleanAllRecords = !isDefaultBaseFicha;
 
@@ -292,9 +288,11 @@ export default function App() {
   });
   const [tempRecords, setTempRecords] = useState<Record<string, string>>({});
 
+  // SINCRONIZACIÓN EN TIEMPO REAL CON FIRESTORE (REACTIVO Y LIMPIO AL CAMBIAR DE FICHA)
   useEffect(() => {
     setIsLoading(true);
     
+    // 1. Carga inicial rápida desde caché local si existe
     const localData = localStorage.getItem(`sena_ficha_data_${currentFichaId}`);
     if (localData) {
       try {
@@ -303,13 +301,24 @@ export default function App() {
       } catch (e) {}
     }
 
-    const unsubscribe = subscribeToFichaData((data) => {
-      if (data) {
-        updateCurrentFichaData(data);
+    // 2. Suscripción en tiempo real a Firestore para la ficha activa
+    const unsubscribe = subscribeToFichaData((cloudData) => {
+      if (cloudData) {
+        // Actualizamos de inmediato el estado global y local con la data fresca de Firestore
+        const sanitized = sanitizeFicha(cloudData, currentFichaId);
+        setFichasDataMap(prev => {
+          const updated = {
+            ...prev,
+            [currentFichaId]: sanitized
+          };
+          localStorage.setItem('sena_all_fichas_database', JSON.stringify(updated));
+          return updated;
+        });
       }
       setIsLoading(false);
     }, currentFichaId);
      
+    // Función de limpieza: Se ejecuta al desmontar o al cambiar de `currentFichaId`
     return () => {
       if (unsubscribe && typeof unsubscribe === 'function') {
         unsubscribe();
@@ -361,7 +370,6 @@ export default function App() {
       updateCurrentFichaData(updatedCourseData);
       localStorage.setItem(`sena_ficha_data_${currentFichaId}`, JSON.stringify(updatedCourseData));
       setShowAttendanceModal(false);
-      alert(`Asistencia guardada correctamente para la Ficha ${currentFichaId}.`);
     } catch (error) {
       console.error("Failed to save attendance", error);
       updateCurrentFichaData(updatedCourseData);
