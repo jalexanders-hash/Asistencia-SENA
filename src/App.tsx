@@ -48,12 +48,24 @@ const displayAsDDMMYYYY = (dateStr: string) => {
   }
 
   if (parts.length === 3) {
-    let p1 = parts[0]; // Mes (ej: 01)
-    let p2 = parts[1]; // Día (ej: 06)
-    let p3 = parts[2]; // Año (ej: 2026)
+    let p1 = parts[0].trim();
+    let p2 = parts[1].trim();
+    let p3 = parts[2].trim();
 
-    // Se intercambian p1 y p2 para asegurar que siempre se despliegue como DD/MM/YYYY
-    return `${String(p2).padStart(2, '0')}/${String(p1).padStart(2, '0')}/${p3}`;
+    // Limpiamos comillas simples si las hubiera (ej. '23/2026 -> 23)
+    p1 = p1.replace(/['"]/g, '');
+    p2 = p2.replace(/['"]/g, '');
+    p3 = p3.replace(/['"]/g, '');
+
+    // Si el año (p3) está al final y tiene 4 dígitos
+    if (p3.length === 4) {
+      // Si el primer número (p1) es mayor a 12, es imposible que sea un mes, por lo que ya es un día (DD/MM/YYYY)
+      if (Number(p1) > 12) {
+        return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
+      }
+      // De lo contrario, invertimos p1 (mes) y p2 (día) para forzar el formato correcto DD/MM/YYYY
+      return `${String(p2).padStart(2, '0')}/${String(p1).padStart(2, '0')}/${p3}`;
+    }
   }
   return dateStr;
 };
