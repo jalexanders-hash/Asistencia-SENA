@@ -799,7 +799,7 @@ CC: ${correoInstructorActual}`;
                 onClick={() => setActiveTab('reportes')}
                 className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'reportes' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
-                Reportes y Google Sheets
+                Reportes
               </button>
             </div>
 
@@ -1050,18 +1050,18 @@ CC: ${correoInstructorActual}`;
                 <div className="flex items-center gap-3 border-b pb-4">
                   <img src={LOGO_SENA_SVG} alt="" className="w-10 h-10" />
                   <div>
-                    <h2 className="text-lg font-bold text-slate-800">Generador de Reportes y Sincronización Google Sheets</h2>
-                    <p className="text-xs text-slate-500">Centralice la información académica discriminando por instructor y competencias.</p>
+                    <h2 className="text-lg font-bold text-slate-800">Generador de Reportes de Inasistencia</h2>
+                    <p className="text-xs text-slate-500">Centralice y consulte la información académica de asistencia y novedades discriminando por instructor y competencias.</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-xl border">
-                  <div className="w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50 p-5 rounded-xl border border-slate-200">
+                  <div className="w-full sm:w-96">
                     <label className="text-xs font-bold text-slate-700 block mb-1">Filtrar Reportes por Instructor:</label>
                     <select 
                       value={instructorFiltroReporte}
                       onChange={(e) => setInstructorFiltroReporte(e.target.value)}
-                      className="border rounded-lg px-3 py-1.5 text-xs font-semibold bg-white text-slate-800"
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:border-[#39a900]"
                     >
                       <option value="todos">Todos los Instructores</option>
                       {courseData.equipo_instructores?.map((inst: any, idx: number) => (
@@ -1069,21 +1069,15 @@ CC: ${correoInstructorActual}`;
                       ))}
                     </select>
                   </div>
-                </div>
 
-                <div className="flex flex-wrap gap-4 pt-2">
-                  <button 
-                    onClick={() => setShowExportModal(true)}
-                    className="px-5 py-2.5 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors"
-                  >
-                    <Printer className="w-4 h-4" /> Abrir Vista Previa y PDF
-                  </button>
-                  <button 
-                    onClick={() => setIsSheetsModalOpen(true)}
-                    className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-emerald-50 hover:text-[#39a900] flex items-center gap-2 shadow-sm transition-colors"
-                  >
-                    <FileSpreadsheet className="w-4 h-4 text-[#39a900]" /> Sincronizar Google Sheets
-                  </button>
+                  <div className="w-full sm:w-auto flex justify-end">
+                    <button 
+                      onClick={() => setShowExportModal(true)}
+                      className="px-5 py-2.5 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors"
+                    >
+                      <Printer className="w-4 h-4" /> Abrir Vista Previa y PDF
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
