@@ -18,7 +18,7 @@ function normalizeStr(str: string): string {
     .trim();
 }
 
-// Mapeo preciso para convertir cualquier fecha en formato DD/MM/YYYY o YYYY-MM-DD a su día de la semana real
+// Conversión estricta garantizando el formato DD/MM/YYYY (Día, Mes, Año)
 function getDayOfWeekFromDate(dateStr: string): string {
   if (!dateStr) return '';
   let parts: string[] = [];
@@ -27,15 +27,27 @@ function getDayOfWeekFromDate(dateStr: string): string {
     parts = dateStr.split('/');
   } else if (dateStr.includes('-')) {
     parts = dateStr.split('-');
-    if (parts[0].length === 4) {
-      parts = [parts[2], parts[1], parts[0]]; // YYYY-MM-DD a DD-MM-YYYY
-    }
   }
 
   if (parts.length === 3) {
-    const day = Number(parts[0]);
-    const month = Number(parts[1]) - 1;
-    const year = Number(parts[2]);
+    let day = 0;
+    let month = 0;
+    let year = 0;
+
+    // Detectar si viene en formato YYYY-MM-DD o DD/MM/YYYY
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD
+      year = Number(parts[0]);
+      month = Number(parts[1]) - 1;
+      day = Number(parts[2]);
+    } else {
+      // Estricto DD/MM/YYYY (Día primero, Mes segundo)
+      day = Number(parts[0]);
+      month = Number(parts[1]) - 1;
+      year = Number(parts[2]);
+      if (year < 100) year += 2000; // Ajuste por si el año viene en 2 dígitos (ej. 26 -> 2026)
+    }
+
     const d = new Date(year, month, day);
     
     if (!isNaN(d.getTime())) {
@@ -59,7 +71,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
     (i: any) => normalizeStr(i.nombre_del_instructor) === normalizeStr(selectedInstructorFilter)
   );
 
-  // Filtro estricto: Las fechas deben corresponder exactamente al día de la semana asignado al instructor
+  // Filtro estricto: Las fechas deben corresponder exactamente al día de la semana asignado al instructor usando DD/MM/YYYY
   const getDatesForFilter = () => {
     const allDates = courseData?.fechas_asistencia || [];
 
@@ -77,7 +89,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       return [];
     }
 
-    // Filtra estrictamente solo las fechas cuyo día real de la semana coincide con el día del instructor
+    // Filtra estrictamente solo las fechas cuyo día real de la semana (evaluado como DD/MM/YYYY) coincide con el día del instructor
     return allDates.filter((dateStr: string) => {
       const diaRealDeLaFecha = getDayOfWeekFromDate(dateStr);
       return diaProgramado.includes(diaRealDeLaFecha);
