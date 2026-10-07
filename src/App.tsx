@@ -52,6 +52,11 @@ const displayAsDDMMYYYY = (dateStr: string) => {
     let p2 = parts[1].trim().replace(/['"]/g, '');
     let p3 = parts[2].trim().replace(/['"]/g, '');
 
+    // Si el formato viene de un input ISO (YYYY-MM-DD)
+    if (p1.length === 4) {
+      return `${String(p3).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p1}`;
+    }
+
     if (p3.length === 4) {
       if (Number(p1) > 12) {
         return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
@@ -77,6 +82,11 @@ const parseDateForSorting = (dateStr: string) => {
     let p2 = parts[1].trim().replace(/['"]/g, '');
     let p3 = parts[2].trim().replace(/['"]/g, '');
 
+    // Si viene en formato ISO (YYYY-MM-DD)
+    if (p1.length === 4) {
+      return new Date(Number(p1), Number(p2) - 1, Number(p3));
+    }
+
     if (p3.length === 4) {
       if (Number(p1) > 12) {
         return new Date(Number(p3), Number(p2) - 1, Number(p1));
@@ -87,16 +97,23 @@ const parseDateForSorting = (dateStr: string) => {
   return new Date(dateStr);
 };
 
+// Función robusta para formatear fechas desde los inputs (YYYY-MM-DD) a DD/MM/YYYY sin invertir valores
 const formatDateForData = (dateString: string) => {
   if (!dateString) return "";
   if (dateString.includes('-')) {
-    const [year, month, day] = dateString.split('-');
-    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      // Si el primer segmento tiene 4 dígitos es YYYY-MM-DD (Input HTML)
+      if (parts[0].length === 4) {
+        const [year, month, day] = parts;
+        return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+      }
+    }
   }
   return displayAsDDMMYYYY(dateString);
 };
 
-// Sanitización rigurosa: Evita contaminación cruzada entre fichas y asegura registros limpios
+// Sanitización rigurosa y aislamiento total de fichas nuevas (Evita arrastrar datos de la 3387401)
 const sanitizeFicha = (ficha: any, fichaId: string) => {
   const base = JSON.parse(JSON.stringify(initialCourseData));
   
@@ -114,13 +131,14 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     };
   }
 
-  // Si es una ficha nueva o diferente a la 3387401 base, limpiamos registros heredados cruzados
-  const isNewOrDifferentFicha = ficha.ficha_de_caracterizacion && String(ficha.ficha_de_caracterizacion) !== String(fichaId);
-  
+  // Comprobación estricta: Si la ficha es diferente a la 3387401 o es nueva, nace completamente limpia de registros
+  const isDefaultBaseFicha = String(fichaId) === "3387401" || String(ficha.ficha_de_caracterizacion) === "3387401";
+  const shouldCleanAllRecords = !isDefaultBaseFicha;
+
   const cleanedAprendices = Array.isArray(ficha.asistencias_aprendices) 
     ? ficha.asistencias_aprendices.map((a: any) => ({ 
         ...a, 
-        registros: isNewOrDifferentFicha ? {} : (a.registros || {}) 
+        registros: shouldCleanAllRecords ? {} : (a.registros || {}) 
       }))
     : (base.asistencias_aprendices || []).map((a: any) => ({ ...a, registros: {} }));
 
@@ -129,7 +147,7 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     ...ficha,
     ficha_de_caracterizacion: fichaId,
     equipo_instructores: Array.isArray(ficha.equipo_instructores) ? ficha.equipo_instructores : [],
-    fechas_asistencia: isNewOrDifferentFicha ? [] : (Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d)) : []),
+    fechas_asistencia: shouldCleanAllRecords ? [] : (Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d)) : []),
     asistencias_aprendices: cleanedAprendices,
     competencias: Array.isArray(ficha.competencias) ? ficha.competencias : [],
     aprendices: Array.isArray(ficha.aprendices) ? ficha.aprendices : []
