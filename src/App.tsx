@@ -70,7 +70,7 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     return { 
       ...base, 
       ficha_de_caracterizacion: fichaId,
-      equipo_instructores: [],
+      equipo_instructores: base.equipo_instructores,
       programa: "Tecnología en Gestión Administrativa",
     };
   }
@@ -79,8 +79,12 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     ...ficha,
     ficha_de_caracterizacion: ficha.ficha_de_caracterizacion || fichaId,
     equipo_instructores: Array.isArray(ficha.equipo_instructores) && ficha.equipo_instructores.length > 0 
-      ? ficha.equipo_instructores 
-      : (fichaId === "3407860" ? [] : base.equipo_instructores),
+      ? ficha.equipo_instructores.map((inst: any) => ({
+          ...inst,
+          rol: inst.rol || "Instructor / Tutor",
+          dia: inst.dia || "Por definir"
+        }))
+      : base.equipo_instructores,
     fechas_asistencia: Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia : [],
     asistencias_aprendices: Array.isArray(ficha.asistencias_aprendices) ? ficha.asistencias_aprendices : [],
     competencias: Array.isArray(ficha.competencias) ? ficha.competencias : [],
@@ -110,7 +114,7 @@ export default function App() {
         ficha_de_caracterizacion: "3407860",
         denominacion: "GESTIÓN ADMINISTRATIVA",
         programa: "Tecnología en Gestión Administrativa",
-        equipo_instructores: [],
+        equipo_instructores: initialCourseData.equipo_instructores,
         fechas_asistencia: [],
         asistencias_aprendices: []
       }, "3407860")
@@ -153,10 +157,6 @@ export default function App() {
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const [instructorFiltroReporte, setInstructorFiltroReporte] = useState<string>('todos');
-
-  const instructoresFiltradosReporte = instructorFiltroReporte === 'todos' 
-    ? courseData.equipo_instructores 
-    : courseData.equipo_instructores.filter((inst: any) => inst.nombre_del_instructor === instructorFiltroReporte);
 
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
@@ -564,10 +564,10 @@ CC: ${correoInstructorActual}`;
                   className="bg-emerald-50 text-[#39a900] text-xs font-bold px-2 py-0.5 rounded border border-[#39a900]/30 focus:outline-none cursor-pointer"
                 >
                  {Object.keys(fichasDataMap).map((fichaKey) => (
-  <option key={fichaKey} value={fichaKey}>
-    Ficha: {fichaKey}
-  </option>
-))}
+                  <option key={fichaKey} value={fichaKey}>
+                    Ficha: {fichaKey}
+                  </option>
+                ))}
                 </select>
               </div>
             </div>
@@ -774,38 +774,44 @@ CC: ${correoInstructorActual}`;
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {courseData.equipo_instructores.map((inst: any, idx: number) => (
-                        <div 
-                          key={idx} 
-                          className="bg-gradient-to-br from-slate-50 to-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all space-y-3"
-                        >
-                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
-                            <div>
-                              <h4 className="font-bold text-slate-900 text-sm">
-                                {inst.nombre_del_instructor || 'Instructor sin nombre'}
-                              </h4>
-                              <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
-                                <Shield className="w-3 h-3" /> {inst.rol || 'Instructor / Tutor'}
-                              </span>
-                              <p className="text-[11px] text-slate-500 mt-1">Correo: {inst.correo || inst.correo_institucional || 'No registrado'}</p>
+                      {courseData.equipo_instructores.map((inst: any, idx: number) => {
+                        const diasInst = courseData.fechas_por_instructor?.[inst.nombre_del_instructor] || courseData.fechas_asistencia;
+                        return (
+                          <div 
+                            key={idx} 
+                            className="bg-gradient-to-br from-slate-50 to-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all space-y-3"
+                          >
+                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                              <div>
+                                <h4 className="font-bold text-slate-900 text-sm">
+                                  {inst.nombre_del_instructor || 'Instructor sin nombre'}
+                                </h4>
+                                <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                                  <Shield className="w-3 h-3" /> {inst.rol || 'Instructor / Tutor'}
+                                </span>
+                                <p className="text-[11px] text-slate-500 mt-1">Correo: {inst.correo || inst.correo_institucional || 'No registrado'}</p>
+                              </div>
+                              {inst.dia && (
+                                <span className="bg-emerald-100 text-emerald-800 font-bold text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" /> {inst.dia}
+                                </span>
+                              )}
                             </div>
-                            {inst.dia && (
-                              <span className="bg-emerald-100 text-emerald-800 font-bold text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1">
-                                <Calendar className="w-3 h-3" /> {inst.dia}
-                              </span>
-                            )}
-                          </div>
 
-                          <div className="space-y-1 text-xs">
-                            <span className="text-slate-400 font-medium flex items-center gap-1">
-                              <Award className="w-3.5 h-3.5 text-slate-500" /> Competencia a Cargo:
-                            </span>
-                            <p className="text-slate-700 font-medium bg-white p-2 rounded-lg border border-slate-100 leading-relaxed">
-                              {inst.competencia || 'Competencia general asignada a la ficha'}
-                            </p>
+                            <div className="space-y-1 text-xs">
+                              <span className="text-slate-400 font-medium flex items-center gap-1">
+                                <Award className="w-3.5 h-3.5 text-slate-500" /> Competencia a Cargo:
+                              </span>
+                              <p className="text-slate-700 font-medium bg-white p-2 rounded-lg border border-slate-100 leading-relaxed">
+                                {inst.competencia || 'Competencia general asignada a la ficha'}
+                              </p>
+                              <div className="pt-2 text-[11px] text-slate-500">
+                                Sesiones programadas: <strong className="text-slate-800">{diasInst.length}</strong>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
