@@ -67,7 +67,9 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     return { 
       ...base, 
       ficha_de_caracterizacion: fichaId,
-      equipo_instructores: base.equipo_instructores,
+      equipo_instructores: [], // Inicia vacío para evitar cruces entre fichas
+      fechas_asistencia: [],
+      asistencias_aprendices: [],
       programa: "Tecnología en Gestión Administrativa",
     };
   }
@@ -75,13 +77,8 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     ...base,
     ...ficha,
     ficha_de_caracterizacion: ficha.ficha_de_caracterizacion || fichaId,
-    equipo_instructores: Array.isArray(ficha.equipo_instructores) && ficha.equipo_instructores.length > 0 
-      ? ficha.equipo_instructores.map((inst: any) => ({
-          ...inst,
-          rol: inst.rol || "Instructor / Tutor",
-          dia: inst.dia || "Por definir"
-        }))
-      : base.equipo_instructores,
+    // Asegura que solo existan los instructores pertenecientes explícitamente a esta ficha
+    equipo_instructores: Array.isArray(ficha.equipo_instructores) ? ficha.equipo_instructores : [],
     fechas_asistencia: Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia : [],
     asistencias_aprendices: Array.isArray(ficha.asistencias_aprendices) ? ficha.asistencias_aprendices : [],
     competencias: Array.isArray(ficha.competencias) ? ficha.competencias : [],
