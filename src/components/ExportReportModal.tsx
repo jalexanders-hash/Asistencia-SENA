@@ -59,7 +59,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
     (i: any) => normalizeStr(i.nombre_del_instructor) === normalizeStr(selectedInstructorFilter)
   );
 
-  // Cruce por calendario real entre las fechas de la ficha y el día programado del instructor
+  // Cruce confiable basado en las fechas que realmente tienen registros o coincidencia activa
   const getDatesForFilter = () => {
     const allDates = courseData?.fechas_asistencia || [];
 
@@ -71,17 +71,24 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       return allDates; 
     }
 
-    const diaProgramado = normalizeStr(currentInstructorObj.dia || '');
-
-    if (!diaProgramado) {
-      const fechasMap = courseData?.fechas_por_instructor?.[selectedInstructorFilter];
-      if (Array.isArray(fechasMap) && fechasMap.length > 0) return fechasMap;
-      return allDates;
-    }
-
+    // Filtra las fechas donde al menos un aprendiz tenga un registro activo (Falta, Tarde, Excusa, etc.)
+    // Asegurando que la información mostrada al filtrar por instructor coincida perfectamente con el global.
     return allDates.filter((dateStr: string) => {
-      const diaRealDeLaFecha = getDayOfWeekFromDate(dateStr);
-      return diaProgramado.includes(diaRealDeLaFecha);
+      const hasRecords = students.some(student => {
+        const est = normalizeStr(student.registros?.[dateStr]);
+        return est === 'x' || est === 'falto' || est === 'faltó' || est === 'excusa' || est === 'evento' || est === 'tarde' || est === 'tardanza';
+      });
+
+      if (hasRecords) return true;
+
+      // Si no hay registros explícitos en esa fecha pero coincide con el día asignado del instructor, se incluye
+      const diaProgramado = normalizeStr(currentInstructorObj.dia || '');
+      if (diaProgramado) {
+        const diaRealDeLaFecha = getDayOfWeekFromDate(dateStr);
+        return diaProgramado.includes(diaRealDeLaFecha);
+      }
+
+      return false;
     });
   };
 
@@ -261,7 +268,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
             {reportType === 'inasistencias' ? (
               <div className="space-y-6">
                 {activeDates.length === 0 ? (
-                  <p className="text-center text-slate-400 italic text-xs py-4">No hay sesiones asociadas a los días programados para este instructor.</p>
+                  <p className="text-center text-slate-400 italic text-xs py-4">No hay sesiones asociadas a los registros de este instructor.</p>
                 ) : (
                   activeDates.map((date: string) => {
                     const ausentesFecha = students.filter(s => {
