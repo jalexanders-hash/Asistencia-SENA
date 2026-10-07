@@ -39,18 +39,15 @@ const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding
 
 const formatDateForData = (dateString: string) => {
   if (!dateString) return "";
-  
   if (dateString.includes('-')) {
     const [year, month, day] = dateString.split('-');
     return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
   }
-  
   const parts = dateString.split('/');
   if (parts.length === 3) {
     const [m, d, y] = parts;
     return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
   }
-
   return dateString;
 };
 
@@ -157,7 +154,6 @@ export default function App() {
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const [instructorFiltroReporte, setInstructorFiltroReporte] = useState<string>('todos');
-
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
   const [selectedStudentForProfile, setSelectedStudentForProfile] = useState<any>(null);
@@ -284,15 +280,6 @@ export default function App() {
       newFechas.push(formattedDate);
     }
      
-    let newFechasPorInstructor = { ...(courseData.fechas_por_instructor || {}) };
-    if (currentInstructor) {
-      let currentDates = [...(newFechasPorInstructor[(currentInstructor as any).nombre_del_instructor] || [])];
-      if (!currentDates.includes(formattedDate)) {
-        currentDates.push(formattedDate);
-        newFechasPorInstructor[(currentInstructor as any).nombre_del_instructor] = currentDates;
-      }
-    }
-     
     const newAprendices = courseData.asistencias_aprendices.map((student: any) => {
       const status = tempRecords[student.numero_documento];
       const newRegistros = { ...student.registros } as Record<string, string>;
@@ -308,11 +295,10 @@ export default function App() {
       ...courseData,
       fechas_asistencia: newFechas,
       asistencias_aprendices: newAprendices,
-      fechas_por_instructor: newFechasPorInstructor
     };
      
     try {
-      await saveAttendanceData(newFechas, newAprendices, newFechasPorInstructor, currentFichaId);
+      await saveAttendanceData(newFechas, newAprendices, {}, currentFichaId);
       updateCurrentFichaData(updatedCourseData);
       localStorage.setItem(`sena_ficha_data_${currentFichaId}`, JSON.stringify(updatedCourseData));
       setShowAttendanceModal(false);
@@ -450,34 +436,32 @@ export default function App() {
     const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde');
 
     if (notificationTemplateType === 'inasistencia') {
-      const listadoFechas = fechasFallasInstructor.length > 0 ? fechasFallasInstructor.map(f => `- ${displayAsDDMMYYYY(f)}`).join('\n') : 'Ninguna registrada por este instructor';
+      const listadoFechas = fechasFallasInstructor.length > 0 ? fechasFallasInstructor.map(f => `- ${displayAsDDMMYYYY(f)}`).join('\n') : 'Ninguna registrada';
       return `Asunto: Notificación por Inasistencia Injustificada (Acuerdo 009 de 2024) - Ficha ${courseData.ficha_de_caracterizacion}
 
 Estimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),
 
-De conformidad con el Acuerdo 009 de 2024 (Reglamento del Aprendiz SENA), específicamente en su Artículo 27 ("Cumplimiento satisfactorio del proceso formativo") y el Artículo 29 ("Incumplimiento injustificado"), le informamos que registra un acumulado de ${fechasFallasInstructor.length} inasistencia(s) injustificada(s) en las sesiones de formación con este instructor:
+De conformidad con el Acuerdo 009 de 2024 (Reglamento del Aprendiz SENA), específicamente en su Artículo 27 ("Cumplimiento satisfactorio del proceso formativo") y el Artículo 29 ("Incumplimiento injustificado"), le informamos que registra un acumulado de ${fechasFallasInstructor.length} inasistencia(s) injustificada(s):
 
 ${listadoFechas}
 
-Le recordamos que, conforme al Artículo 28, las inasistencias no programadas deben justificarse formalmente con los respectivos soportes a más tardar dentro de los cinco (5) días hábiles siguientes a su ocurrencia. De lo contrario, se configurará deserción según el Artículo 30.
+Le recordamos que, conforme al Artículo 28, las inasistencias no programadas deben justificarse formalmente con los respectivos soportes a más tardar dentro de los cinco (5) días hábiles siguientes a su ocurrencia.
 
 Atentamente,
 ${instructorName}
 CC: ${correoInstructorActual}`;
 
     } else if (notificationTemplateType === 'llegadas_tarde') {
-      const listadoTardanzas = fechasTardanzasInstructor.length > 0 ? fechasTardanzasInstructor.map(f => `- ${displayAsDDMMYYYY(f)}`).join('\n') : 'Ninguna registrada por este instructor';
+      const listadoTardanzas = fechasTardanzasInstructor.length > 0 ? fechasTardanzasInstructor.map(f => `- ${displayAsDDMMYYYY(f)}`).join('\n') : 'Ninguna registrada';
       return `Asunto: Llamado de Atención Formal por Llegadas Tarde - Ficha ${courseData.ficha_de_caracterizacion}
 
 Estimado(a) aprendiz ${student.nombres} ${student.apellidos} (${student.numero_documento}),
 
 El presente correo constituye un llamado de atención formal en relación con sus reiteradas llegadas tarde y ausencias parciales a las sesiones de formación programadas.
 
-Conforme al Artículo 27 del Acuerdo 009 de 2024 del SENA, el cumplimiento satisfactorio exige puntualidad y participación activa. Las tardanzas registradas en las sesiones de este instructor son:
+Conforme al Artículo 27 del Acuerdo 009 de 2024 del SENA, el cumplimiento satisfactorio exige puntualidad y participación activa:
 
 ${listadoTardanzas}
-
-La puntualidad es un compromiso institucional fundamental para el desarrollo adecuado de la competencia.
 
 Atentamente,
 ${instructorName}
@@ -765,7 +749,7 @@ CC: ${correoInstructorActual}`;
                     <h3 className="text-base font-bold text-slate-800">Equipo Ejecutor e Instructores Asignados</h3>
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    A continuación se relacionan los instructores a cargo de la formación, su respectivo rol, la competencia asignada y el día programado para el desarrollo de las sesiones:
+                    A continuación se relacionan los instructores a cargo de la formación, su respectivo rol, la competencia asignada y el día asignado para el desarrollo de las sesiones:
                   </p>
 
                   {(!courseData.equipo_instructores || courseData.equipo_instructores.length === 0) ? (
@@ -775,7 +759,6 @@ CC: ${correoInstructorActual}`;
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courseData.equipo_instructores.map((inst: any, idx: number) => {
-                        const diasInst = courseData.fechas_por_instructor?.[inst.nombre_del_instructor] || courseData.fechas_asistencia;
                         return (
                           <div 
                             key={idx} 
@@ -805,9 +788,6 @@ CC: ${correoInstructorActual}`;
                               <p className="text-slate-700 font-medium bg-white p-2 rounded-lg border border-slate-100 leading-relaxed">
                                 {inst.competencia || 'Competencia general asignada a la ficha'}
                               </p>
-                              <div className="pt-2 text-[11px] text-slate-500">
-                                Sesiones programadas: <strong className="text-slate-800">{diasInst.length}</strong>
-                              </div>
                             </div>
                           </div>
                         );
