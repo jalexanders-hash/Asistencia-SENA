@@ -111,7 +111,7 @@ const formatDateForData = (dateString: string) => {
   return displayAsDDMMYYYY(dateString);
 };
 
-// Sanitización rigurosa y aislamiento total de fichas nuevas (Evita arrastrar datos de la 3387401)
+// Sanitización que permite leer correctamente las inasistencias de CUALQUIER ficha desde Firestore
 const sanitizeFicha = (ficha: any, fichaId: string) => {
   const base = JSON.parse(JSON.stringify(initialCourseData));
   
@@ -129,13 +129,10 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     };
   }
 
-  const isDefaultBaseFicha = String(fichaId) === "3387401" || String(ficha.ficha_de_caracterizacion) === "3387401";
-  const shouldCleanAllRecords = !isDefaultBaseFicha;
-
   const cleanedAprendices = Array.isArray(ficha.asistencias_aprendices) 
     ? ficha.asistencias_aprendices.map((a: any) => ({ 
         ...a, 
-        registros: shouldCleanAllRecords ? {} : (a.registros || {}) 
+        registros: a.registros || {} 
       }))
     : (base.asistencias_aprendices || []).map((a: any) => ({ ...a, registros: {} }));
 
@@ -144,7 +141,7 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     ...ficha,
     ficha_de_caracterizacion: fichaId,
     equipo_instructores: Array.isArray(ficha.equipo_instructores) ? ficha.equipo_instructores : [],
-    fechas_asistencia: shouldCleanAllRecords ? [] : (Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d)) : []),
+    fechas_asistencia: Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d)) : [],
     asistencias_aprendices: cleanedAprendices,
     competencias: Array.isArray(ficha.competencias) ? ficha.competencias : [],
     aprendices: Array.isArray(ficha.aprendices) ? ficha.aprendices : []
@@ -308,7 +305,7 @@ export default function App() {
   });
   const [tempRecords, setTempRecords] = useState<Record<string, string>>({});
 
-  // SINCRONIZACIÓN EN TIEMPO REAL CON FIRESTORE (REACTIVO Y LIMPIO AL CAMBIAR DE FICHA)
+  // SINCRONIZACIÓN EN TIEMPO REAL CON FIRESTORE
   useEffect(() => {
     setIsLoading(true);
     
