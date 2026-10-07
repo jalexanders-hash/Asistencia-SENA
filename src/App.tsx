@@ -3,7 +3,8 @@ import { courseData as initialCourseData } from './data';
 import { subscribeToFichaData, saveAttendanceData } from './lib/firebase';
 import { SheetsTemplateModal } from './components/SheetsTemplateModal';
 import ExportReportModal from './components/ExportReportModal';
-import { auth } from "./lib/firebase";
+import { auth, db } from "./lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
 import { 
@@ -166,18 +167,37 @@ export default function App() {
       } catch (e) {}
     }
     return {
-      "3387401": sanitizeFicha(initialCourseData, "3387401"),
-      "3407860": sanitizeFicha({
-        ...initialCourseData,
-        ficha_de_caracterizacion: "3407860",
-        denominacion: "GESTIÓN ADMINISTRATIVA",
-        programa: "Tecnología en Gestión Administrativa",
-        equipo_instructores: initialCourseData.equipo_instructores,
-        fechas_asistencia: [],
-        asistencias_aprendices: []
-      }, "3407860")
+      "3387401": sanitizeFicha(initialCourseData, "3387401")
     };
   });
+
+  // CARGA AUTOMÁTICA DE TODAS LAS FICHAS DESDE FIRESTORE AL INICIAR LA APP
+  useEffect(() => {
+    const fetchAllFichasFromCloud = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "fichas"));
+        const cloudFichasMap: Record<string, any> = {};
+
+        querySnapshot.forEach((docSnap) => {
+          const fichaId = docSnap.id;
+          const fichaData = docSnap.data();
+          cloudFichasMap[fichaId] = sanitizeFicha(fichaData, fichaId);
+        });
+
+        if (Object.keys(cloudFichasMap).length > 0) {
+          setFichasDataMap(prev => {
+            const merged = { ...prev, ...cloudFichasMap };
+            localStorage.setItem('sena_all_fichas_database', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      } catch (error) {
+        console.error("Error al descargar todas las fichas de Firestore:", error);
+      }
+    };
+
+    fetchAllFichasFromCloud();
+  }, []);
 
   const courseData = useMemo(() => {
     const rawData = fichasDataMap[currentFichaId] || {
@@ -292,7 +312,6 @@ export default function App() {
   useEffect(() => {
     setIsLoading(true);
     
-    // 1. Carga inicial rápida desde caché local si existe
     const localData = localStorage.getItem(`sena_ficha_data_${currentFichaId}`);
     if (localData) {
       try {
@@ -301,10 +320,8 @@ export default function App() {
       } catch (e) {}
     }
 
-    // 2. Suscripción en tiempo real a Firestore para la ficha activa
     const unsubscribe = subscribeToFichaData((cloudData) => {
       if (cloudData) {
-        // Actualizamos de inmediato el estado global y local con la data fresca de Firestore
         const sanitized = sanitizeFicha(cloudData, currentFichaId);
         setFichasDataMap(prev => {
           const updated = {
@@ -318,7 +335,6 @@ export default function App() {
       setIsLoading(false);
     }, currentFichaId);
      
-    // Función de limpieza: Se ejecuta al desmontar o al cambiar de `currentFichaId`
     return () => {
       if (unsubscribe && typeof unsubscribe === 'function') {
         unsubscribe();
