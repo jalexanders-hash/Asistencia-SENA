@@ -61,7 +61,7 @@ interface SheetsTemplateModalProps {
 
 /**
  * Fusiona de manera segura las inasistencias de un archivo de asistencia descargado 
- * con los datos existentes en la nube, preservando la estructura general de la ficha.
+ * con los datos existentes en la nube, evitando traslapes o pérdida de fechas por instructor.
  */
 function mergeInstructorAttendance(
   currentCloudData: typeof initialCourseData,
@@ -81,36 +81,43 @@ function mergeInstructorAttendance(
     asistencias_aprendices: uploadedData.asistencias_aprendices || []
   } : JSON.parse(JSON.stringify(currentCloudData));
 
-  // Normalizar las fechas del instructor a DD/MM/YYYY
+  // 1. Obtener y normalizar las fechas que vienen en el archivo subido por el instructor
   const rawFechasDelInstructor = uploadedData.fechas_por_instructor?.[currentInstructorName] 
     || uploadedData.fechas_asistencia 
     || [];
   
-  const fechasDelInstructor = rawFechasDelInstructor.map((f: string) => displayAsDDMMYYYY(f));
+  const fechasSubidasInstructor = rawFechasDelInstructor.map((f: string) => displayAsDDMMYYYY(f));
 
   const mergedData = baseData;
 
   if (!mergedData.fechas_asistencia) {
     mergedData.fechas_asistencia = [];
   }
-  
-  fechasDelInstructor.forEach((fecha: string) => {
-    if (!mergedData.fechas_asistencia.includes(fecha)) {
-      mergedData.fechas_asistencia.push(fecha);
-    }
-  });
 
+  // 2. Unificar fechas generales de la ficha asegurando que no falte ninguna de las subidas
+  const setFechasGenerales = new Set([...mergedData.fechas_asistencia, ...fechasSubidasInstructor]);
+  mergedData.fechas_asistencia = Array.from(setFechasGenerales);
+
+  // 3. Gestionar el diccionario de fechas por instructor evitando traslapes destructivos
   if (!mergedData.fechas_por_instructor) {
     mergedData.fechas_por_instructor = {};
   }
+
   if (currentInstructorName) {
-    mergedData.fechas_por_instructor[currentInstructorName] = fechasDelInstructor;
+    const fechasPreviasInstructor = mergedData.fechas_por_instructor[currentInstructorName] || [];
+    const setFechasInstructor = new Set([
+      ...fechasPreviasInstructor.map((f: string) => displayAsDDMMYYYY(f)), 
+      ...fechasSubidasInstructor
+    ]);
+    
+    mergedData.fechas_por_instructor[currentInstructorName] = Array.from(setFechasInstructor);
   }
 
   if (!mergedData.asistencias_aprendices) {
     mergedData.asistencias_aprendices = [];
   }
 
+  // 4. Fusionar los registros de cada aprendiz de forma limpia y sin perder historial previo
   if (!isDifferentFicha) {
     mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
       const uploadedStudent = uploadedData.asistencias_aprendices?.find(
@@ -120,15 +127,13 @@ function mergeInstructorAttendance(
       if (!uploadedStudent) return cloudStudent;
 
       const cloudRegistros = { ...(cloudStudent.registros || {}) };
-
-      // Normalizar claves de registros existentes en la nube por si acaso
       const normalizedCloudRegistros: Record<string, string> = {};
+      
       Object.keys(cloudRegistros).forEach(k => {
         normalizedCloudRegistros[displayAsDDMMYYYY(k)] = cloudRegistros[k];
       });
 
-      fechasDelInstructor.forEach((fecha: string) => {
-        // Buscar en el estudiante subido tanto con la fecha original como normalizada
+      fechasSubidasInstructor.forEach((fecha: string) => {
         const rawUploadedRegs = uploadedStudent.registros || {};
         let val = undefined;
         
@@ -141,7 +146,9 @@ function mergeInstructorAttendance(
         if (val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '·' && String(val).trim() !== '-') {
           normalizedCloudRegistros[fecha] = String(val).trim();
         } else {
-          delete normalizedCloudRegistros[fecha];
+          if (!normalizedCloudRegistros[fecha]) {
+            delete normalizedCloudRegistros[fecha];
+          }
         }
       });
 
@@ -183,7 +190,6 @@ export function SheetsTemplateModal({
     try {
       const result = await parseUploadedTemplate(file, courseData);
       
-      // Normalizar todas las fechas del resultado parseado a DD/MM/YYYY
       if (result.success && result.data) {
         if (Array.isArray(result.data.fechas_asistencia)) {
           result.data.fechas_asistencia = result.data.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d));
