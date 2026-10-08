@@ -5,52 +5,42 @@ const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding
 
 const displayAsDDMMYYYY = (dateStr: string) => {
   if (!dateStr) return "";
+  let cleanStr = String(dateStr).trim().replace(/['"]/g, '');
   let parts: string[] = [];
-  if (dateStr.includes('/')) {
-    parts = dateStr.split('/');
-  } else if (dateStr.includes('-')) {
-    parts = dateStr.split('-');
+  if (cleanStr.includes('/')) {
+    parts = cleanStr.split('/');
+  } else if (cleanStr.includes('-')) {
+    parts = cleanStr.split('-');
   }
   if (parts.length === 3) {
-    let p1 = parts[0].trim().replace(/['"]/g, '');
-    let p2 = parts[1].trim().replace(/['"]/g, '');
-    let p3 = parts[2].trim().replace(/['"]/g, '');
+    let p1 = parts[0].trim();
+    let p2 = parts[1].trim();
+    let p3 = parts[2].trim();
 
+    // Si viene en formato ISO (YYYY-MM-DD)
     if (p1.length === 4) {
       return `${String(p3).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p1}`;
     }
+    // Formato DD/MM/YYYY o MM/DD/YYYY
     if (p3.length === 4) {
       if (Number(p1) > 12) {
         return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
       }
-      return `${String(p2).padStart(2, '0')}/${String(p1).padStart(2, '0')}/${p3}`;
+      return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
     }
   }
-  return dateStr;
+  return cleanStr;
 };
 
 const parseDateForSorting = (dateStr: string) => {
   if (!dateStr) return new Date(0);
-  let parts: string[] = [];
-  if (dateStr.includes('/')) {
-    parts = dateStr.split('/');
-  } else if (dateStr.includes('-')) {
-    parts = dateStr.split('-');
-  }
+  const formatted = displayAsDDMMYYYY(dateStr);
+  const parts = formatted.split('/');
   if (parts.length === 3) {
-    let p1 = parts[0].trim().replace(/['"]/g, '');
-    let p2 = parts[1].trim().replace(/['"]/g, '');
-    let p3 = parts[2].trim().replace(/['"]/g, '');
-
-    if (p1.length === 4) {
-      return new Date(Number(p1), Number(p2) - 1, Number(p3));
-    }
-    if (p3.length === 4) {
-      if (Number(p1) > 12) {
-        return new Date(Number(p3), Number(p2) - 1, Number(p1));
-      }
-      return new Date(Number(p3), Number(p1) - 1, Number(p2));
-    }
+    const day = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const year = Number(parts[2]);
+    return new Date(year, month, day);
   }
   return new Date(dateStr);
 };
@@ -65,54 +55,65 @@ interface ExportReportModalProps {
 export default function ExportReportModal({ isOpen, onClose, courseData, students }: ExportReportModalProps) {
   const [reportType, setReportType] = useState<'sin_excusa' | 'con_excusa' | 'tardanzas'>('sin_excusa');
   const [selectedInstructorName, setSelectedInstructorName] = useState<string>('todos');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>(''); // YYYY-MM-DD del input HTML
+  const [endDate, setEndDate] = useState<string>('');     // YYYY-MM-DD del input HTML
 
   const safeCourseData = courseData || {};
   const instructorsList = Array.isArray(safeCourseData.equipo_instructores) ? safeCourseData.equipo_instructores : [];
   const currentInstructor = instructorsList.find((i: any) => i.nombre_del_instructor === selectedInstructorName) || null;
 
+  // Filtrado de fechas por rango de calendario y por día asignado al instructor
   const filteredDates = useMemo(() => {
     const allDates = Array.isArray(safeCourseData.fechas_asistencia) ? safeCourseData.fechas_asistencia : [];
+    
     return allDates.filter((dateStr: string) => {
-      const d = parseDateForSorting(dateStr);
-      if (startDate && d < new Date(startDate)) return false;
-      if (endDate && d > new Date(endDate)) return false;
+      const standardizedDateStr = displayAsDDMMYYYY(dateStr);
+      const d = parseDateForSorting(standardizedDateStr);
+      
+      // Filtro por rango de fechas (desde / hasta)
+      if (startDate) {
+        const startFilterDate = new Date(startDate);
+        startFilterDate.setHours(0, 0, 0, 0);
+        if (d < startFilterDate) return false;
+      }
+      if (endDate) {
+        const endFilterDate = new Date(endDate);
+        endFilterDate.setHours(23, 59, 59, 999);
+        if (d > endFilterDate) return false;
+      }
+
+      // Filtro estricto por el día asignado al instructor (ej. "miércoles")
+      if (selectedInstructorName !== 'todos' && currentInstructor && currentInstructor.dia) {
+        const diaInstructor = currentInstructor.dia.toLowerCase().trim();
+        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        const nombreDiaFecha = diasSemana[d.getDay()];
+        
+        if (nombreDiaFecha !== diaInstructor && !diaInstructor.includes(nombreDiaFecha)) {
+          return false;
+        }
+      }
+
       return true;
     }).sort((a: string, b: string) => parseDateForSorting(a).getTime() - parseDateForSorting(b).getTime());
-  }, [safeCourseData, startDate, endDate]);
+  }, [safeCourseData, startDate, endDate, selectedInstructorName, currentInstructor]);
 
   const reportDataByStudent = useMemo(() => {
     const safeStudents = Array.isArray(students) ? students : [];
     
-    // Filtrado estricto por el día calendario asignado al instructor (ej. "miércoles")
-    let fechasValidasParaInstructor = filteredDates;
-    
-    if (selectedInstructorName !== 'todos' && currentInstructor && currentInstructor.dia) {
-      const diaInstructor = currentInstructor.dia.toLowerCase().trim();
-      
-      fechasValidasParaInstructor = filteredDates.filter((dateStr: string) => {
-        const fechaObj = parseDateForSorting(dateStr);
-        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-        const nombreDiaFecha = diasSemana[fechaObj.getDay()];
-        
-        // Compara si el día de la semana de la fecha coincide con el día del instructor (ej. "miércoles")
-        return nombreDiaFecha === diaInstructor || diaInstructor.includes(nombreDiaFecha);
-      });
-    }
-
     return safeStudents.map((student) => {
       const matchedDates: string[] = [];
       const registros = student?.registros || {};
 
-      fechasValidasParaInstructor.forEach((date: string) => {
-        const status = registros[date] || registros[displayAsDDMMYYYY(date)];
+      filteredDates.forEach((date: string) => {
+        const standardizedDate = displayAsDDMMYYYY(date);
+        const status = registros[date] || registros[standardizedDate];
+        
         if (reportType === 'sin_excusa' && status === 'X') {
-          matchedDates.push(displayAsDDMMYYYY(date));
+          matchedDates.push(standardizedDate);
         } else if (reportType === 'con_excusa' && (status === 'Excusa' || status === 'Evento')) {
-          matchedDates.push(displayAsDDMMYYYY(date));
+          matchedDates.push(standardizedDate);
         } else if (reportType === 'tardanzas' && status === 'Tarde') {
-          matchedDates.push(displayAsDDMMYYYY(date));
+          matchedDates.push(standardizedDate);
         }
       });
 
@@ -122,7 +123,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
         totalOcurrencias: matchedDates.length
       };
     }).filter(s => s.totalOcurrencias > 0);
-  }, [students, filteredDates, reportType, selectedInstructorName, currentInstructor]);
+  }, [students, filteredDates, reportType]);
 
   if (!isOpen) return null;
 
