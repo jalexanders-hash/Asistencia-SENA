@@ -1064,8 +1064,8 @@ CC: ${correoInstructorActual}`;
                   </div>
 
                   <div className="w-full sm:w-auto flex justify-end">
-                    {/* BOTÓN CONECTADO AL ESTADO showExportModal PARA ABRIR EL MODAL */}
                     <button 
+                      type="button"
                       onClick={() => setShowExportModal(true)}
                       className="px-5 py-2.5 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
                     >
@@ -1327,7 +1327,7 @@ CC: ${correoInstructorActual}`;
         }}
       />
 
-      {/* MODAL EXPORTAR / REPORTES (CONFIGURADO Y ENLAZADO CORRECTAMENTE) */}
+      {/* MODAL EXPORTAR / REPORTES (GARANTIZADO) */}
       <ExportReportModal 
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
