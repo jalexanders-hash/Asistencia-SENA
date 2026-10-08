@@ -70,18 +70,19 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   if (!isOpen) return null;
 
-  const instructorsList = Array.isArray(courseData?.equipo_instructores) ? courseData.equipo_instructores : [];
+  const safeCourseData = courseData || {};
+  const instructorsList = Array.isArray(safeCourseData.equipo_instructores) ? safeCourseData.equipo_instructores : [];
   const currentInstructor = instructorsList.find((i: any) => i.nombre_del_instructor === selectedInstructorName) || instructorsList[0];
 
   const filteredDates = useMemo(() => {
-    const allDates = Array.isArray(courseData?.fechas_asistencia) ? courseData.fechas_asistencia : [];
+    const allDates = Array.isArray(safeCourseData.fechas_asistencia) ? safeCourseData.fechas_asistencia : [];
     return allDates.filter((dateStr: string) => {
       const d = parseDateForSorting(dateStr);
       if (startDate && d < new Date(startDate)) return false;
       if (endDate && d > new Date(endDate)) return false;
       return true;
     }).sort((a: string, b: string) => parseDateForSorting(a).getTime() - parseDateForSorting(b).getTime());
-  }, [courseData, startDate, endDate]);
+  }, [safeCourseData, startDate, endDate]);
 
   const reportDataByStudent = useMemo(() => {
     const safeStudents = Array.isArray(students) ? students : [];
@@ -90,7 +91,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       const registros = student?.registros || {};
 
       filteredDates.forEach((date: string) => {
-        const status = registros[date];
+        const status = registros[date] || registros[displayAsDDMMYYYY(date)];
         if (reportType === 'sin_excusa' && status === 'X') {
           matchedDates.push(displayAsDDMMYYYY(date));
         } else if (reportType === 'con_excusa' && (status === 'Excusa' || status === 'Evento')) {
@@ -124,7 +125,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Reporte_${reportType}_Ficha_${courseData?.ficha_de_caracterizacion || 'SENA'}.csv`);
+    link.setAttribute("download", `Reporte_${reportType}_Ficha_${safeCourseData.ficha_de_caracterizacion || 'SENA'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -143,31 +144,34 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
               <p className="text-xs text-slate-500">Acuerdo 009 de 2024 y Soporte para Sofía Plus / Comité</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200 transition-colors">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* CONTROLES / FILTROS (NO SE IMPRIMEN) */}
+        {/* CONTROLES / FILTROS */}
         <div className="p-4 bg-emerald-50/50 border-b border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 print:hidden">
           
           <div className="md:col-span-3 flex flex-wrap gap-2 border-b border-emerald-200 pb-3">
             <span className="text-xs font-bold text-slate-700 self-center mr-2">Tipo de Reporte:</span>
             <button
+              type="button"
               onClick={() => setReportType('sin_excusa')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${reportType === 'sin_excusa' ? 'bg-[#39a900] text-white shadow-sm' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${reportType === 'sin_excusa' ? 'bg-[#39a900] text-white shadow-sm' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}`}
             >
               1. Inasistencias Injustificadas (Sin Excusa)
             </button>
             <button
+              type="button"
               onClick={() => setReportType('con_excusa')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${reportType === 'con_excusa' ? 'bg-[#39a900] text-white shadow-sm' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${reportType === 'con_excusa' ? 'bg-[#39a900] text-white shadow-sm' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}`}
             >
               2. Inasistencias Justificadas (Con Excusa)
             </button>
             <button
+              type="button"
               onClick={() => setReportType('tardanzas')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${reportType === 'tardanzas' ? 'bg-[#39a900] text-white shadow-sm' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${reportType === 'tardanzas' ? 'bg-[#39a900] text-white shadow-sm' : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'}`}
             >
               3. Control de Llegadas Tarde
             </button>
@@ -216,8 +220,8 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
               <img src={LOGO_SENA_SVG} alt="SENA" className="w-12 h-12 object-contain" />
             </div>
             <h1 className="text-sm font-bold text-slate-900 uppercase tracking-wide">SERVICIO NACIONAL DE APRENDIZAJE SENA</h1>
-            <h2 className="text-base font-extrabold text-[#39a900] uppercase">{courseData?.denominacion || 'PROGRAMA DE FORMACIÓN'}</h2>
-            <p className="text-xs text-slate-600 font-medium">Centro: {courseData?.centro || 'Centro Agroindustrial'} | Ficha de Caracterización: <strong className="text-slate-900">{courseData?.ficha_de_caracterizacion || ''}</strong></p>
+            <h2 className="text-base font-extrabold text-[#39a900] uppercase">{safeCourseData.denominacion || 'PROGRAMA DE FORMACIÓN'}</h2>
+            <p className="text-xs text-slate-600 font-medium">Centro: {safeCourseData.centro || 'Centro Agroindustrial'} | Ficha de Caracterización: <strong className="text-slate-900">{safeCourseData.ficha_de_caracterizacion || ''}</strong></p>
           </div>
 
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -302,8 +306,9 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 print:hidden">
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleExportCSV}
-              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-emerald-50 hover:text-[#39a900] hover:border-[#39a900] flex items-center gap-2 shadow-xs transition-colors"
+              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold hover:bg-emerald-50 hover:text-[#39a900] hover:border-[#39a900] flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
               <Download className="w-4 h-4 text-[#39a900]" /> Descargar CSV (Sofía Plus)
             </button>
@@ -311,14 +316,16 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100 transition-colors"
+              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100 transition-colors cursor-pointer"
             >
               Cerrar
             </button>
             <button
+              type="button"
               onClick={handlePrint}
-              className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors"
+              className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
             >
               <Printer className="w-4 h-4" /> Imprimir / Guardar PDF
             </button>
