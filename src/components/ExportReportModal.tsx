@@ -17,15 +17,10 @@ const displayAsDDMMYYYY = (dateStr: string) => {
     let p2 = parts[1].trim();
     let p3 = parts[2].trim();
 
-    // Si viene en formato ISO (YYYY-MM-DD)
     if (p1.length === 4) {
       return `${String(p3).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p1}`;
     }
-    // Formato DD/MM/YYYY o MM/DD/YYYY
     if (p3.length === 4) {
-      if (Number(p1) > 12) {
-        return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
-      }
       return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
     }
   }
@@ -45,6 +40,11 @@ const parseDateForSorting = (dateStr: string) => {
   return new Date(dateStr);
 };
 
+// Función auxiliar para normalizar cadenas y comparar días sin problemas de acentos
+const normalizeText = (text: string) => {
+  return String(text || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
 interface ExportReportModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -55,14 +55,14 @@ interface ExportReportModalProps {
 export default function ExportReportModal({ isOpen, onClose, courseData, students }: ExportReportModalProps) {
   const [reportType, setReportType] = useState<'sin_excusa' | 'con_excusa' | 'tardanzas'>('sin_excusa');
   const [selectedInstructorName, setSelectedInstructorName] = useState<string>('todos');
-  const [startDate, setStartDate] = useState<string>(''); // YYYY-MM-DD del input HTML
-  const [endDate, setEndDate] = useState<string>('');     // YYYY-MM-DD del input HTML
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   const safeCourseData = courseData || {};
   const instructorsList = Array.isArray(safeCourseData.equipo_instructores) ? safeCourseData.equipo_instructores : [];
   const currentInstructor = instructorsList.find((i: any) => i.nombre_del_instructor === selectedInstructorName) || null;
 
-  // Filtrado de fechas por rango de calendario y por día asignado al instructor
+  // Filtrado de fechas considerando el rango del calendario Y el día de la semana asignado al instructor
   const filteredDates = useMemo(() => {
     const allDates = Array.isArray(safeCourseData.fechas_asistencia) ? safeCourseData.fechas_asistencia : [];
     
@@ -70,7 +70,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       const standardizedDateStr = displayAsDDMMYYYY(dateStr);
       const d = parseDateForSorting(standardizedDateStr);
       
-      // Filtro por rango de fechas (desde / hasta)
+      // 1. Filtro por rango de fechas (desde / hasta)
       if (startDate) {
         const startFilterDate = new Date(startDate);
         startFilterDate.setHours(0, 0, 0, 0);
@@ -82,13 +82,13 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
         if (d > endFilterDate) return false;
       }
 
-      // Filtro estricto por el día asignado al instructor (ej. "miércoles")
+      // 2. Filtro estricto por el día de la semana asignado al instructor (ej. "Miércoles")
       if (selectedInstructorName !== 'todos' && currentInstructor && currentInstructor.dia) {
-        const diaInstructor = currentInstructor.dia.toLowerCase().trim();
-        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        const diaInstructorNormalized = normalizeText(currentInstructor.dia);
+        const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
         const nombreDiaFecha = diasSemana[d.getDay()];
         
-        if (nombreDiaFecha !== diaInstructor && !diaInstructor.includes(nombreDiaFecha)) {
+        if (!diaInstructorNormalized.includes(nombreDiaFecha)) {
           return false;
         }
       }
@@ -282,7 +282,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
                 {reportDataByStudent.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-400 italic">
-                      No se encontraron registros para este reporte con los filtros seleccionados.
+                      No se encontraron registros para este reporte con los filtros seleccionados (verifique que las fechas de asistencia coincidan con el día asignado al instructor).
                     </td>
                   </tr>
                 ) : (
