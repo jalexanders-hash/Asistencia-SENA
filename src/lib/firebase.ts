@@ -22,29 +22,48 @@ export const auth = getAuth(app);
 const DEFAULT_FICHA_ID = "3387401";
 
 /**
- * Convierte cualquier formato de fecha (YYYY-MM-DD, M/D/YYYY, etc.)
+ * Convierte cualquier formato de fecha (YYYY-MM-DD, M/D/YYYY, número serial Excel, etc.)
  * al formato estricto colombiano DD/MM/YYYY
  */
-function normalizeDateToDDMMYYYY(dateStr: string): string {
-  if (!dateStr) return "";
-  const clean = String(dateStr).trim();
+function normalizeDateToDDMMYYYY(dateStr: string | number): string {
+  if (dateStr === null || dateStr === undefined || dateStr === "") return "";
   
+  const clean = String(dateStr).trim().replace(/['"]/g, '');
+
+  // Manejo de números seriales de Excel (ej: 46042)
+  if (typeof dateStr === 'number' || /^\d{5}$/.test(clean)) {
+    const excelEpoch = new Date(1899, 11, 30);
+    const dateObj = new Date(excelEpoch.getTime() + Number(clean) * 24 * 60 * 60 * 1000);
+    if (!isNaN(dateObj.getTime())) {
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const y = dateObj.getFullYear();
+      return `${d}/${m}/${y}`;
+    }
+  }
+
   // Si viene en formato YYYY-MM-DD o YYYY/MM/DD
   if (/^\d{4}[\-\/]\d{1,2}[\-\/]\d{1,2}$/.test(clean)) {
     const [y, m, d] = clean.split(/[\-\/]/);
     return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
   }
   
-  // Si viene en formato M/D/YYYY o MM/DD/YYYY
-  const parts = clean.split('/');
+  // Si viene en formato M/D/YYYY o DD/MM/YYYY
+  const parts = clean.split(/[\/\-\.]/);
   if (parts.length === 3) {
-    let p0 = Number(parts[0]);
-    let p1 = Number(parts[1]);
-    let year = Number(parts[2]);
-    if (year < 100) year += 2000;
+    let p0 = parts[0].trim();
+    let p1 = parts[1].trim();
+    let p2 = parts[2].trim();
 
-    let day = p0 > 12 ? p0 : p1;
-    let month = p0 > 12 ? p1 : p0;
+    // Si el primer segmento es el año (YYYY-MM-DD)
+    if (p0.length === 4) {
+      return `${String(p2).padStart(2, '0')}/${String(p1).padStart(2, '0')}/${p0}`;
+    }
+
+    let day = Number(p0);
+    let month = Number(p1);
+    let year = Number(p2);
+    if (year < 100) year += 2000;
 
     if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
       return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
@@ -80,10 +99,24 @@ const sanitizeFichaDates = (data: any) => {
     };
   });
 
+  // Normalizar fechas por instructor si existen
+  const normalizedFechasPorInstructor: Record<string, string[]> = {};
+  if (data.fechas_por_instructor && typeof data.fechas_por_instructor === 'object') {
+    Object.keys(data.fechas_por_instructor).forEach(instructorKey => {
+      const fechasArr = Array.isArray(data.fechas_por_instructor[instructorKey]) 
+        ? data.fechas_por_instructor[instructorKey] 
+        : [];
+      normalizedFechasPorInstructor[instructorKey] = Array.from(
+        new Set(fechasArr.map((f: string) => normalizeDateToDDMMYYYY(f)))
+      );
+    });
+  }
+
   return {
     ...data,
     fechas_asistencia: normalizedFechas,
-    asistencias_aprendices: normalizedAprendices
+    asistencias_aprendices: normalizedAprendices,
+    ...(Object.keys(normalizedFechasPorInstructor).length > 0 && { fechas_por_instructor: normalizedFechasPorInstructor })
   };
 };
 
@@ -139,13 +172,14 @@ export const saveAttendanceData = async (
 
     const sanitized = sanitizeFichaDates({
       fechas_asistencia,
-      asistencias_aprendices
+      asistencias_aprendices,
+      ...(fechas_por_instructor && { fechas_por_instructor })
     });
 
     await updateDoc(docRef, {
       fechas_asistencia: sanitized.fechas_asistencia,
       asistencias_aprendices: sanitized.asistencias_aprendices,
-      ...(fechas_por_instructor && { fechas_por_instructor })
+      ...(sanitized.fechas_por_instructor && { fechas_por_instructor: sanitized.fechas_por_instructor })
     });
   } catch (error) {
     console.error("Error al guardar asistencia:", error);
