@@ -22,6 +22,35 @@ import { downloadBlankAttendanceTemplate } from '../lib/blankTemplateGenerator';
 import { replaceFichaCompleteData } from '../lib/firebase';
 import { courseData as initialCourseData } from '../data';
 
+// Función unificada global para asegurar formato estricto DD/MM/YYYY
+const displayAsDDMMYYYY = (dateStr: string) => {
+  if (!dateStr) return "";
+  let cleanStr = String(dateStr).trim().replace(/['"]/g, '');
+  let parts: string[] = [];
+  if (cleanStr.includes('/')) {
+    parts = cleanStr.split('/');
+  } else if (cleanStr.includes('-')) {
+    parts = cleanStr.split('-');
+  }
+
+  if (parts.length === 3) {
+    let p1 = parts[0].trim();
+    let p2 = parts[1].trim();
+    let p3 = parts[2].trim();
+
+    // Si viene en formato ISO (YYYY-MM-DD)
+    if (p1.length === 4) {
+      return `${String(p3).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p1}`;
+    }
+
+    // Formato DD/MM/YYYY o MM/DD/YYYY
+    if (p3.length === 4) {
+      return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
+    }
+  }
+  return cleanStr;
+};
+
 interface SheetsTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -39,13 +68,11 @@ function mergeInstructorAttendance(
   uploadedData: typeof initialCourseData,
   currentInstructorName: string
 ): typeof initialCourseData {
-  // 1. Verificamos si las fichas coinciden para evitar arrastrar datos cruzados entre fichas distintas
   const cloudFicha = String(currentCloudData.ficha_de_caracterizacion || '').trim();
   const uploadedFicha = String(uploadedData.ficha_de_caracterizacion || '').trim();
   
   const isDifferentFicha = uploadedFicha && cloudFicha && uploadedFicha !== cloudFicha;
 
-  // Si es una ficha distinta, partimos de una base limpia para esa ficha específica
   const baseData = isDifferentFicha ? {
     ...initialCourseData,
     ficha_de_caracterizacion: uploadedFicha,
@@ -54,9 +81,12 @@ function mergeInstructorAttendance(
     asistencias_aprendices: uploadedData.asistencias_aprendices || []
   } : JSON.parse(JSON.stringify(currentCloudData));
 
-  const fechasDelInstructor = uploadedData.fechas_por_instructor?.[currentInstructorName] 
+  // Normalizar las fechas del instructor a DD/MM/YYYY
+  const rawFechasDelInstructor = uploadedData.fechas_por_instructor?.[currentInstructorName] 
     || uploadedData.fechas_asistencia 
     || [];
+  
+  const fechasDelInstructor = rawFechasDelInstructor.map((f: string) => displayAsDDMMYYYY(f));
 
   const mergedData = baseData;
 
@@ -81,7 +111,6 @@ function mergeInstructorAttendance(
     mergedData.asistencias_aprendices = [];
   }
 
-  // Si es diferente ficha, evitamos cruzar aprendices de la ficha anterior
   if (!isDifferentFicha) {
     mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
       const uploadedStudent = uploadedData.asistencias_aprendices?.find(
@@ -92,20 +121,33 @@ function mergeInstructorAttendance(
 
       const cloudRegistros = { ...(cloudStudent.registros || {}) };
 
+      // Normalizar claves de registros existentes en la nube por si acaso
+      const normalizedCloudRegistros: Record<string, string> = {};
+      Object.keys(cloudRegistros).forEach(k => {
+        normalizedCloudRegistros[displayAsDDMMYYYY(k)] = cloudRegistros[k];
+      });
+
       fechasDelInstructor.forEach((fecha: string) => {
-        if (uploadedStudent.registros && uploadedStudent.registros[fecha] !== undefined) {
-          const val = uploadedStudent.registros[fecha];
-          if (val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '·' && String(val).trim() !== '-') {
-            cloudRegistros[fecha] = String(val).trim();
-          } else {
-            delete cloudRegistros[fecha];
+        // Buscar en el estudiante subido tanto con la fecha original como normalizada
+        const rawUploadedRegs = uploadedStudent.registros || {};
+        let val = undefined;
+        
+        Object.keys(rawUploadedRegs).forEach(rk => {
+          if (displayAsDDMMYYYY(rk) === fecha) {
+            val = rawUploadedRegs[rk];
           }
+        });
+
+        if (val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '·' && String(val).trim() !== '-') {
+          normalizedCloudRegistros[fecha] = String(val).trim();
+        } else {
+          delete normalizedCloudRegistros[fecha];
         }
       });
 
       return {
         ...cloudStudent,
-        registros: cloudRegistros
+        registros: normalizedCloudRegistros
       };
     });
   }
@@ -140,6 +182,24 @@ export function SheetsTemplateModal({
 
     try {
       const result = await parseUploadedTemplate(file, courseData);
+      
+      // Normalizar todas las fechas del resultado parseado a DD/MM/YYYY
+      if (result.success && result.data) {
+        if (Array.isArray(result.data.fechas_asistencia)) {
+          result.data.fechas_asistencia = result.data.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d));
+        }
+        if (result.data.asistencias_aprendices && Array.isArray(result.data.asistencias_aprendices)) {
+          result.data.asistencias_aprendices = result.data.asistencias_aprendices.map((student: any) => {
+            const regs = student.registros || {};
+            const normalizedRegs: Record<string, string> = {};
+            Object.keys(regs).forEach(k => {
+              normalizedRegs[displayAsDDMMYYYY(k)] = regs[k];
+            });
+            return { ...student, registros: normalizedRegs };
+          });
+        }
+      }
+
       console.log(`=== RESULTADO DE PARSEADO EXCEL (${uploadType}) ===`, result);
       setUploadResult(result);
     } catch (err: any) {
@@ -180,7 +240,6 @@ export function SheetsTemplateModal({
       let finalDataToSave;
 
       if (uploadType === 'inasistencias') {
-        // Flujo 2: Fusionar inasistencias de forma segura utilizando el instructor titular
         const currentInstructorName = uploadResult.data.instructor_titular || courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "";
         finalDataToSave = mergeInstructorAttendance(
           courseData,
@@ -188,7 +247,6 @@ export function SheetsTemplateModal({
           currentInstructorName
         );
       } else {
-        // Flujo 1: Configuración general completa (reemplazo íntegro)
         finalDataToSave = {
           ...uploadResult.data,
           ficha_de_caracterizacion: excelFichaId
@@ -197,13 +255,10 @@ export function SheetsTemplateModal({
 
       finalDataToSave.ficha_de_caracterizacion = excelFichaId;
 
-      // 1. Guardar persistentemente en Firebase usando replace para evitar cruces entre fichas
       await replaceFichaCompleteData(finalDataToSave, excelFichaId);
 
-      // 2. Generar clon profundo para asegurar la reactividad inmediata en React
       const refreshedData = JSON.parse(JSON.stringify(finalDataToSave));
 
-      // 3. Notificar a la app principal con los datos frescos y la ficha correcta
       onDataLoaded(refreshedData, excelFichaId);
      
       const mensajeExito = uploadType === 'inasistencias' 
@@ -213,7 +268,6 @@ export function SheetsTemplateModal({
       alert(mensajeExito);
       onClose();
 
-      // 4. Refresco automático controlado para asegurar el renderizado total
       setTimeout(() => {
         window.location.reload();
       }, 500);
@@ -334,7 +388,7 @@ export function SheetsTemplateModal({
                       Descargar Plantilla en Blanco
                     </button>
                   </div>
-            </div>
+                </div>
 
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-300 transition-all group">
                   <div>
@@ -532,7 +586,7 @@ export function SheetsTemplateModal({
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             Compatible con Google Sheets, Microsoft Excel y LibreOffice Calc
-        </span>
+          </span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md font-medium transition-colors"
