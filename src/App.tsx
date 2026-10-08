@@ -54,12 +54,10 @@ const displayAsDDMMYYYY = (dateStr: string) => {
     let p2 = parts[1].trim();
     let p3 = parts[2].trim();
 
-    // Si viene en formato ISO (YYYY-MM-DD)
     if (p1.length === 4) {
       return `${String(p3).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p1}`;
     }
 
-    // Formato DD/MM/YYYY o MM/DD/YYYY
     if (p3.length === 4) {
       return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
     }
@@ -67,7 +65,6 @@ const displayAsDDMMYYYY = (dateStr: string) => {
   return cleanStr;
 };
 
-// Parseo seguro de fecha para ordenamiento sin errores de zona horaria
 const parseDateForSorting = (dateStr: string) => {
   if (!dateStr) return new Date(0);
   const formatted = displayAsDDMMYYYY(dateStr);
@@ -81,7 +78,6 @@ const parseDateForSorting = (dateStr: string) => {
   return new Date(dateStr);
 };
 
-// Conversión desde el input HTML nativo (YYYY-MM-DD) a DD/MM/YYYY
 const formatDateForData = (dateString: string) => {
   if (!dateString) return "";
   let cleanStr = String(dateString).trim();
@@ -112,7 +108,6 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     };
   }
 
-  // Sanitizar registros de aprendices unificando las claves de fecha a DD/MM/YYYY
   const cleanedAprendices = Array.isArray(ficha.asistencias_aprendices) 
     ? ficha.asistencias_aprendices.map((a: any) => {
         const registrosNormalizados: Record<string, string> = {};
@@ -258,6 +253,8 @@ export default function App() {
         (inst: any) => 
           inst.correo?.toLowerCase().trim() === userEmail ||
           inst.correo_google?.toLowerCase().trim() === userEmail ||
+          inst.correo_gmail?.toLowerCase().trim() === userEmail ||
+          inst.correo_institucional_sena?.toLowerCase().trim() === userEmail ||
           inst.correo_institucional?.toLowerCase().trim() === userEmail
       );
       if (idx !== -1) {
@@ -830,6 +827,8 @@ CC: ${correoInstructorActual}`;
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courseData.equipo_instructores.map((inst: any, idx: number) => {
+                        const gmailVal = inst.correo_gmail || inst.correo_google || inst.correo || '';
+                        const institucionalVal = inst.correo_institucional_sena || inst.correo_institucional || '';
                         return (
                           <div 
                             key={idx} 
@@ -843,7 +842,19 @@ CC: ${correoInstructorActual}`;
                                 <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
                                   <Shield className="w-3 h-3" /> {inst.rol || 'Instructor / Tutor'}
                                 </span>
-                                <p className="text-[11px] text-slate-500 mt-1">Correo: {inst.correo || inst.correo_institucional || 'No registrado'}</p>
+                                
+                                <div className="mt-2 space-y-1 text-[11px] text-slate-600 font-mono">
+                                  <p className="flex items-center gap-1">
+                                    <Mail className="w-3 h-3 text-slate-400" />
+                                    <span>Gmail:</span> 
+                                    <strong className="text-slate-800">{gmailVal || 'No registrado'}</strong>
+                                  </p>
+                                  <p className="flex items-center gap-1">
+                                    <Shield className="w-3 h-3 text-emerald-600" />
+                                    <span>Institucional:</span> 
+                                    <strong className="text-slate-800">{institucionalVal || 'No registrado'}</strong>
+                                  </p>
+                                </div>
                               </div>
                               {inst.dia && (
                                 <span className="bg-emerald-100 text-emerald-800 font-bold text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1">
