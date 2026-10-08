@@ -68,8 +68,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  if (!isOpen) return null;
-
+  // TODOS LOS HOOKS DEBEN ESTAR SIEMPRE EN EL NIVEL SUPERIOR (FUERA DE CONDICIONALES)
   const safeCourseData = courseData || {};
   const instructorsList = Array.isArray(safeCourseData.equipo_instructores) ? safeCourseData.equipo_instructores : [];
   const currentInstructor = instructorsList.find((i: any) => i.nombre_del_instructor === selectedInstructorName) || instructorsList[0];
@@ -108,6 +107,9 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
       };
     }).filter(s => s.totalOcurrencias > 0);
   }, [students, filteredDates, reportType]);
+
+  // LA VALIDACIÓN DE isOpen SE HACE AQUÍ, DESPUÉS DE DECLARAR TODOS LOS HOOKS
+  if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
