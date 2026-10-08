@@ -68,7 +68,6 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  // TODOS LOS HOOKS DEBEN ESTAR SIEMPRE EN EL NIVEL SUPERIOR (FUERA DE CONDICIONALES)
   const safeCourseData = courseData || {};
   const instructorsList = Array.isArray(safeCourseData.equipo_instructores) ? safeCourseData.equipo_instructores : [];
   const currentInstructor = instructorsList.find((i: any) => i.nombre_del_instructor === selectedInstructorName) || instructorsList[0];
@@ -85,11 +84,33 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   const reportDataByStudent = useMemo(() => {
     const safeStudents = Array.isArray(students) ? students : [];
+    
+    // Filtrado de fechas basado de manera estricta en el día asignado del instructor
+    let fechasValidasParaInstructor = filteredDates;
+    if (selectedInstructorName !== 'todos' && currentInstructor && currentInstructor.dia) {
+      const diaInstructor = currentInstructor.dia.toLowerCase().trim();
+      
+      fechasValidasParaInstructor = filteredDates.filter((dateStr: string) => {
+        const fechaObj = parseDateForSorting(dateStr);
+        // getDay(): 0 = domingo, 1 = lunes, 2 = martes, 3 = miércoles, 4 = jueves, 5 = viernes, 6 = sábado
+        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        const nombreDiaFecha = diasSemana[fechaObj.getDay()];
+        
+        // Comparamos el día de la fecha con el día configurado del instructor (ej. "lunes")
+        return nombreDiaFecha === diaInstructor || diaInstructor.includes(nombreDiaFecha);
+      });
+
+      // Si por alguna razón el formato del día no coincide exactamente, por respaldo evaluamos todas las fechas del rango
+      if (fechasValidasParaInstructor.length === 0) {
+        fechasValidasParaInstructor = filteredDates;
+      }
+    }
+
     return safeStudents.map((student) => {
       const matchedDates: string[] = [];
       const registros = student?.registros || {};
 
-      filteredDates.forEach((date: string) => {
+      fechasValidasParaInstructor.forEach((date: string) => {
         const status = registros[date] || registros[displayAsDDMMYYYY(date)];
         if (reportType === 'sin_excusa' && status === 'X') {
           matchedDates.push(displayAsDDMMYYYY(date));
@@ -106,9 +127,8 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
         totalOcurrencias: matchedDates.length
       };
     }).filter(s => s.totalOcurrencias > 0);
-  }, [students, filteredDates, reportType]);
+  }, [students, filteredDates, reportType, selectedInstructorName, currentInstructor]);
 
-  // LA VALIDACIÓN DE isOpen SE HACE AQUÍ, DESPUÉS DE DECLARAR TODOS LOS HOOKS
   if (!isOpen) return null;
 
   const handlePrint = () => {
@@ -188,7 +208,9 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
             >
               <option value="todos">Todos los Instructores</option>
               {instructorsList.map((inst: any, idx: number) => (
-                <option key={idx} value={inst.nombre_del_instructor}>{inst.nombre_del_instructor}</option>
+                <option key={idx} value={inst.nombre_del_instructor}>
+                  {inst.nombre_del_instructor} {inst.dia ? `(${inst.dia})` : ''}
+                </option>
               ))}
             </select>
           </div>
@@ -229,7 +251,9 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
               <span className="text-slate-500 block font-medium">Instructor a Cargo:</span>
-              <strong className="text-slate-800 text-sm">{selectedInstructorName === 'todos' ? 'Consolidado General de Instructores' : currentInstructor?.nombre_del_instructor}</strong>
+              <strong className="text-slate-800 text-sm">
+                {selectedInstructorName === 'todos' ? 'Consolidado General de Instructores' : `${currentInstructor?.nombre_del_instructor} ${currentInstructor?.dia ? `- Día: ${currentInstructor.dia}` : ''}`}
+              </strong>
             </div>
             <div>
               <span className="text-slate-500 block font-medium">Competencia / Rol:</span>
