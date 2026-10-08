@@ -7,7 +7,8 @@ export const courseData = {
     {
       "competencia": "Competencia general de la ficha",
       "nombre_del_instructor": "Instructor por definir",
-      "correo": "",
+      "correo_gmail": "",
+      "correo_institucional": "",
       "rol": "Instructor / Tutor",
       "dia": "Por definir"
     }
