@@ -70,7 +70,7 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
 
   const safeCourseData = courseData || {};
   const instructorsList = Array.isArray(safeCourseData.equipo_instructores) ? safeCourseData.equipo_instructores : [];
-  const currentInstructor = instructorsList.find((i: any) => i.nombre_del_instructor === selectedInstructorName) || instructorsList[0];
+  const currentInstructor = instructorsList.find((i: any) => i.nombre_del_instructor === selectedInstructorName) || null;
 
   const filteredDates = useMemo(() => {
     const allDates = Array.isArray(safeCourseData.fechas_asistencia) ? safeCourseData.fechas_asistencia : [];
@@ -85,25 +85,20 @@ export default function ExportReportModal({ isOpen, onClose, courseData, student
   const reportDataByStudent = useMemo(() => {
     const safeStudents = Array.isArray(students) ? students : [];
     
-    // Filtrado de fechas basado de manera estricta en el día asignado del instructor
+    // Filtrado estricto por el día calendario asignado al instructor (ej. "miércoles")
     let fechasValidasParaInstructor = filteredDates;
+    
     if (selectedInstructorName !== 'todos' && currentInstructor && currentInstructor.dia) {
       const diaInstructor = currentInstructor.dia.toLowerCase().trim();
       
       fechasValidasParaInstructor = filteredDates.filter((dateStr: string) => {
         const fechaObj = parseDateForSorting(dateStr);
-        // getDay(): 0 = domingo, 1 = lunes, 2 = martes, 3 = miércoles, 4 = jueves, 5 = viernes, 6 = sábado
         const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
         const nombreDiaFecha = diasSemana[fechaObj.getDay()];
         
-        // Comparamos el día de la fecha con el día configurado del instructor (ej. "lunes")
+        // Compara si el día de la semana de la fecha coincide con el día del instructor (ej. "miércoles")
         return nombreDiaFecha === diaInstructor || diaInstructor.includes(nombreDiaFecha);
       });
-
-      // Si por alguna razón el formato del día no coincide exactamente, por respaldo evaluamos todas las fechas del rango
-      if (fechasValidasParaInstructor.length === 0) {
-        fechasValidasParaInstructor = filteredDates;
-      }
     }
 
     return safeStudents.map((student) => {
