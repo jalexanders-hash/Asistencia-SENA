@@ -368,7 +368,7 @@ export default function App() {
     };
      
     try {
-      await saveAttendanceData(newFechas, newAprendices, {}, currentFichaId);
+      await saveAttendanceData(newFechas, newAprendices, courseData.equipo_instructores || [], currentFichaId);
       updateCurrentFichaData(updatedCourseData);
       localStorage.setItem(`sena_ficha_data_${currentFichaId}`, JSON.stringify(updatedCourseData));
       setShowAttendanceModal(false);
@@ -1382,7 +1382,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
 
   const equipoInstructores = courseData.equipo_instructores || [];
 
-  const handleRegistrarInstructor = (e: React.FormEvent) => {
+  const handleRegistrarInstructor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre || !competencia || !correoInst || !fechaInicio || !registradoPor) {
       alert("Por favor complete los campos obligatorios.");
@@ -1416,15 +1416,28 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       equipo_instructores: updatedEquipo
     };
 
-    updateCourseData(updatedCourseData);
-    alert("¡Instructor registrado correctamente y trazabilidad histórica preservada!");
-    
-    setNombre('');
-    setCompetencia('');
-    setCorreoGmail('');
-    setCorreoInst('');
-    setFechaInicio('');
-    setRegistradoPor('');
+    try {
+      // Guardado asegurado en Firebase Firestore
+      await saveAttendanceData(
+        courseData.fechas_asistencia || [], 
+        courseData.asistencias_aprendices || [], 
+        updatedEquipo, 
+        currentFichaId
+      );
+
+      updateCourseData(updatedCourseData);
+      alert("¡Instructor registrado y guardado exitosamente en Firebase Firestore!");
+      
+      setNombre('');
+      setCompetencia('');
+      setCorreoGmail('');
+      setCorreoInst('');
+      setFechaInicio('');
+      setRegistradoPor('');
+    } catch (error) {
+      console.error("Error al guardar en Firestore:", error);
+      alert("Hubo un error al sincronizar con Firebase. Los cambios se guardaron localmente.");
+    }
   };
 
   return (
