@@ -213,7 +213,7 @@ export default function App() {
   const [authError, setAuthError] = useState('');
 
   const [mainView, setMainView] = useState<'listado' | 'tablero'>('listado');
-  const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes'>('asistencia');
+  const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes' | 'instructores'>('asistencia');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -789,6 +789,12 @@ CC: ${correoInstructorActual}`;
               >
                 Reportes
               </button>
+              <button 
+                onClick={() => setActiveTab('instructores')}
+                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'instructores' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                Gestión de Instructores
+              </button>
             </div>
 
             {activeTab === 'ficha' && (
@@ -1085,6 +1091,14 @@ CC: ${correoInstructorActual}`;
                 </div>
               </div>
             )}
+
+            {activeTab === 'instructores' && (
+              <GestionInstructores 
+                courseData={courseData}
+                currentFichaId={currentFichaId}
+                updateCourseData={updateCurrentFichaData}
+              />
+            )}
           </div>
         )}
 
@@ -1348,3 +1362,154 @@ CC: ${correoInstructorActual}`;
     </div>
   );
 }
+
+
+// Componente Integrado de Gestión y Reemplazo de Instructores
+interface GestionInstructoresProps {
+  courseData: any;
+  currentFichaId: string;
+  updateCourseData: (newData: any) => void;
+}
+
+export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ courseData, currentFichaId, updateCourseData }) => {
+  const [nombre, setNombre] = useState('');
+  const [competencia, setCompetencia] = useState('');
+  const [correoGmail, setCorreoGmail] = useState('');
+  const [correoInst, setCorreoInst] = useState('');
+  const [diaSemana, setDiaSemana] = useState('Lunes');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [registradoPor, setRegistradoPor] = useState('');
+
+  const equipoInstructores = courseData.equipo_instructores || [];
+
+  const handleRegistrarInstructor = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombre || !competencia || !correoInst || !fechaInicio || !registradoPor) {
+      alert("Por favor complete los campos obligatorios.");
+      return;
+    }
+
+    const nuevoInstructor = {
+      nombre_del_instructor: nombre,
+      competencia: competencia,
+      correo_gmail: correoGmail,
+      correo_institucional: correoInst,
+      correo_institucional_sena: correoInst,
+      dia: diaSemana,
+      rol: "Instructor / Tutor",
+      fecha_inicio: fechaInicio,
+      fecha_fin: null,
+      registrado_por: registradoPor
+    };
+
+    const updatedEquipo = equipoInstructores.map((inst: any) => {
+      if (inst.competencia === competencia && inst.dia === diaSemana && !inst.fecha_fin) {
+        return { ...inst, fecha_fin: fechaInicio };
+      }
+      return inst;
+    });
+
+    updatedEquipo.push(nuevoInstructor);
+
+    const updatedCourseData = {
+      ...courseData,
+      equipo_instructores: updatedEquipo
+    };
+
+    updateCourseData(updatedCourseData);
+    alert("¡Instructor registrado correctamente y trazabilidad histórica preservada!");
+    
+    setNombre('');
+    setCompetencia('');
+    setCorreoGmail('');
+    setCorreoInst('');
+    setFechaInicio('');
+    setRegistradoPor('');
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+      <div className="border-b border-slate-200 pb-4">
+        <h2 className="text-xl font-bold text-slate-900">👥 Módulo de Gestión y Reemplazo de Instructores - Ficha {currentFichaId}</h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Registre o reemplace instructores por competencia y día de la semana garantizando la inmutabilidad de los registros históricos anteriores.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-bold text-slate-800">Equipo Ejecutor y Trazabilidad Histórica</h3>
+        {equipoInstructores.length === 0 ? (
+          <p className="text-xs text-slate-400 italic p-4 bg-slate-50 rounded-lg">No hay instructores registrados actualmente.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b">
+                  <th className="p-3">Instructor</th>
+                  <th className="p-3">Competencia</th>
+                  <th className="p-3">Día</th>
+                  <th className="p-3">Inicio</th>
+                  <th className="p-3">Fin (Histórico)</th>
+                  <th className="p-3">Correo Institucional</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {equipoInstructores.map((inst: any, idx: number) => (
+                  <tr key={idx} className={inst.fecha_fin ? "bg-slate-50 text-slate-400" : "hover:bg-slate-50"}>
+                    <td className="p-3 font-bold text-slate-800">{inst.nombre_del_instructor || inst.nombre}</td>
+                    <td className="p-3">{inst.competencia}</td>
+                    <td className="p-3">{inst.dia || inst.dia_semana || 'N/A'}</td>
+                    <td className="p-3 font-mono">{inst.fecha_inicio || 'Inicial'}</td>
+                    <td className="p-3 font-mono">{inst.fecha_fin || 'Activo (Actual)'}</td>
+                    <td className="p-3">{inst.correo_institucional || inst.correo_institucional_sena}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200 pt-6">
+        <h3 className="text-sm font-bold text-slate-800 mb-4">➕ Registrar o Reemplazar Instructor</h3>
+        <form onSubmit={handleRegistrarInstructor} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Nombre completo del instructor</label>
+            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+          </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Competencia asociada</label>
+            <input type="text" value={competencia} onChange={e => setCompetencia(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+          </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Correo Gmail / Personal</label>
+            <input type="email" value={correoGmail} onChange={e => setCorreoGmail(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" />
+          </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Correo institucional</label>
+            <input type="email" value={correoInst} onChange={e => setCorreoInst(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+          </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Día de la semana asignado</label>
+            <select value={diaSemana} onChange={e => setDiaSemana(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]">
+              {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Fecha de inicio / reemplazo</label>
+            <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block font-bold text-slate-700 mb-1">Tu Correo Institucional (Autorización como instructor actual)</label>
+            <input type="email" value={registradoPor} onChange={e => setRegistradoPor(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+          </div>
+          <div className="md:col-span-2 flex justify-end">
+            <button type="submit" className="px-6 py-2.5 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm cursor-pointer">
+              Guardar e Integrar Instructor
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
