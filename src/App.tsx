@@ -7,6 +7,7 @@ import { auth, db } from "./lib/firebase";
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
+import { getUserSystemRole, canManageFichasAndSheets } from './lib/securityRoles';
 import { 
   Users, 
   XCircle,
@@ -36,27 +37,11 @@ import {
 
 const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding=%27utf-8%27?%3e%3c!--%20Generator:%20Adobe%20Illustrator%2026.0.1,%20SVG%20Export%20Plug-In%20.%20SVG%20Version:%206.00%20Build%200)%20--%3e%3csvg%20version=%271.1%27%20id=%27Capa_1%27%20xmlns=%27http://www.w3.org/2000/svg%27%20xmlns:xlink=%27http://www.w3.org/1999/xlink%27%20x=%270px%27%20y=%270px%27%20viewBox=%270%200%201000%201000%27%20style=%27enable-background:new%200%200%201000%201000;%27%20xml:space=%27preserve%27%3e%3cstyle%20type=%27text/css%27%3e%20.st0{fill:%2339a900;}%20%3c/style%3e%3cpath%20id=%27path47-5%27%20class=%27st0%27%20d=%27M504.2,20.5c-58.3,0.1-105.6,47.4-105.5,105.8c0.1,58.3,47.4,105.6,105.7,105.6%20c58.3,0,105.6-47.3,105.6-105.7V126C609.9,67.6,562.6,20.4,504.2,20.5z%20M155.6,264.6c-18.6,0.1-37.5,1.1-55.2,5.6%20c-11.7,3-23,7.8-30.3,15.4c-9.2,9.5-10.4,22.3-5.9,33.3c4,9.7,14.8,16.9,26.8,21.1c25.9,8.9,54.6,10.7,81.8,16.3%20c5,1.2,10.6,2.6,13.7,6c3.2,4.1,1.3,9.7-4,12.2c-8.8,4.5-20.1,4.5-30.4,4.4c-9.4-0.4-19.7-1.2-27.2-5.9c-5.5-3.4-6.5-9.1-5.2-14.1%20l-60.6,0c-0.2,9.2,1.6,18.9,8.4,26.8c5.6,6.8,14.8,11.5,24.6,14.4c15.7,4.6,32.7,6,49.4,6.4c22.7,0.4,45.8-0.3,67.6-5.4%20c13-3.2,25.8-8.3,34.1-16.6c14.8-14.8,11.3-38.3-8.3-49.8c-9.8-5.7-21.5-9.2-33.4-11.5c-17.5-3.6-35.3-6.3-52.9-9.2%20c-6.2-1.2-12.8-2.3-18-5.2c-5.5-2.9-5.9-9.8-0.3-12.9c7.2-4.1,16.8-4,25.4-4c9.1,0.2,19,0.7,26.5,5c4.2,2.3,5.9,6.3,5.9,10.1%20l57.6-0.1c-0.2-7.3-1.6-14.9-6.9-21.2c-6.2-7.8-17.1-12.7-28.3-15.5C192.8,265.6,174.1,264.7,155.6,264.6L155.6,264.6z%20M280.6,268.9%20l0,137.7l168.1,0l0-30H342.3v-26.7h94.9v-29.3h-94.9l0-21.9l102.6,0l-0.1-29.7L280.6,268.9z%20M557.5,269c0,0-51.9,0-77.9,0l0,137.7%20l59,0l0-92.7l80.8,92.6l81,0.1l0-137.7l-59.1,0l0.1,92L557.5,269z%20M805.6,269.2c0,0-63.6,91.9-95.6,137.7l61.9,0l14.9-24.8h95.7%20l13.9,24.9l68.8,0L874,269.2L805.6,269.2z%20M836.6,302.1l29.4,49.9l-60.7,0.1L836.6,302.1z%20M10.6,445.6l0.5,75l280.1-1%20c14.3,3.1,22.6,12.4,19.7,33.5L138.6,854.7l56.1,52.5l266.9-461.6L10.6,445.6z%20M545.2,446.2l262.4,459.6l58-52.1L691.3,552.9%20c-2.9-21.2,5.4-30.6,19.7-33.7l280.2,1l-0.1-73.7L545.2,446.2z%20M500.9,522.3L254.8,944.7l65.4,31.9L484.4,699%20c5.7-4.6,11.4-7.1,17.1-7.3c6-0.2,12.2,2,18.3,6.8l163.8,278.4l67.4-35.2L500.9,522.3z%27/%3e%3cg%20id=%27_x23_000000ff-2%27%20transform=%27matrix(0.31570611,0,0,0.23560774,-391.49698,-10.601126)%27%3e%3c/g%3e%3c/svg%3e`;
 
-// CONSTANTES DE SEGURIDAD Y ROLES
 const ADMIN_EMAIL = "jalexanders@gmail.com";
 
-export const isGlobalAdmin = (user: User | null): boolean => {
-  if (!user || !user.email) return false;
-  return user.email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase();
-};
-
 export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = []): boolean => {
-  if (isGlobalAdmin(user)) return true;
-  if (!user || !user.email) return false;
-  const userEmail = user.email.toLowerCase().trim();
-  return equipoInstructores.some((inst) => {
-    const emails = [
-      inst.correo_institucional_sena,
-      inst.correo_institucional,
-      inst.correo_gmail,
-      inst.correo
-    ];
-    return emails.some(e => e && e.toLowerCase().trim() === userEmail);
-  });
+  const role = getUserSystemRole(user, equipoInstructores);
+  return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER';
 };
 
 // MÓDULO DE AUDITORÍA INMUTABLE
@@ -337,9 +322,13 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  const currentUserRole = useMemo(() => {
+    return getUserSystemRole(user, courseData.equipo_instructores);
+  }, [user, courseData]);
+
   useEffect(() => {
     if (user && courseData) {
-      if (isGlobalAdmin(user)) {
+      if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
         setCurrentInstructorIdx(0);
         setAuthError('');
         return;
@@ -358,12 +347,12 @@ export default function App() {
         setAuthError('');
       } else {
         setCurrentInstructorIdx(null);
-        setAuthError('Tu correo no está registrado como instructor en esta ficha.');
+        setAuthError('Tu correo no está registrado como instructor o coordinador en esta ficha.');
       }
     } else {
       setCurrentInstructorIdx(null);
     }
-  }, [user, courseData]);
+  }, [user, courseData, currentUserRole]);
     
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
@@ -480,12 +469,11 @@ export default function App() {
       updateCurrentFichaData(updatedCourseData);
       localStorage.setItem(`sena_ficha_data_${currentFichaId}`, JSON.stringify(updatedCourseData));
 
-      // Registrar auditoría inalterable
       await registrarLogAuditoria(
         currentFichaId,
         user.email,
         'REGISTRAR_ASISTENCIA',
-        `El instructor/admin registró asistencia para la fecha ${formattedDate} en la ficha ${currentFichaId}.`,
+        `El usuario (${currentUserRole}) registró asistencia para la fecha ${formattedDate} en la ficha ${currentFichaId}.`,
         courseData.fechas_asistencia,
         newFechas
       );
@@ -618,7 +606,7 @@ export default function App() {
   }, [studentsWithStats]);
 
   const getNotificationTemplateText = (student: any) => {
-    const instructorName = (currentInstructor as any)?.nombre_del_instructor || (isGlobalAdmin(user) ? "Jorge Alexander Sepúlveda (Administrador)" : "Instructor SENA");
+    const instructorName = (currentInstructor as any)?.nombre_del_instructor || (currentUserRole === 'ADMIN' ? "Jorge Alexander Sepúlveda (Administrador)" : currentUserRole === 'COORDINADOR' ? "Coordinación Académica SENA" : "Instructor SENA");
     const fechasFallasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'X' || student.registros[displayAsDDMMYYYY(date)] === 'X');
     const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde' || student.registros[displayAsDDMMYYYY(date)] === 'Tarde');
 
@@ -683,7 +671,7 @@ CC: ${correoInstructorActual}`;
     return <Login />;
   }
 
-  if (!isGlobalAdmin(user) && (currentInstructorIdx === null || currentInstructor === null)) {
+  if (currentUserRole === 'INVITADO' && currentInstructorIdx === null) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 p-8 text-center space-y-4">
@@ -694,7 +682,7 @@ CC: ${correoInstructorActual}`;
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Acceso Restringido</h1>
-          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor en esta ficha.'}</p>
+          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor o coordinador en esta ficha.'}</p>
            
           <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-500 text-left">
             <span className="font-semibold text-slate-700 block mb-1">Correo actual:</span>
@@ -745,8 +733,7 @@ CC: ${correoInstructorActual}`;
           </div>
 
           <div className="flex items-center gap-4">
-            {/* BOTÓN DE RESPALDO GLOBAL (SOLO PARA ADMIN JORGE ALEXANDER) */}
-            {isGlobalAdmin(user) && (
+            {currentUserRole === 'ADMIN' && (
               <button
                 onClick={() => generarBackupGlobalFichas(fichasDataMap, user.email || ADMIN_EMAIL)}
                 className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
@@ -832,11 +819,11 @@ CC: ${correoInstructorActual}`;
 
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="w-9 h-9 rounded-full bg-[#39a900]/10 flex items-center justify-center font-bold text-[#39a900] text-xs border-2 border-[#39a900]/20">
-                {isGlobalAdmin(user) ? "JA" : "JS"}
+                {currentUserRole === 'ADMIN' ? "JA" : currentUserRole === 'COORDINADOR' ? "CA" : "JS"}
               </div>
               <div className="hidden md:block text-left leading-tight">
                 <p className="text-xs font-bold text-slate-800">
-                  {isGlobalAdmin(user) ? "Jorge Alexander Sepúlveda (Admin)" : "Jorge Alexander Sepúlveda Vélez"}
+                  {currentUserRole === 'ADMIN' ? "Jorge Alexander (Administrador)" : currentUserRole === 'COORDINADOR' ? "Coordinación Académica" : "Jorge Alexander Sepúlveda"}
                 </p>
                 <p className="text-[11px] text-slate-500">{user.email}</p>
               </div>
@@ -848,6 +835,12 @@ CC: ${correoInstructorActual}`;
       {/* CUERPO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
         
+        {currentUserRole === 'COORDINADOR' && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs text-blue-900">
+            <span className="font-semibold">📊 Modo de Coordinación Académica Activo: Tienes privilegios de supervisión global, reportes consolidados y auditoría en todas las fichas.</span>
+          </div>
+        )}
+
         <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
@@ -874,13 +867,15 @@ CC: ${correoInstructorActual}`;
               <ClipboardList className="w-4 h-4" />
               Tomar Asistencia
             </button>
-            <button 
-              onClick={() => setIsSheetsModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-[#39a900] hover:border-[#39a900]/50 shadow-sm transition-colors"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-[#39a900]" />
-              <span className="hidden sm:inline">Google Sheets</span>
-            </button>
+            {canManageFichasAndSheets(user, courseData.equipo_instructores) && (
+              <button 
+                onClick={() => setIsSheetsModalOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-[#39a900] hover:border-[#39a900]/50 shadow-sm transition-colors"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-[#39a900]" />
+                <span className="hidden sm:inline">Google Sheets</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -967,15 +962,17 @@ CC: ${correoInstructorActual}`;
                       {courseData.equipo_instructores.map((inst: any, idx: number) => {
                         const gmailVal = inst.correo_gmail || inst.correo_google || inst.correo || '';
                         const institucionalVal = inst.correo_institucional_sena || inst.correo_institucional || '';
+                        const isLiderInst = inst.rol === 'Instructor Lider' || inst.es_lider === true;
                         return (
                           <div 
                             key={idx} 
-                            className="bg-gradient-to-br from-slate-50 to-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all space-y-3"
+                            className={`bg-gradient-to-br from-slate-50 to-white p-4 rounded-xl border shadow-xs transition-all space-y-3 ${isLiderInst ? 'border-emerald-500 ring-1 ring-emerald-500/30' : 'border-slate-200 hover:border-emerald-300'}`}
                           >
                             <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
                               <div>
-                                <h4 className="font-bold text-slate-900 text-sm">
+                                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                                   {inst.nombre_del_instructor || 'Instructor sin nombre'}
+                                  {isLiderInst && <span className="bg-emerald-100 text-[#39a900] text-[10px] px-2 py-0.5 rounded-full font-bold">Líder</span>}
                                 </h4>
                                 <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
                                   <Shield className="w-3 h-3" /> {inst.rol || 'Instructor / Tutor'}
@@ -1511,6 +1508,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
   const [correoInst, setCorreoInst] = useState('');
   const [diaSemana, setDiaSemana] = useState('Lunes');
   const [fechaInicio, setFechaInicio] = useState('');
+  const [esLiderNuevo, setEsLiderNuevo] = useState(false);
   const [registradoPor, setRegistradoPor] = useState(user?.email || '');
 
   const equipoInstructores = courseData.equipo_instructores || [];
@@ -1535,7 +1533,8 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       correo_institucional: correoInst,
       correo_institucional_sena: correoInst,
       dia: diaSemana,
-      rol: "Instructor / Tutor",
+      rol: esLiderNuevo ? "Instructor Lider" : "Instructor / Tutor",
+      es_lider: esLiderNuevo,
       fecha_inicio: fechaInicio,
       fecha_fin: null,
       registrado_por: registradoPor
@@ -1559,12 +1558,11 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       await updateFichaCompleteData(updatedCourseData, currentFichaId);
       updateCourseData(updatedCourseData);
 
-      // Registrar auditoría inalterable
       await registrarLogAuditoria(
         currentFichaId,
         user?.email || registradoPor,
         'REEMPLAZAR_INSTRUCTOR',
-        `Se registró o reemplazó al instructor ${nombre} para la competencia "${competencia}" en la ficha ${currentFichaId}.`,
+        `Se registró o reemplazó al instructor ${nombre} (${esLiderNuevo ? 'Líder' : 'Tutor'}) para la competencia "${competencia}" en la ficha ${currentFichaId}.`,
         equipoInstructores,
         updatedEquipo
       );
@@ -1576,6 +1574,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       setCorreoGmail('');
       setCorreoInst('');
       setFechaInicio('');
+      setEsLiderNuevo(false);
     } catch (error) {
       console.error("Error al guardar en Firestore:", error);
       alert("Hubo un error al sincronizar con Firebase. Los cambios se guardaron localmente.");
@@ -1609,16 +1608,22 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {equipoInstructores.map((inst: any, idx: number) => (
-                  <tr key={idx} className={inst.fecha_fin ? "bg-slate-50 text-slate-400" : "hover:bg-slate-50"}>
-                    <td className="p-3 font-bold text-slate-800">{inst.nombre_del_instructor || inst.nombre}</td>
-                    <td className="p-3">{inst.competencia}</td>
-                    <td className="p-3">{inst.dia || inst.dia_semana || 'N/A'}</td>
-                    <td className="p-3 font-mono">{inst.fecha_inicio || 'Inicial'}</td>
-                    <td className="p-3 font-mono">{inst.fecha_fin || 'Activo (Actual)'}</td>
-                    <td className="p-3">{inst.correo_institucional || inst.correo_institucional_sena}</td>
-                  </tr>
-                ))}
+                {equipoInstructores.map((inst: any, idx: number) => {
+                  const isLider = inst.rol === 'Instructor Lider' || inst.es_lider === true;
+                  return (
+                    <tr key={idx} className={inst.fecha_fin ? "bg-slate-50 text-slate-400" : "hover:bg-slate-50"}>
+                      <td className="p-3 font-bold text-slate-800 flex items-center gap-1.5">
+                        {inst.nombre_del_instructor || inst.nombre}
+                        {isLider && <span className="bg-emerald-100 text-[#39a900] text-[10px] px-1.5 py-0.5 rounded-full font-bold">Líder</span>}
+                      </td>
+                      <td className="p-3">{inst.competencia}</td>
+                      <td className="p-3">{inst.dia || inst.dia_semana || 'N/A'}</td>
+                      <td className="p-3 font-mono">{inst.fecha_inicio || 'Inicial'}</td>
+                      <td className="p-3 font-mono">{inst.fecha_fin || 'Activo (Actual)'}</td>
+                      <td className="p-3">{inst.correo_institucional || inst.correo_institucional_sena}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1655,6 +1660,18 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
               <label className="block font-bold text-slate-700 mb-1">Fecha de inicio / reemplazo</label>
               <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
             </div>
+            <div className="md:col-span-2 flex items-center gap-2 pt-1">
+              <input 
+                type="checkbox" 
+                id="esLiderCheck" 
+                checked={esLiderNuevo} 
+                onChange={e => setEsLiderNuevo(e.target.checked)} 
+                className="w-4 h-4 rounded border-slate-300 text-[#39a900] focus:ring-[#39a900]"
+              />
+              <label htmlFor="esLiderCheck" className="font-bold text-slate-700 cursor-pointer">
+                Asignar rol de <span className="text-[#39a900]">Instructor Líder</span> para esta ficha (permite carga de Sheets y gestión estructural).
+              </label>
+            </div>
             <div className="md:col-span-2">
               <label className="block font-bold text-slate-700 mb-1">Tu Correo (Autorización)</label>
               <input type="email" value={registradoPor} onChange={e => setRegistradoPor(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
@@ -1668,7 +1685,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
         </div>
       ) : (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold text-center">
-          🔒 Modo de solo lectura: Tu cuenta actual no tiene privilegios para registrar o modificar instructores en esta ficha.
+          🔒 Modo de solo lectura: Tu cuenta actual no tiene privilegios de líder o administrador para registrar o modificar instructores en esta ficha.
         </div>
       )}
     </div>
