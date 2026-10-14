@@ -44,6 +44,11 @@ export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = 
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER';
 };
 
+export const canManageFichasAndSheets = (user: User | null, equipoInstructores: any[] = []): boolean => {
+  const role = getUserSystemRole(user, equipoInstructores);
+  return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER';
+};
+
 // MÓDULO DE AUDITORÍA INMUTABLE
 export type TipoAccionAuditoria = 
   | 'REGISTRAR_ASISTENCIA' 
@@ -1725,7 +1730,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
               <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
             </div>
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Competencia asociada</label>
+              <label className="no block font-bold text-slate-700 mb-1">Competencia asociada</label>
               <input type="text" value={competencia} onChange={e => setCompetencia(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
             </div>
             <div>
