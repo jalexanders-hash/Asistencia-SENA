@@ -10,7 +10,7 @@ export interface Instructor {
   correo_institucional?: string;
   correo_gmail?: string;
   correo?: string;
-  rol?: string; // Ejemplo: 'Instructor Lider', 'Instructor / Tutor'
+  rol?: string; // Ejemplo: 'Instructor Lider', 'Instructor / Tutor', 'Coordinador Academico'
   es_lider?: boolean;
   dia?: string;
   fecha_fin?: string | null;
@@ -28,8 +28,16 @@ export const getUserSystemRole = (user: User | null, equipoInstructores: Instruc
   // 1. Validar Administrador Global
   if (email === ADMIN_EMAIL.toLowerCase()) return 'ADMIN';
   
-  // 2. Validar Coordinador Académico (por patrón en el correo o institucional)
-  if (email.includes('coordinacion') || email === 'coordinacion.academica@sena.edu.co') {
+  // 2. Validar Coordinador Académico (por patrón en el correo institucional o asignación explícita en rol)
+  if (
+    email.includes('coordinacion') || 
+    email === 'coordinacion.academica@sena.edu.co' ||
+    equipoInstructores.some(inst => {
+      const instEmails = [inst.correo_institucional_sena, inst.correo_institucional, inst.correo_gmail, inst.correo];
+      const matchesEmail = instEmails.some(e => e && e.toLowerCase().trim() === email);
+      return matchesEmail && inst.rol === 'Coordinador Academico';
+    })
+  ) {
     return 'COORDINADOR';
   }
 
