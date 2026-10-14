@@ -7,7 +7,7 @@ import { auth, db } from "./lib/firebase";
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
-import { getUserSystemRoleGlobal } from './lib/securityRoles';
+import { getUserSystemRole } from './lib/securityRoles';
 import { 
   Users, 
   XCircle,
@@ -40,7 +40,7 @@ const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding
 const ADMIN_EMAIL = "jalexanders@gmail.com";
 
 export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = []): boolean => {
-  const role = getUserSystemRoleGlobal(user, {});
+  const role = getUserSystemRole(user, equipoInstructores);
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER';
 };
 
@@ -283,6 +283,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
+  const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -321,39 +322,49 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Validación de rol global utilizando todas las fichas cargadas
   const currentUserRole = useMemo(() => {
-    return getUserSystemRoleGlobal(user, fichasDataMap);
-  }, [user, fichasDataMap]);
+    return getUserSystemRole(user, courseData.equipo_instructores);
+  }, [user, courseData]);
 
   useEffect(() => {
-    if (user && fichasDataMap) {
-      if (currentUserRole !== 'INVITADO') {
+    if (user && courseData) {
+      if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
+        setCurrentInstructorIdx(0);
+        setAuthError('');
+        return;
+      }
+      const userEmail = user.email?.toLowerCase().trim();
+      const equipo = courseData.equipo_instructores || [];
+      const idx = equipo.findIndex(
+        (inst: any) => {
+          const instEmails = [
+            inst.correo_institucional_sena,
+            inst.correo_institucional,
+            inst.correo_gmail,
+            inst.correo,
+            inst.correo_google
+          ];
+          return instEmails.some(e => e && e.toLowerCase().trim() === userEmail);
+        }
+      );
+      if (idx !== -1) {
+        setCurrentInstructorIdx(idx);
         setAuthError('');
       } else {
-        setAuthError('Tu correo no está registrado como instructor o coordinador en ninguna ficha del sistema.');
+        setCurrentInstructorIdx(null);
+        setAuthError('Tu correo no está registrado como instructor o coordinador en esta ficha.');
       }
+    } else {
+      setCurrentInstructorIdx(null);
     }
-  }, [user, fichasDataMap, currentUserRole]);
+  }, [user, courseData, currentUserRole]);
     
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
     
-  const currentInstructor = useMemo(() => {
-    if (!user || !user.email) return null;
-    const email = user.email.toLowerCase().trim();
-    for (const fichaKey of Object.keys(fichasDataMap)) {
-      const equipo = fichasDataMap[fichaKey].equipo_instructores || [];
-      const inst = equipo.find((i: any) => {
-        const emails = [i.correo_institucional_sena, i.correo_institucional, i.correo_gmail, i.correo, i.correo_google];
-        return emails.some(e => e && e.toLowerCase().trim() === email);
-      });
-      if (inst) return inst;
-    }
-    return courseData.equipo_instructores?.[0] || null;
-  }, [user, fichasDataMap, courseData]);
+  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
 
   const currentInstructorDates = useMemo(() => {
     const dates = courseData.fechas_asistencia || [];
@@ -665,7 +676,7 @@ CC: ${correoInstructorActual}`;
     return <Login />;
   }
 
-  if (currentUserRole === 'INVITADO') {
+  if (currentUserRole === 'INVITADO' && currentInstructorIdx === null) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 p-8 text-center space-y-4">
@@ -676,7 +687,7 @@ CC: ${correoInstructorActual}`;
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Acceso Restringido</h1>
-          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor o coordinador en ninguna ficha del sistema.'}</p>
+          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor o coordinador en esta ficha.'}</p>
            
           <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-500 text-left">
             <span className="font-semibold text-slate-700 block mb-1">Correo actual:</span>
@@ -817,7 +828,7 @@ CC: ${correoInstructorActual}`;
               </div>
               <div className="hidden md:block text-left leading-tight">
                 <p className="text-xs font-bold text-slate-800">
-                  {currentUserRole === 'ADMIN' ? "Jorge Alexander (Administrador)" : currentUserRole === 'COORDINADOR' ? "Coordinación Académica" : "Instructor SENA"}
+                  {currentUserRole === 'ADMIN' ? "Jorge Alexander (Administrador)" : currentUserRole === 'COORDINADOR' ? "Coordinación Académica" : "Jorge Alexander Sepúlveda"}
                 </p>
                 <p className="text-[11px] text-slate-500">{user.email}</p>
               </div>
