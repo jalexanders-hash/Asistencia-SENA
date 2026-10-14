@@ -127,7 +127,7 @@ export function generateCompleteConfigurationTemplate(): Uint8Array {
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-  const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado", "2026-02-09"];
+  const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"];
   const aprendicesRows = [
     aprendicesHeaders, 
     ["CC", "", "", "", "", "", "En formación", ""]
