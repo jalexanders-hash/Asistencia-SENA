@@ -26,10 +26,32 @@ service cloud.firestore {
         request.auth.token.email == "jalexanders@gmail.com";
     }
 
+    // Función auxiliar para verificar si el usuario es Coordinador Académico
+    function esCoordinadorAcademico() {
+      return request.auth != null && (
+        esAdminGlobal() ||
+        request.auth.token.email.matches('.*coordinacion.*@misena\\.edu\\.co') ||
+        request.auth.token.email == "coordinacion.academica@sena.edu.co"
+      );
+    }
+
+    // Función auxiliar para verificar si el instructor es el líder formal de la ficha
+    function esInstructorLider(fichaData) {
+      return request.auth != null && fichaData.equipo_instructores is list &&
+        fichaData.equipo_instructores.hasAny([
+          { 'correo_institucional_sena': request.auth.token.email, 'rol': 'Instructor Lider' },
+          { 'correo_institucional': request.auth.token.email, 'rol': 'Instructor Lider' },
+          { 'correo_gmail': request.auth.token.email, 'rol': 'Instructor Lider' },
+          { 'correo_institucional_sena': request.auth.token.email, 'es_lider': true },
+          { 'correo_institucional': request.auth.token.email, 'es_lider': true }
+        ]);
+    }
+
     // Función para validar si el instructor autenticado forma parte del equipo ejecutor de la ficha
     function esInstructorAutorizado(fichaData) {
       return request.auth != null && (
-        esAdminGlobal() ||
+        esCoordinadorAcademico() ||
+        esInstructorLider(fichaData) ||
         (fichaData.equipo_instructores is list &&
           fichaData.equipo_instructores.hasAny([
             { 'correo_institucional_sena': request.auth.token.email },
@@ -43,16 +65,16 @@ service cloud.firestore {
 
     // Reglas para Fichas de Caracterización
     match /fichas/{fichaId} {
-      // Lectura permitida (soporta accesos públicos/magic links previos o autenticados)
-      allow read: if isValidId(fichaId);
+      // Lectura permitida para cualquier usuario autenticado o vinculado
+      allow read: if request.auth != null;
       
-      // Creación con validación de estructura e ID
-      allow create: if isValidId(fichaId) && isValidFicha(incoming());
+      // Creación permitida para Admin o Coordinador Académico
+      allow create: if isValidId(fichaId) && isValidFicha(incoming()) && (esAdminGlobal() || esCoordinadorAcademico());
       
-      // Actualización protegida por RBAC y validación de campos permitidos
+      // Actualización protegida por RBAC (Admin, Coordinador o Instructor Líder/Autorizado)
       allow update: if isValidId(fichaId) 
         && isValidFicha(incoming())
-        && esInstructorAutorizado(resource.data)
+        && (esCoordinadorAcademico() || esInstructorLider(resource.data) || esInstructorAutorizado(resource.data))
         && incoming().diff(resource.data).affectedKeys().hasOnly([
              'fechas_asistencia', 
              'asistencias_aprendices', 
@@ -64,21 +86,21 @@ service cloud.firestore {
              'denominacion'
            ]);
 
-      // Eliminación restringida de forma exclusiva al Administrador Global
-      allow delete: if esAdminGlobal();
+      // Eliminación restringida al Administrador Global o Coordinador Académico
+      allow delete: if esAdminGlobal() || esCoordinadorAcademico();
     }
 
     // Reglas para el Módulo de Auditoría y Trazabilidad (Logs Inmutables)
     match /logs_auditoria/{logId} {
-      // El administrador lee todo; los instructores solo sus propias trazas
+      // El administrador o coordinador lee todo; los instructores solo sus propias trazas
       allow read: if request.auth != null && (
-        esAdminGlobal() || resource.data.correo_usuario == request.auth.token.email
+        esCoordinadorAcademico() || resource.data.correo_usuario == request.auth.token.email
       );
 
       // Cualquier usuario autenticado puede generar trazas de auditoría al registrar acciones
       allow create: if request.auth != null;
 
-      // INMUTABILIDAD ESTRICTA: Los logs nunca se pueden modificar ni eliminar
+      // INMUTABILIDAD ESTRICTA: Los logs nunca se pueden modificar ni eliminar por nadie
       allow update, delete: if false;
     }
   }
