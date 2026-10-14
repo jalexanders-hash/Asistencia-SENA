@@ -4,7 +4,7 @@ import { subscribeToFichaData, saveAttendanceData, updateFichaCompleteData } fro
 import { SheetsTemplateModal } from './components/SheetsTemplateModal';
 import ExportReportModal from './components/ExportReportModal';
 import { auth, db } from "./lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
 import { 
@@ -21,9 +21,7 @@ import {
   Bell,
   CheckCircle2,
   Layers,
-  FileText,
   X,
-  ChevronDown,
   LayoutDashboard,
   Printer,
   Copy,
@@ -37,6 +35,100 @@ import {
 } from 'lucide-react';
 
 const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding=%27utf-8%27?%3e%3c!--%20Generator:%20Adobe%20Illustrator%2026.0.1,%20SVG%20Export%20Plug-In%20.%20SVG%20Version:%206.00%20Build%200)%20--%3e%3csvg%20version=%271.1%27%20id=%27Capa_1%27%20xmlns=%27http://www.w3.org/2000/svg%27%20xmlns:xlink=%27http://www.w3.org/1999/xlink%27%20x=%270px%27%20y=%270px%27%20viewBox=%270%200%201000%201000%27%20style=%27enable-background:new%200%200%201000%201000;%27%20xml:space=%27preserve%27%3e%3cstyle%20type=%27text/css%27%3e%20.st0{fill:%2339a900;}%20%3c/style%3e%3cpath%20id=%27path47-5%27%20class=%27st0%27%20d=%27M504.2,20.5c-58.3,0.1-105.6,47.4-105.5,105.8c0.1,58.3,47.4,105.6,105.7,105.6%20c58.3,0,105.6-47.3,105.6-105.7V126C609.9,67.6,562.6,20.4,504.2,20.5z%20M155.6,264.6c-18.6,0.1-37.5,1.1-55.2,5.6%20c-11.7,3-23,7.8-30.3,15.4c-9.2,9.5-10.4,22.3-5.9,33.3c4,9.7,14.8,16.9,26.8,21.1c25.9,8.9,54.6,10.7,81.8,16.3%20c5,1.2,10.6,2.6,13.7,6c3.2,4.1,1.3,9.7-4,12.2c-8.8,4.5-20.1,4.5-30.4,4.4c-9.4-0.4-19.7-1.2-27.2-5.9c-5.5-3.4-6.5-9.1-5.2-14.1%20l-60.6,0c-0.2,9.2,1.6,18.9,8.4,26.8c5.6,6.8,14.8,11.5,24.6,14.4c15.7,4.6,32.7,6,49.4,6.4c22.7,0.4,45.8-0.3,67.6-5.4%20c13-3.2,25.8-8.3,34.1-16.6c14.8-14.8,11.3-38.3-8.3-49.8c-9.8-5.7-21.5-9.2-33.4-11.5c-17.5-3.6-35.3-6.3-52.9-9.2%20c-6.2-1.2-12.8-2.3-18-5.2c-5.5-2.9-5.9-9.8-0.3-12.9c7.2-4.1,16.8-4,25.4-4c9.1,0.2,19,0.7,26.5,5c4.2,2.3,5.9,6.3,5.9,10.1%20l57.6-0.1c-0.2-7.3-1.6-14.9-6.9-21.2c-6.2-7.8-17.1-12.7-28.3-15.5C192.8,265.6,174.1,264.7,155.6,264.6L155.6,264.6z%20M280.6,268.9%20l0,137.7l168.1,0l0-30H342.3v-26.7h94.9v-29.3h-94.9l0-21.9l102.6,0l-0.1-29.7L280.6,268.9z%20M557.5,269c0,0-51.9,0-77.9,0l0,137.7%20l59,0l0-92.7l80.8,92.6l81,0.1l0-137.7l-59.1,0l0.1,92L557.5,269z%20M805.6,269.2c0,0-63.6,91.9-95.6,137.7l61.9,0l14.9-24.8h95.7%20l13.9,24.9l68.8,0L874,269.2L805.6,269.2z%20M836.6,302.1l29.4,49.9l-60.7,0.1L836.6,302.1z%20M10.6,445.6l0.5,75l280.1-1%20c14.3,3.1,22.6,12.4,19.7,33.5L138.6,854.7l56.1,52.5l266.9-461.6L10.6,445.6z%20M545.2,446.2l262.4,459.6l58-52.1L691.3,552.9%20c-2.9-21.2,5.4-30.6,19.7-33.7l280.2,1l-0.1-73.7L545.2,446.2z%20M500.9,522.3L254.8,944.7l65.4,31.9L484.4,699%20c5.7-4.6,11.4-7.1,17.1-7.3c6-0.2,12.2,2,18.3,6.8l163.8,278.4l67.4-35.2L500.9,522.3z%27/%3e%3cg%20id=%27_x23_000000ff-2%27%20transform=%27matrix(0.31570611,0,0,0.23560774,-391.49698,-10.601126)%27%3e%3c/g%3e%3c/svg%3e`;
+
+// CONSTANTES DE SEGURIDAD Y ROLES
+const ADMIN_EMAIL = "jalexanders@gmail.com";
+
+export const isGlobalAdmin = (user: User | null): boolean => {
+  if (!user || !user.email) return false;
+  return user.email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase();
+};
+
+export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = []): boolean => {
+  if (isGlobalAdmin(user)) return true;
+  if (!user || !user.email) return false;
+  const userEmail = user.email.toLowerCase().trim();
+  return equipoInstructores.some((inst) => {
+    const emails = [
+      inst.correo_institucional_sena,
+      inst.correo_institucional,
+      inst.correo_gmail,
+      inst.correo
+    ];
+    return emails.some(e => e && e.toLowerCase().trim() === userEmail);
+  });
+};
+
+// MÓDULO DE AUDITORÍA INMUTABLE
+export type TipoAccionAuditoria = 
+  | 'REGISTRAR_ASISTENCIA' 
+  | 'MODIFICAR_ASISTENCIA' 
+  | 'REEMPLAZAR_INSTRUCTOR' 
+  | 'MODIFICAR_FICHA'
+  | 'ELIMINAR_REGISTRO';
+
+export const registrarLogAuditoria = async (
+  fichaId: string,
+  correoUsuario: string,
+  tipoAccion: TipoAccionAuditoria,
+  detalles: string,
+  valorAnterior?: any,
+  valorNuevo?: any
+): Promise<void> => {
+  try {
+    const fechaHoraColombia = new Date().toLocaleString("es-CO", {
+      timeZone: "America/Bogota",
+      dateStyle: "full",
+      timeStyle: "medium"
+    });
+
+    const logData = {
+      ficha_id: fichaId,
+      correo_usuario: correoUsuario.toLowerCase().trim(),
+      tipo_accion: tipoAccion,
+      detalles: detalles,
+      valor_anterior: valorAnterior ? JSON.stringify(valorAnterior) : null,
+      valor_nuevo: valorNuevo ? JSON.stringify(valorNuevo) : null,
+      fecha_hora_colombia: fechaHoraColombia,
+      timestamp_server: serverTimestamp()
+    };
+
+    await addDoc(collection(db, "logs_auditoria"), logData);
+  } catch (error) {
+    console.error("Error crítico al registrar la auditoría de seguridad:", error);
+  }
+};
+
+// MÓDULO DE COPIAS DE SEGURIDAD (BACKUP & RECOVERY)
+export const generarBackupGlobalFichas = (fichasMap: any, userEmail: string) => {
+  try {
+    const fechaActual = new Date().toISOString().split('T')[0];
+    const horaColombia = new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" });
+
+    const backupPayload = {
+      version: "2.0",
+      sistema: "SENA - Gestión Académica y Asistencia",
+      autor_respaldo: userEmail,
+      fecha_hora_colombia: horaColombia,
+      total_fichas: Object.keys(fichasMap).length,
+      data_fichas: fichasMap
+    };
+
+    const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SENA_Backup_General_${fechaActual}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error al generar el respaldo de seguridad:", error);
+    alert("Hubo un error al generar la copia de seguridad.");
+  }
+};
 
 const displayAsDDMMYYYY = (dateStr: string) => {
   if (!dateStr) return "";
@@ -247,6 +339,11 @@ export default function App() {
 
   useEffect(() => {
     if (user && courseData) {
+      if (isGlobalAdmin(user)) {
+        setCurrentInstructorIdx(0);
+        setAuthError('');
+        return;
+      }
       const userEmail = user.email?.toLowerCase().trim();
       const idx = courseData.equipo_instructores.findIndex(
         (inst: any) => 
@@ -328,6 +425,11 @@ export default function App() {
   }, [currentFichaId]);
 
   const handleOpenAttendance = () => {
+    if (!canUserEditFicha(user, courseData.equipo_instructores)) {
+      alert("Acceso denegado: No tienes permisos para registrar asistencia en esta ficha.");
+      return;
+    }
+
     const formattedDate = formatDateForData(attendanceDate);
     const existingRecords: Record<string, string> = {};
      
@@ -341,6 +443,13 @@ export default function App() {
   };
 
   const handleSaveAttendance = async () => {
+    if (!user || !user.email) return;
+
+    if (!canUserEditFicha(user, courseData.equipo_instructores)) {
+      alert("Acceso denegado: No tienes permisos para modificar la asistencia.");
+      return;
+    }
+
     setIsSavingAttendance(true);
     const formattedDate = formatDateForData(attendanceDate);
      
@@ -370,6 +479,17 @@ export default function App() {
       await saveAttendanceData(newFechas, newAprendices, {}, currentFichaId);
       updateCurrentFichaData(updatedCourseData);
       localStorage.setItem(`sena_ficha_data_${currentFichaId}`, JSON.stringify(updatedCourseData));
+
+      // Registrar auditoría inalterable
+      await registrarLogAuditoria(
+        currentFichaId,
+        user.email,
+        'REGISTRAR_ASISTENCIA',
+        `El instructor/admin registró asistencia para la fecha ${formattedDate} en la ficha ${currentFichaId}.`,
+        courseData.fechas_asistencia,
+        newFechas
+      );
+
       setShowAttendanceModal(false);
     } catch (error) {
       console.error("Failed to save attendance", error);
@@ -498,7 +618,7 @@ export default function App() {
   }, [studentsWithStats]);
 
   const getNotificationTemplateText = (student: any) => {
-    const instructorName = (currentInstructor as any)?.nombre_del_instructor || "Instructor SENA";
+    const instructorName = (currentInstructor as any)?.nombre_del_instructor || (isGlobalAdmin(user) ? "Jorge Alexander Sepúlveda (Administrador)" : "Instructor SENA");
     const fechasFallasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'X' || student.registros[displayAsDDMMYYYY(date)] === 'X');
     const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde' || student.registros[displayAsDDMMYYYY(date)] === 'Tarde');
 
@@ -563,7 +683,7 @@ CC: ${correoInstructorActual}`;
     return <Login />;
   }
 
-  if (currentInstructorIdx === null || currentInstructor === null) {
+  if (!isGlobalAdmin(user) && (currentInstructorIdx === null || currentInstructor === null)) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 p-8 text-center space-y-4">
@@ -625,6 +745,17 @@ CC: ${correoInstructorActual}`;
           </div>
 
           <div className="flex items-center gap-4">
+            {/* BOTÓN DE RESPALDO GLOBAL (SOLO PARA ADMIN JORGE ALEXANDER) */}
+            {isGlobalAdmin(user) && (
+              <button
+                onClick={() => generarBackupGlobalFichas(fichasDataMap, user.email || ADMIN_EMAIL)}
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+                title="Descargar copia de seguridad estructurada (.JSON)"
+              >
+                💾 Backup Global (.JSON)
+              </button>
+            )}
+
             <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${isOnline ? 'bg-emerald-50 text-[#39a900] border border-[#39a900]/30' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
               {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
               <span>{isOnline ? 'En línea' : 'Modo Offline'}</span>
@@ -701,10 +832,12 @@ CC: ${correoInstructorActual}`;
 
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="w-9 h-9 rounded-full bg-[#39a900]/10 flex items-center justify-center font-bold text-[#39a900] text-xs border-2 border-[#39a900]/20">
-                JS
+                {isGlobalAdmin(user) ? "JA" : "JS"}
               </div>
               <div className="hidden md:block text-left leading-tight">
-                <p className="text-xs font-bold text-slate-800">Jorge Alexander Sepúlveda Vélez</p>
+                <p className="text-xs font-bold text-slate-800">
+                  {isGlobalAdmin(user) ? "Jorge Alexander Sepúlveda (Admin)" : "Jorge Alexander Sepúlveda Vélez"}
+                </p>
                 <p className="text-[11px] text-slate-500">{user.email}</p>
               </div>
             </div>
@@ -1096,6 +1229,7 @@ CC: ${correoInstructorActual}`;
                 courseData={courseData}
                 currentFichaId={currentFichaId}
                 updateCourseData={updateCurrentFichaData}
+                user={user}
               />
             )}
           </div>
@@ -1351,7 +1485,7 @@ CC: ${correoInstructorActual}`;
         }}
       />
 
-      {/* MODAL EXPORTAR / REPORTES (GARANTIZADO) */}
+      {/* MODAL EXPORTAR / REPORTES */}
       <ExportReportModal 
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
@@ -1362,26 +1496,33 @@ CC: ${correoInstructorActual}`;
   );
 }
 
-// Componente Integrado de Gestión y Reemplazo de Instructores
+// COMPONENTE GESTIÓN E INSTRUCTORES CON SEGURIDAD RBAC Y AUDITORÍA
 interface GestionInstructoresProps {
   courseData: any;
   currentFichaId: string;
   updateCourseData: (newData: any) => void;
+  user: User | null;
 }
 
-export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ courseData, currentFichaId, updateCourseData }) => {
+export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ courseData, currentFichaId, updateCourseData, user }) => {
   const [nombre, setNombre] = useState('');
   const [competencia, setCompetencia] = useState('');
   const [correoGmail, setCorreoGmail] = useState('');
   const [correoInst, setCorreoInst] = useState('');
   const [diaSemana, setDiaSemana] = useState('Lunes');
   const [fechaInicio, setFechaInicio] = useState('');
-  const [registradoPor, setRegistradoPor] = useState('');
+  const [registradoPor, setRegistradoPor] = useState(user?.email || '');
 
   const equipoInstructores = courseData.equipo_instructores || [];
 
   const handleRegistrarInstructor = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!canUserEditFicha(user, equipoInstructores)) {
+      alert("Acceso denegado: No tienes privilegios para registrar o reemplazar instructores en esta ficha.");
+      return;
+    }
+
     if (!nombre || !competencia || !correoInst || !fechaInicio || !registradoPor) {
       alert("Por favor complete los campos obligatorios.");
       return;
@@ -1415,18 +1556,26 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
     };
 
     try {
-      // Usar updateFichaCompleteData para asegurar la persistencia completa incluyendo equipo_instructores en Firestore
       await updateFichaCompleteData(updatedCourseData, currentFichaId);
-
       updateCourseData(updatedCourseData);
-      alert("¡Instructor registrado y guardado exitosamente en Firebase Firestore!");
+
+      // Registrar auditoría inalterable
+      await registrarLogAuditoria(
+        currentFichaId,
+        user?.email || registradoPor,
+        'REEMPLAZAR_INSTRUCTOR',
+        `Se registró o reemplazó al instructor ${nombre} para la competencia "${competencia}" en la ficha ${currentFichaId}.`,
+        equipoInstructores,
+        updatedEquipo
+      );
+
+      alert("¡Instructor registrado y auditado exitosamente en Firebase Firestore!");
       
       setNombre('');
       setCompetencia('');
       setCorreoGmail('');
       setCorreoInst('');
       setFechaInicio('');
-      setRegistradoPor('');
     } catch (error) {
       console.error("Error al guardar en Firestore:", error);
       alert("Hubo un error al sincronizar con Firebase. Los cambios se guardaron localmente.");
@@ -1438,7 +1587,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       <div className="border-b border-slate-200 pb-4">
         <h2 className="text-xl font-bold text-slate-900">👥 Módulo de Gestión y Reemplazo de Instructores - Ficha {currentFichaId}</h2>
         <p className="text-xs text-slate-500 mt-1">
-          Registre o reemplace instructores por competencia y día de la semana garantizando la inmutabilidad de los registros históricos anteriores.
+          Registre o reemplace instructores por competencia y día de la semana garantizando la inmutabilidad y trazabilidad de los registros históricos.
         </p>
       </div>
 
@@ -1476,46 +1625,52 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
         )}
       </div>
 
-      <div className="border-t border-slate-200 pt-6">
-        <h3 className="text-sm font-bold text-slate-800 mb-4">➕ Registrar o Reemplazar Instructor</h3>
-        <form onSubmit={handleRegistrarInstructor} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Nombre completo del instructor</label>
-            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
-          </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Competencia asociada</label>
-            <input type="text" value={competencia} onChange={e => setCompetencia(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
-          </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Correo Gmail / Personal</label>
-            <input type="email" value={correoGmail} onChange={e => setCorreoGmail(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" />
-          </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Correo institucional</label>
-            <input type="email" value={correoInst} onChange={e => setCorreoInst(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
-          </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Día de la semana asignado</label>
-            <select value={diaSemana} onChange={e => setDiaSemana(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]">
-              {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Fecha de inicio / reemplazo</label>
-            <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block font-bold text-slate-700 mb-1">Tu Correo Institucional (Autorización como instructor actual)</label>
-            <input type="email" value={registradoPor} onChange={e => setRegistradoPor(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
-          </div>
-          <div className="md:col-span-2 flex justify-end">
-            <button type="submit" className="px-6 py-2.5 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm cursor-pointer">
-              Guardar e Integrar Instructor
-            </button>
-          </div>
-        </form>
-      </div>
+      {canUserEditFicha(user, equipoInstructores) ? (
+        <div className="border-t border-slate-200 pt-6">
+          <h3 className="text-sm font-bold text-slate-800 mb-4">➕ Registrar o Reemplazar Instructor</h3>
+          <form onSubmit={handleRegistrarInstructor} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Nombre completo del instructor</label>
+              <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Competencia asociada</label>
+              <input type="text" value={competencia} onChange={e => setCompetencia(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Correo Gmail / Personal</label>
+              <input type="email" value={correoGmail} onChange={e => setCorreoGmail(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Correo institucional</label>
+              <input type="email" value={correoInst} onChange={e => setCorreoInst(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Día de la semana asignado</label>
+              <select value={diaSemana} onChange={e => setDiaSemana(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]">
+                {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Fecha de inicio / reemplazo</label>
+              <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block font-bold text-slate-700 mb-1">Tu Correo (Autorización)</label>
+              <input type="email" value={registradoPor} onChange={e => setRegistradoPor(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <button type="submit" className="px-6 py-2.5 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm cursor-pointer">
+                Guardar e Integrar Instructor
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold text-center">
+          🔒 Modo de solo lectura: Tu cuenta actual no tiene privilegios para registrar o modificar instructores en esta ficha.
+        </div>
+      )}
     </div>
   );
 };
