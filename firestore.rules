@@ -20,13 +20,66 @@ service cloud.firestore {
         && data.equipo_instructores is list;
     }
 
+    // Función auxiliar para verificar si el usuario es el Administrador Global
+    function esAdminGlobal() {
+      return request.auth != null && 
+        request.auth.token.email == "jalexanders@gmail.com";
+    }
+
+    // Función para validar si el instructor autenticado forma parte del equipo ejecutor de la ficha
+    function esInstructorAutorizado(fichaData) {
+      return request.auth != null && (
+        esAdminGlobal() ||
+        (fichaData.equipo_instructores is list &&
+          fichaData.equipo_instructores.hasAny([
+            { 'correo_institucional_sena': request.auth.token.email },
+            { 'correo_institucional': request.auth.token.email },
+            { 'correo_gmail': request.auth.token.email },
+            { 'correo': request.auth.token.email }
+          ])
+        )
+      );
+    }
+
+    // Reglas para Fichas de Caracterización
     match /fichas/{fichaId} {
-      // The app design explicitly supports anonymous (unauthenticated) users via magic links.
+      // Lectura permitida (soporta accesos públicos/magic links previos o autenticados)
       allow read: if isValidId(fichaId);
+      
+      // Creación con validación de estructura e ID
       allow create: if isValidId(fichaId) && isValidFicha(incoming());
+      
+      // Actualización protegida por RBAC y validación de campos permitidos
       allow update: if isValidId(fichaId) 
         && isValidFicha(incoming())
-        && incoming().diff(resource.data).affectedKeys().hasOnly(['fechas_asistencia', 'asistencias_aprendices', 'equipo_instructores', 'fechas_por_instructor', 'ficha_de_caracterizacion', 'programa', 'centro', 'denominacion']);
+        && esInstructorAutorizado(resource.data)
+        && incoming().diff(resource.data).affectedKeys().hasOnly([
+             'fechas_asistencia', 
+             'asistencias_aprendices', 
+             'equipo_instructores', 
+             'fechas_por_instructor', 
+             'ficha_de_caracterizacion', 
+             'programa', 
+             'centro', 
+             'denominacion'
+           ]);
+
+      // Eliminación restringida de forma exclusiva al Administrador Global
+      allow delete: if esAdminGlobal();
+    }
+
+    // Reglas para el Módulo de Auditoría y Trazabilidad (Logs Inmutables)
+    match /logs_auditoria/{logId} {
+      // El administrador lee todo; los instructores solo sus propias trazas
+      allow read: if request.auth != null && (
+        esAdminGlobal() || resource.data.correo_usuario == request.auth.token.email
+      );
+
+      // Cualquier usuario autenticado puede generar trazas de auditoría al registrar acciones
+      allow create: if request.auth != null;
+
+      // INMUTABILIDAD ESTRICTA: Los logs nunca se pueden modificar ni eliminar
+      allow update, delete: if false;
     }
   }
 }
