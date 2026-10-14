@@ -950,7 +950,7 @@ CC: ${correoInstructorActual}`;
                     <h3 className="text-base font-bold text-slate-800">Equipo Ejecutor e Instructores Asignados</h3>
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    A continuación se relacionan los instructores a cargo de la formación, su respectivo rol, la competencia asignada y el día asignado para el desarrollo de las sesiones:
+                    A continuación se relacionan los instructores a cargo de la formación, su respectivo rol institucional, la competencia asignada y el día asignado para el desarrollo de las sesiones:
                   </p>
 
                   {(!courseData.equipo_instructores || courseData.equipo_instructores.length === 0) ? (
@@ -962,20 +962,29 @@ CC: ${correoInstructorActual}`;
                       {courseData.equipo_instructores.map((inst: any, idx: number) => {
                         const gmailVal = inst.correo_gmail || inst.correo_google || inst.correo || '';
                         const institucionalVal = inst.correo_institucional_sena || inst.correo_institucional || '';
-                        const isLiderInst = inst.rol === 'Instructor Lider' || inst.es_lider === true;
+                        const rolActual = inst.rol || (inst.es_lider ? 'Instructor Lider' : 'Instructor / Tutor');
+                        
+                        // Estilo dinámico de tarjeta según rol
+                        const cardBorder = rolActual === 'Instructor Lider' 
+                          ? 'border-emerald-500 ring-1 ring-emerald-500/30' 
+                          : rolActual === 'Coordinador Academico' 
+                          ? 'border-blue-400 ring-1 ring-blue-400/30' 
+                          : 'border-slate-200 hover:border-emerald-300';
+
                         return (
                           <div 
                             key={idx} 
-                            className={`bg-gradient-to-br from-slate-50 to-white p-4 rounded-xl border shadow-xs transition-all space-y-3 ${isLiderInst ? 'border-emerald-500 ring-1 ring-emerald-500/30' : 'border-slate-200 hover:border-emerald-300'}`}
+                            className={`bg-gradient-to-br from-slate-50 to-white p-4 rounded-xl border shadow-xs transition-all space-y-3 ${cardBorder}`}
                           >
                             <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
                               <div>
-                                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
                                   {inst.nombre_del_instructor || 'Instructor sin nombre'}
-                                  {isLiderInst && <span className="bg-emerald-100 text-[#39a900] text-[10px] px-2 py-0.5 rounded-full font-bold">Líder</span>}
+                                  {rolActual === 'Instructor Lider' && <span className="bg-emerald-100 text-[#39a900] text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-300">Líder</span>}
+                                  {rolActual === 'Coordinador Academico' && <span className="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold border border-blue-300">Coordinador</span>}
                                 </h4>
                                 <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
-                                  <Shield className="w-3 h-3" /> {inst.rol || 'Instructor / Tutor'}
+                                  <Shield className="w-3 h-3" /> {rolActual}
                                 </span>
                                 
                                 <div className="mt-2 space-y-1 text-[11px] text-slate-600 font-mono">
@@ -992,7 +1001,7 @@ CC: ${correoInstructorActual}`;
                                 </div>
                               </div>
                               {inst.dia && (
-                                <span className="bg-emerald-100 text-emerald-800 font-bold text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1">
+                                <span className="bg-emerald-100 text-emerald-800 font-bold text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1 whitespace-nowrap">
                                   <Calendar className="w-3 h-3" /> {inst.dia}
                                 </span>
                               )}
@@ -1493,7 +1502,7 @@ CC: ${correoInstructorActual}`;
   );
 }
 
-// COMPONENTE GESTIÓN E INSTRUCTORES CON SEGURIDAD RBAC Y AUDITORÍA
+// COMPONENTE GESTIÓN E INSTRUCTORES CON GESTIÓN DINÁMICA DE ROLES Y AUDITORÍA
 interface GestionInstructoresProps {
   courseData: any;
   currentFichaId: string;
@@ -1508,15 +1517,60 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
   const [correoInst, setCorreoInst] = useState('');
   const [diaSemana, setDiaSemana] = useState('Lunes');
   const [fechaInicio, setFechaInicio] = useState('');
-  const [esLiderNuevo, setEsLiderNuevo] = useState(false);
+  const [rolNuevo, setRolNuevo] = useState('Instructor / Tutor');
   const [registradoPor, setRegistradoPor] = useState(user?.email || '');
 
   const equipoInstructores = courseData.equipo_instructores || [];
+  const tienePermisosEdicion = canUserEditFicha(user, equipoInstructores);
+
+  // Handler para actualizar el rol en línea (in-line select)
+  const handleRolChange = async (index: number, nuevoRol: string) => {
+    if (!tienePermisosEdicion) {
+      alert("Acceso denegado: No tienes privilegios para modificar roles en esta ficha.");
+      return;
+    }
+
+    const instructorOriginal = equipoInstructores[index];
+    const rolAnterior = instructorOriginal.rol || 'Instructor / Tutor';
+
+    if (rolAnterior === nuevoRol) return;
+
+    const updatedEquipo = [...equipoInstructores];
+    updatedEquipo[index] = {
+      ...instructorOriginal,
+      rol: nuevoRol,
+      es_lider: nuevoRol === 'Instructor Lider'
+    };
+
+    const updatedCourseData = {
+      ...courseData,
+      equipo_instructores: updatedEquipo
+    };
+
+    try {
+      await updateFichaCompleteData(updatedCourseData, currentFichaId);
+      updateCourseData(updatedCourseData);
+
+      await registrarLogAuditoria(
+        currentFichaId,
+        user?.email || registradoPor,
+        'MODIFICAR_FICHA',
+        `Se actualizó el rol del instructor ${instructorOriginal.nombre_del_instructor} de "${rolAnterior}" a "${nuevoRol}" en la ficha ${currentFichaId}.`,
+        { rol: rolAnterior },
+        { rol: nuevoRol }
+      );
+
+      alert(`Rol actualizado exitosamente a: ${nuevoRol}`);
+    } catch (error) {
+      console.error("Error al actualizar el rol en Firestore:", error);
+      alert("Error de sincronización con la base de datos.");
+    }
+  };
 
   const handleRegistrarInstructor = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!canUserEditFicha(user, equipoInstructores)) {
+    if (!tienePermisosEdicion) {
       alert("Acceso denegado: No tienes privilegios para registrar o reemplazar instructores en esta ficha.");
       return;
     }
@@ -1533,8 +1587,8 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       correo_institucional: correoInst,
       correo_institucional_sena: correoInst,
       dia: diaSemana,
-      rol: esLiderNuevo ? "Instructor Lider" : "Instructor / Tutor",
-      es_lider: esLiderNuevo,
+      rol: rolNuevo,
+      es_lider: rolNuevo === 'Instructor Lider',
       fecha_inicio: fechaInicio,
       fecha_fin: null,
       registrado_por: registradoPor
@@ -1562,7 +1616,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
         currentFichaId,
         user?.email || registradoPor,
         'REEMPLAZAR_INSTRUCTOR',
-        `Se registró o reemplazó al instructor ${nombre} (${esLiderNuevo ? 'Líder' : 'Tutor'}) para la competencia "${competencia}" en la ficha ${currentFichaId}.`,
+        `Se registró o reemplazó al instructor ${nombre} con rol "${rolNuevo}" para la competencia "${competencia}" en la ficha ${currentFichaId}.`,
         equipoInstructores,
         updatedEquipo
       );
@@ -1574,11 +1628,21 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       setCorreoGmail('');
       setCorreoInst('');
       setFechaInicio('');
-      setEsLiderNuevo(false);
+      setRolNuevo('Instructor / Tutor');
     } catch (error) {
       console.error("Error al guardar en Firestore:", error);
       alert("Hubo un error al sincronizar con Firebase. Los cambios se guardaron localmente.");
     }
+  };
+
+  const getRoleBadgeClass = (rol: string) => {
+    if (rol === 'Instructor Lider') {
+      return 'bg-emerald-100 text-[#39a900] border border-emerald-300 font-bold px-2.5 py-1 rounded-full text-[11px]';
+    }
+    if (rol === 'Coordinador Academico') {
+      return 'bg-blue-100 text-blue-800 border border-blue-300 font-bold px-2.5 py-1 rounded-full text-[11px]';
+    }
+    return 'bg-slate-100 text-slate-700 border border-slate-200 font-semibold px-2.5 py-1 rounded-full text-[11px]';
   };
 
   return (
@@ -1586,7 +1650,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       <div className="border-b border-slate-200 pb-4">
         <h2 className="text-xl font-bold text-slate-900">👥 Módulo de Gestión y Reemplazo de Instructores - Ficha {currentFichaId}</h2>
         <p className="text-xs text-slate-500 mt-1">
-          Registre o reemplace instructores por competencia y día de la semana garantizando la inmutabilidad y trazabilidad de los registros históricos.
+          Gestione los roles institucionales (Líder, Tutor, Coordinador Académico) y reemplace instructores garantizando la inmutabilidad de los registros.
         </p>
       </div>
 
@@ -1600,6 +1664,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
               <thead>
                 <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b">
                   <th className="p-3">Instructor</th>
+                  <th className="p-3">Rol Institucional</th>
                   <th className="p-3">Competencia</th>
                   <th className="p-3">Día</th>
                   <th className="p-3">Inicio</th>
@@ -1609,14 +1674,33 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {equipoInstructores.map((inst: any, idx: number) => {
-                  const isLider = inst.rol === 'Instructor Lider' || inst.es_lider === true;
+                  const rolActual = inst.rol || (inst.es_lider ? 'Instructor Lider' : 'Instructor / Tutor');
                   return (
                     <tr key={idx} className={inst.fecha_fin ? "bg-slate-50 text-slate-400" : "hover:bg-slate-50"}>
-                      <td className="p-3 font-bold text-slate-800 flex items-center gap-1.5">
+                      <td className="p-3 font-bold text-slate-800 whitespace-nowrap">
                         {inst.nombre_del_instructor || inst.nombre}
-                        {isLider && <span className="bg-emerald-100 text-[#39a900] text-[10px] px-1.5 py-0.5 rounded-full font-bold">Líder</span>}
                       </td>
-                      <td className="p-3">{inst.competencia}</td>
+                      
+                      {/* Columna ROL con selector en línea interactivo */}
+                      <td className="p-3 whitespace-nowrap">
+                        {tienePermisosEdicion ? (
+                          <select
+                            value={rolActual}
+                            onChange={(e) => handleRolChange(idx, e.target.value)}
+                            className="border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold bg-white text-slate-800 focus:outline-none focus:border-[#39a900] cursor-pointer shadow-xs"
+                          >
+                            <option value="Instructor / Tutor">Instructor / Tutor</option>
+                            <option value="Instructor Lider">Instructor Líder</option>
+                            <option value="Coordinador Academico">Coordinador Académico</option>
+                          </select>
+                        ) : (
+                          <span className={getRoleBadgeClass(rolActual)}>
+                            {rolActual}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-3 max-w-xs truncate" title={inst.competencia}>{inst.competencia}</td>
                       <td className="p-3">{inst.dia || inst.dia_semana || 'N/A'}</td>
                       <td className="p-3 font-mono">{inst.fecha_inicio || 'Inicial'}</td>
                       <td className="p-3 font-mono">{inst.fecha_fin || 'Activo (Actual)'}</td>
@@ -1630,7 +1714,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
         )}
       </div>
 
-      {canUserEditFicha(user, equipoInstructores) ? (
+      {tienePermisosEdicion ? (
         <div className="border-t border-slate-200 pt-6">
           <h3 className="text-sm font-bold text-slate-800 mb-4">➕ Registrar o Reemplazar Instructor</h3>
           <form onSubmit={handleRegistrarInstructor} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -1657,22 +1741,18 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
               </select>
             </div>
             <div>
+              <label className="block font-bold text-slate-700 mb-1">Rol Institucional</label>
+              <select value={rolNuevo} onChange={e => setRolNuevo(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900] font-bold text-[#39a900]">
+                <option value="Instructor / Tutor">Instructor / Tutor</option>
+                <option value="Instructor Lider">Instructor Líder</option>
+                <option value="Coordinador Academico">Coordinador Académico</option>
+              </select>
+            </div>
+            <div>
               <label className="block font-bold text-slate-700 mb-1">Fecha de inicio / reemplazo</label>
               <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
             </div>
-            <div className="md:col-span-2 flex items-center gap-2 pt-1">
-              <input 
-                type="checkbox" 
-                id="esLiderCheck" 
-                checked={esLiderNuevo} 
-                onChange={e => setEsLiderNuevo(e.target.checked)} 
-                className="w-4 h-4 rounded border-slate-300 text-[#39a900] focus:ring-[#39a900]"
-              />
-              <label htmlFor="esLiderCheck" className="font-bold text-slate-700 cursor-pointer">
-                Asignar rol de <span className="text-[#39a900]">Instructor Líder</span> para esta ficha (permite carga de Sheets y gestión estructural).
-              </label>
-            </div>
-            <div className="md:col-span-2">
+            <div>
               <label className="block font-bold text-slate-700 mb-1">Tu Correo (Autorización)</label>
               <input type="email" value={registradoPor} onChange={e => setRegistradoPor(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
             </div>
