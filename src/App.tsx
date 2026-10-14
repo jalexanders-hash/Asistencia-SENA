@@ -7,7 +7,7 @@ import { auth, db } from "./lib/firebase";
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
-import { getUserSystemRole, canManageFichasAndSheets } from './lib/securityRoles';
+import { getUserSystemRoleGlobal } from './lib/securityRoles';
 import { 
   Users, 
   XCircle,
@@ -40,7 +40,7 @@ const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding
 const ADMIN_EMAIL = "jalexanders@gmail.com";
 
 export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = []): boolean => {
-  const role = getUserSystemRole(user, equipoInstructores);
+  const role = getUserSystemRoleGlobal(user, {});
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER';
 };
 
@@ -283,7 +283,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
-  const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -322,44 +321,39 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Validación de rol global utilizando todas las fichas cargadas
   const currentUserRole = useMemo(() => {
-    return getUserSystemRole(user, courseData.equipo_instructores);
-  }, [user, courseData]);
+    return getUserSystemRoleGlobal(user, fichasDataMap);
+  }, [user, fichasDataMap]);
 
   useEffect(() => {
-    if (user && courseData) {
-      if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
-        setCurrentInstructorIdx(0);
-        setAuthError('');
-        return;
-      }
-      const userEmail = user.email?.toLowerCase().trim();
-      const idx = courseData.equipo_instructores.findIndex(
-        (inst: any) => 
-          inst.correo?.toLowerCase().trim() === userEmail ||
-          inst.correo_google?.toLowerCase().trim() === userEmail ||
-          inst.correo_gmail?.toLowerCase().trim() === userEmail ||
-          inst.correo_institucional_sena?.toLowerCase().trim() === userEmail ||
-          inst.correo_institucional?.toLowerCase().trim() === userEmail
-      );
-      if (idx !== -1) {
-        setCurrentInstructorIdx(idx);
+    if (user && fichasDataMap) {
+      if (currentUserRole !== 'INVITADO') {
         setAuthError('');
       } else {
-        setCurrentInstructorIdx(null);
-        setAuthError('Tu correo no está registrado como instructor o coordinador en esta ficha.');
+        setAuthError('Tu correo no está registrado como instructor o coordinador en ninguna ficha del sistema.');
       }
-    } else {
-      setCurrentInstructorIdx(null);
     }
-  }, [user, courseData, currentUserRole]);
+  }, [user, fichasDataMap, currentUserRole]);
     
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
     
-  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
+  const currentInstructor = useMemo(() => {
+    if (!user || !user.email) return null;
+    const email = user.email.toLowerCase().trim();
+    for (const fichaKey of Object.keys(fichasDataMap)) {
+      const equipo = fichasDataMap[fichaKey].equipo_instructores || [];
+      const inst = equipo.find((i: any) => {
+        const emails = [i.correo_institucional_sena, i.correo_institucional, i.correo_gmail, i.correo, i.correo_google];
+        return emails.some(e => e && e.toLowerCase().trim() === email);
+      });
+      if (inst) return inst;
+    }
+    return courseData.equipo_instructores?.[0] || null;
+  }, [user, fichasDataMap, courseData]);
 
   const currentInstructorDates = useMemo(() => {
     const dates = courseData.fechas_asistencia || [];
@@ -671,7 +665,7 @@ CC: ${correoInstructorActual}`;
     return <Login />;
   }
 
-  if (currentUserRole === 'INVITADO' && currentInstructorIdx === null) {
+  if (currentUserRole === 'INVITADO') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 p-8 text-center space-y-4">
@@ -682,7 +676,7 @@ CC: ${correoInstructorActual}`;
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Acceso Restringido</h1>
-          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor o coordinador en esta ficha.'}</p>
+          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor o coordinador en ninguna ficha del sistema.'}</p>
            
           <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-500 text-left">
             <span className="font-semibold text-slate-700 block mb-1">Correo actual:</span>
@@ -823,7 +817,7 @@ CC: ${correoInstructorActual}`;
               </div>
               <div className="hidden md:block text-left leading-tight">
                 <p className="text-xs font-bold text-slate-800">
-                  {currentUserRole === 'ADMIN' ? "Jorge Alexander (Administrador)" : currentUserRole === 'COORDINADOR' ? "Coordinación Académica" : "Jorge Alexander Sepúlveda"}
+                  {currentUserRole === 'ADMIN' ? "Jorge Alexander (Administrador)" : currentUserRole === 'COORDINADOR' ? "Coordinación Académica" : "Instructor SENA"}
                 </p>
                 <p className="text-[11px] text-slate-500">{user.email}</p>
               </div>
@@ -964,7 +958,6 @@ CC: ${correoInstructorActual}`;
                         const institucionalVal = inst.correo_institucional_sena || inst.correo_institucional || '';
                         const rolActual = inst.rol || (inst.es_lider ? 'Instructor Lider' : 'Instructor / Tutor');
                         
-                        // Estilo dinámico de tarjeta según rol
                         const cardBorder = rolActual === 'Instructor Lider' 
                           ? 'border-emerald-500 ring-1 ring-emerald-500/30' 
                           : rolActual === 'Coordinador Academico' 
@@ -1523,7 +1516,6 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
   const equipoInstructores = courseData.equipo_instructores || [];
   const tienePermisosEdicion = canUserEditFicha(user, equipoInstructores);
 
-  // Handler para actualizar el rol en línea (in-line select)
   const handleRolChange = async (index: number, nuevoRol: string) => {
     if (!tienePermisosEdicion) {
       alert("Acceso denegado: No tienes privilegios para modificar roles en esta ficha.");
@@ -1681,7 +1673,6 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
                         {inst.nombre_del_instructor || inst.nombre}
                       </td>
                       
-                      {/* Columna ROL con selector en línea interactivo */}
                       <td className="p-3 whitespace-nowrap">
                         {tienePermisosEdicion ? (
                           <select
