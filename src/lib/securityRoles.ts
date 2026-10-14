@@ -10,6 +10,7 @@ export interface Instructor {
   correo_institucional?: string;
   correo_gmail?: string;
   correo?: string;
+  correo_google?: string;
   rol?: string; // Ejemplo: 'Instructor Lider', 'Instructor / Tutor', 'Coordinador Academico'
   es_lider?: boolean;
   dia?: string;
@@ -19,58 +20,81 @@ export interface Instructor {
 export type UserRole = 'ADMIN' | 'COORDINADOR' | 'INSTRUCTOR_LIDER' | 'INSTRUCTOR' | 'INVITADO';
 
 /**
- * Determina el rol estructurado del usuario actual basándose en su correo y metadatos de la ficha
+ * Determina el rol estructurado del usuario evaluando de forma global en todas las fichas del complejo
  */
-export const getUserSystemRole = (user: User | null, equipoInstructores: Instructor[] = []): UserRole => {
+export const getUserSystemRoleGlobal = (user: User | null, fichasDataMap: Record<string, any> = {}): UserRole => {
   if (!user || !user.email) return 'INVITADO';
   const email = user.email.toLowerCase().trim();
 
   // 1. Validar Administrador Global
   if (email === ADMIN_EMAIL.toLowerCase()) return 'ADMIN';
   
-  // 2. Validar Coordinador Académico (por patrón en el correo institucional o asignación explícita en rol)
-  if (
-    email.includes('coordinacion') || 
-    email === 'coordinacion.academica@sena.edu.co' ||
-    equipoInstructores.some(inst => {
-      const instEmails = [inst.correo_institucional_sena, inst.correo_institucional, inst.correo_gmail, inst.correo];
-      const matchesEmail = instEmails.some(e => e && e.toLowerCase().trim() === email);
-      return matchesEmail && inst.rol === 'Coordinador Academico';
-    })
-  ) {
+  // 2. Validar Coordinador Académico por correo institucional o patrón
+  if (email.includes('coordinacion') || email === 'coordinacion.academica@sena.edu.co') {
     return 'COORDINADOR';
   }
 
-  // 3. Validar Instructor Líder en la ficha actual
-  const esLider = equipoInstructores.some(inst => {
+  // 3. Buscar de forma global en todas las fichas del diccionario
+  for (const fichaId of Object.keys(fichasDataMap)) {
+    const ficha = fichasDataMap[fichaId];
+    const equipo = ficha.equipo_instructores || [];
+
+    for (const inst of equipo) {
+      const instEmails = [
+        inst.correo_institucional_sena, 
+        inst.correo_institucional, 
+        inst.correo_gmail, 
+        inst.correo,
+        inst.correo_google
+      ];
+      const matchesEmail = instEmails.some(e => e && e.toLowerCase().trim() === email);
+
+      if (matchesEmail) {
+        if (inst.rol === 'Coordinador Academico') return 'COORDINADOR';
+        if (inst.rol === 'Instructor Lider' || inst.es_lider === true) return 'INSTRUCTOR_LIDER';
+        return 'INSTRUCTOR';
+      }
+    }
+  }
+
+  return 'INVITADO';
+};
+
+/**
+ * Función auxiliar compatible con llamadas individuales basadas en un solo equipo de instructores
+ */
+export const getUserSystemRole = (user: User | null, equipoInstructores: Instructor[] = []): UserRole => {
+  if (!user || !user.email) return 'INVITADO';
+  const email = user.email.toLowerCase().trim();
+
+  if (email === ADMIN_EMAIL.toLowerCase()) return 'ADMIN';
+  
+  if (email.includes('coordinacion') || email === 'coordinacion.academica@sena.edu.co') {
+    return 'COORDINADOR';
+  }
+
+  const instEncontrado = equipoInstructores.find(inst => {
     const instEmails = [
       inst.correo_institucional_sena, 
       inst.correo_institucional, 
       inst.correo_gmail, 
-      inst.correo
-    ];
-    const matchesEmail = instEmails.some(e => e && e.toLowerCase().trim() === email);
-    return matchesEmail && (inst.rol === 'Instructor Lider' || inst.es_lider === true);
-  });
-
-  if (esLider) return 'INSTRUCTOR_LIDER';
-
-  // 4. Validar Instructor Regular del equipo ejecutor
-  const esRegular = equipoInstructores.some(inst => {
-    const instEmails = [
-      inst.correo_institucional_sena, 
-      inst.correo_institucional, 
-      inst.correo_gmail, 
-      inst.correo
+      inst.correo,
+      inst.correo_google
     ];
     return instEmails.some(e => e && e.toLowerCase().trim() === email);
   });
 
-  return esRegular ? 'INSTRUCTOR' : 'INVITADO';
+  if (instEncontrado) {
+    if (instEncontrado.rol === 'Coordinador Academico') return 'COORDINADOR';
+    if (instEncontrado.rol === 'Instructor Lider' || instEncontrado.es_lider === true) return 'INSTRUCTOR_LIDER';
+    return 'INSTRUCTOR';
+  }
+
+  return 'INVITADO';
 };
 
 /**
- * Valida si el usuario actual tiene privilegios de gestión (crear fichas, cargar plantillas de Sheets, etc.)
+ * Valida si el usuario actual tiene privilegios de gestión global o en ficha
  */
 export const canManageFichasAndSheets = (user: User | null, equipoInstructores: Instructor[] = []): boolean => {
   const role = getUserSystemRole(user, equipoInstructores);
