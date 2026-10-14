@@ -327,42 +327,56 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Validación de rol global utilizando el mapa completo de fichas (fichasDataMap)
   const currentUserRole = useMemo(() => {
-    return getUserSystemRole(user, courseData.equipo_instructores);
-  }, [user, courseData]);
+    return getUserSystemRole(user, fichasDataMap);
+  }, [user, fichasDataMap]);
 
   useEffect(() => {
-    if (user && courseData) {
+    if (user && fichasDataMap) {
       if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
         setCurrentInstructorIdx(0);
         setAuthError('');
         return;
       }
       const userEmail = user.email?.toLowerCase().trim();
-      const equipo = courseData.equipo_instructores || [];
-      const idx = equipo.findIndex(
-        (inst: any) => {
-          const instEmails = [
-            inst.correo_institucional_sena,
-            inst.correo_institucional,
-            inst.correo_gmail,
-            inst.correo,
-            inst.correo_google
-          ];
-          return instEmails.some(e => e && e.toLowerCase().trim() === userEmail);
+      let encontrado = false;
+
+      // Buscar al instructor en todas las fichas cargadas en el sistema
+      for (const [fichaIdKey, fichaObj] of Object.entries(fichasDataMap)) {
+        const equipo = fichaObj.equipo_instructores || [];
+        const idx = equipo.findIndex(
+          (inst: any) => {
+            const instEmails = [
+              inst.correo_institucional_sena,
+              inst.correo_institucional,
+              inst.correo_gmail,
+              inst.correo_google,
+              inst.correo
+            ];
+            return instEmails.some(e => e && e.toLowerCase().trim() === userEmail);
+          }
+        );
+
+        if (idx !== -1) {
+          encontrado = true;
+          if (currentFichaId !== fichaIdKey) {
+            setCurrentFichaId(fichaIdKey);
+          }
+          setCurrentInstructorIdx(idx);
+          setAuthError('');
+          break;
         }
-      );
-      if (idx !== -1) {
-        setCurrentInstructorIdx(idx);
-        setAuthError('');
-      } else {
+      }
+
+      if (!encontrado) {
         setCurrentInstructorIdx(null);
-        setAuthError('Tu correo no está registrado como instructor o coordinador en esta ficha.');
+        setAuthError('Tu correo no está registrado como instructor o coordinador en ninguna ficha del sistema.');
       }
     } else {
       setCurrentInstructorIdx(null);
     }
-  }, [user, courseData, currentUserRole]);
+  }, [user, fichasDataMap, currentUserRole, currentFichaId]);
     
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
