@@ -290,26 +290,45 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
     updatedData.instructor_titular = updatedData.instructor_titular || "";
     updatedData.competencia_activa = updatedData.competencia_activa || "";
 
-    // 1. Parsear Ficha y Denominación unificada
-    if (fichaSheetName) {
-      const ws = wb.Sheets[fichaSheetName];
+    // 1. Parsear Ficha y Denominación unificada (con soporte robusto para formato tabular o vertical)
+    const parseMetaFromSheet = (sheetNameVal: string) => {
+      const ws = wb.Sheets[sheetNameVal];
+      if (!ws) return;
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      if (rows.length > 0) {
-        const first = rows[0];
-        const fichaDetectada = first.ficha_de_caracterizacion || first.ficha || first.numero_ficha;
+      rows.forEach((row: any) => {
+        // Soporte formato tabular (claves en columnas)
+        const fichaDetectada = row.ficha_de_caracterizacion || row.ficha || row.numero_ficha;
         if (fichaDetectada) updatedData.ficha_de_caracterizacion = String(fichaDetectada).trim();
         
-        const denomDetectada = first.denominacion || first.programa;
+        const denomDetectada = row.denominacion || row.programa;
         if (denomDetectada) {
           updatedData.denominacion = String(denomDetectada).trim();
           updatedData.programa = String(denomDetectada).trim();
         }
 
-        if (first.centro) updatedData.centro = String(first.centro).trim();
-        if (first.instructor_titular) updatedData.instructor_titular = String(first.instructor_titular).trim();
-        if (first.competencia_activa) updatedData.competencia_activa = String(first.competencia_activa).trim();
-      }
-    }
+        if (row.centro) updatedData.centro = String(row.centro).trim();
+        if (row.instructor_titular) updatedData.instructor_titular = String(row.instructor_titular).trim();
+        if (row.competencia_activa) updatedData.competencia_activa = String(row.competencia_activa).trim();
+
+        // Soporte formato vertical clave-valor (ej: Col 0 clave, Col 1 valor)
+        const keys = Object.keys(row);
+        if (keys.length >= 2) {
+          const k = String(row[keys[0]] || '').trim().toLowerCase();
+          const v = String(row[keys[1]] || '').trim();
+          if (k.includes('ficha')) updatedData.ficha_de_caracterizacion = v;
+          if (k.includes('denominacion') || k.includes('programa')) {
+            updatedData.denominacion = v;
+            updatedData.programa = v;
+          }
+          if (k.includes('centro')) updatedData.centro = v;
+          if (k.includes('instructor')) updatedData.instructor_titular = v;
+          if (k.includes('competencia')) updatedData.competencia_activa = v;
+        }
+      });
+    };
+
+    if (fichaSheetName) parseMetaFromSheet(fichaSheetName);
+    if (aprendicesSheetName) parseMetaFromSheet(aprendicesSheetName); // Permite leer metadatos incrustados en la hoja de aprendices si aplica
 
     // 2. Parsear Equipo Ejecutor
     if (equipoSheetName) {
@@ -346,7 +365,8 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
           'tipo_documento', 'numero_documento', 'documento', 
           'nombres', 'nombre', 'apellidos', 'apellido', 
           'correo_electronico', 'correo', 'telefono', 'estado', 
-          'fallas', 'tardanzas', 'm/d/yyyy', 'instructor_titular', 'competencia_activa'
+          'fallas', 'tardanzas', 'm/d/yyyy', 'instructor_titular', 'competencia_activa',
+          'ficha_de_caracterizacion', 'denominacion', 'centro', 'programa'
         ];
         
         const rawDateColumns = Object.keys(sampleRow).filter(key => {
