@@ -39,14 +39,16 @@ const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding
 
 const ADMIN_EMAIL = "jalexanders@gmail.com";
 
+// Permitir edición de asistencia tanto a líderes, coordinadores, administradores como a instructores técnicos
 export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = []): boolean => {
   const role = getUserSystemRole(user, equipoInstructores);
-  return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER';
+  return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
 };
 
+// Permitir gestión de plantillas y vistas colaborativas a todo el equipo ejecutor
 export const canManageFichasAndSheets = (user: User | null, equipoInstructores: any[] = []): boolean => {
   const role = getUserSystemRole(user, equipoInstructores);
-  return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER';
+  return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
 };
 
 // MÓDULO DE AUDITORÍA INMUTABLE
@@ -89,7 +91,6 @@ export const registrarLogAuditoria = async (
   }
 };
 
-// MÓDULO DE COPIAS DE SEGURIDAD (BACKUP & RECOVERY)
 export const generarBackupGlobalFichas = (fichasMap: any, userEmail: string) => {
   try {
     const fechaActual = new Date().toISOString().split('T')[0];
@@ -342,7 +343,7 @@ export default function App() {
       const userEmail = user.email?.toLowerCase().trim();
       let encontrado = false;
 
-      // Buscar al instructor en todas las fichas cargadas en el sistema
+      // Buscar al instructor en todas las fichas cargadas en el sistema (multifiche)
       for (const [fichaIdKey, fichaObj] of Object.entries(fichasDataMap)) {
         const equipo = fichaObj.equipo_instructores || [];
         const idx = equipo.findIndex(
