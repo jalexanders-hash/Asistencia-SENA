@@ -18,6 +18,7 @@ import {
   parseUploadedTemplate,
   ParsedTemplateResult
 } from '../lib/templateGenerator';
+import { getInstructorFromSession } from '../lib/authSession';
 import { replaceFichaCompleteData } from '../lib/firebase';
 import { courseData as initialCourseData } from '../data';
 
@@ -37,12 +38,10 @@ const displayAsDDMMYYYY = (dateStr: string) => {
     let p2 = parts[1].trim();
     let p3 = parts[2].trim();
 
-    // Si viene en formato ISO (YYYY-MM-DD)
     if (p1.length === 4) {
       return `${String(p3).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p1}`;
     }
 
-    // Formato DD/MM/YYYY o MM/DD/YYYY
     if (p3.length === 4) {
       return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
     }
@@ -56,6 +55,7 @@ interface SheetsTemplateModalProps {
   currentFicha: string;
   courseData: typeof initialCourseData;
   onDataLoaded: (newData: typeof initialCourseData, targetFichaId?: string) => void;
+  currentUser?: any; // Prop opcional para recibir el usuario autenticado de Firebase/Google Auth
 }
 
 /**
@@ -80,7 +80,6 @@ function mergeInstructorAttendance(
     asistencias_aprendices: uploadedData.asistencias_aprendices || []
   } : JSON.parse(JSON.stringify(currentCloudData));
 
-  // 1. Obtener y normalizar las fechas que vienen en el archivo subido por el instructor
   const rawFechasDelInstructor = uploadedData.fechas_por_instructor?.[currentInstructorName] 
     || uploadedData.fechas_asistencia 
     || [];
@@ -93,11 +92,9 @@ function mergeInstructorAttendance(
     mergedData.fechas_asistencia = [];
   }
 
-  // 2. Unificar fechas generales de la ficha asegurando que no falte ninguna de las subidas
   const setFechasGenerales = new Set([...mergedData.fechas_asistencia, ...fechasSubidasInstructor]);
   mergedData.fechas_asistencia = Array.from(setFechasGenerales);
 
-  // 3. Gestionar el diccionario de fechas por instructor evitando traslapes destructivos
   if (!mergedData.fechas_por_instructor) {
     mergedData.fechas_por_instructor = {};
   }
@@ -116,7 +113,6 @@ function mergeInstructorAttendance(
     mergedData.asistencias_aprendices = [];
   }
 
-  // 4. Fusionar los registros de cada aprendiz de forma limpia, validando opciones estrictas
   const opcionesValidas = ['Presente', 'X', 'Tarde', 'Excusa'];
 
   if (!isDifferentFicha) {
@@ -169,7 +165,8 @@ export function SheetsTemplateModal({
   onClose,
   currentFicha,
   courseData,
-  onDataLoaded
+  onDataLoaded,
+  currentUser
 }: SheetsTemplateModalProps) {
   const [activeTab, setActiveTab] = useState<'descargar' | 'estructura' | 'cargar'>('descargar');
   const [uploadType, setUploadType] = useState<'configuracion' | 'inasistencias' | null>(null);
@@ -180,6 +177,9 @@ export function SheetsTemplateModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  // Caracterización estricta del instructor usando el helper de sesión normalizado
+  const instructorActual = getInstructorFromSession(currentUser || { email: localStorage.getItem('userEmail') }, courseData);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -212,7 +212,6 @@ export function SheetsTemplateModal({
         }
       }
 
-      console.log(`=== RESULTADO DE PARSEADO EXCEL (${uploadType}) ===`, result);
       setUploadResult(result);
     } catch (err: any) {
       console.error("Error al procesar plantilla Excel:", err);
@@ -245,14 +244,12 @@ export function SheetsTemplateModal({
       excelFichaId = currentFicha;
     }
 
-    console.log(`Ficha de destino (${uploadType}):`, excelFichaId);
-
     setIsSaving(true);
     try {
       let finalDataToSave;
 
       if (uploadType === 'inasistencias') {
-        const currentInstructorName = uploadResult.data.instructor_titular || courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "";
+        const currentInstructorName = uploadResult.data.instructor_titular || instructorActual.nombre_del_instructor || "";
         finalDataToSave = mergeInstructorAttendance(
           courseData,
           uploadResult.data,
@@ -309,7 +306,7 @@ export function SheetsTemplateModal({
                 Formato de Datos Google Sheets & Excel
               </h2>
               <p className="text-emerald-100 text-xs mt-0.5">
-                Plantilla estandarizada con precarga de aprendices y validación institucional
+                Plantilla generada para: <strong className="text-white underline">{instructorActual.nombre_del_instructor}</strong>
               </p>
             </div>
           </div>
@@ -369,10 +366,10 @@ export function SheetsTemplateModal({
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-emerald-950">
-                    Formato oficial compatible con Google Sheets y Microsoft Excel (.xlsx)
+                    Formato oficial personalizado para la sesión activa
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Las plantillas descargadas incluyen automáticamente la denominación unificada del programa y la lista completa de aprendices matriculados en la ficha ({currentFicha}).
+                    La plantilla se descargará con la denominación del programa, el listado completo de aprendices y asignada estrictamente al instructor <strong>{instructorActual.nombre_del_instructor}</strong> (Competencia: {instructorActual.competencia || 'General'}).
                   </p>
                 </div>
               </div>
@@ -393,7 +390,7 @@ export function SheetsTemplateModal({
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadGoogleSheetsTemplate(courseData)}
+                      onClick={() => downloadGoogleSheetsTemplate(courseData, instructorActual)}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
                     >
                       <Download className="w-4 h-4" />
@@ -508,7 +505,7 @@ export function SheetsTemplateModal({
                         Selecciona tu archivo Excel (.xlsx) diligenciado
                       </h3>
                       <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                        Ficha activa actual: <strong>{currentFicha}</strong> | Denominación unificada
+                        Ficha activa actual: <strong>{currentFicha}</strong> | Instructor: <strong>{instructorActual.nombre_del_instructor}</strong>
                       </p>
                     </div>
 
@@ -611,7 +608,7 @@ export function SheetsTemplateModal({
         <div className="px-6 py-3.5 bg-slate-100/80 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            Compatible con Google Sheets y Microsoft Excel
+            Sesión activa: <strong className="text-slate-700">{instructorActual.nombre_del_instructor}</strong>
           </span>
           <button
             onClick={onClose}
