@@ -94,14 +94,14 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
     "estado"
   ];
 
-  const fechasAsistencia = Array.isArray(courseData?.fechas_asistencia) && courseData.fechas_asistencia.length > 0
+  const fechasAsistencia: string[] = Array.isArray(courseData?.fechas_asistencia) && courseData.fechas_asistencia.length > 0
     ? courseData.fechas_asistencia
     : ["20/01/2026", "21/01/2026"];
 
   const fullAprendicesHeaders = [...aprendicesHeaders, ...fechasAsistencia];
   const aprendicesRows: any[][] = [fullAprendicesHeaders];
 
-  const listadoAprendices = Array.isArray(courseData?.asistencias_aprendices) && courseData.asistencias_aprendices.length > 0
+  const listadoAprendices: any[] = Array.isArray(courseData?.asistencias_aprendices) && courseData.asistencias_aprendices.length > 0
     ? courseData.asistencias_aprendices
     : [
         {
@@ -117,7 +117,7 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
       ];
 
   listadoAprendices.forEach((aprendiz: any) => {
-    const row = [
+    const row: any[] = [
       aprendiz.tipo_documento || "CC",
       String(aprendiz.numero_documento || ""),
       aprendiz.nombres || "",
@@ -127,7 +127,7 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
       aprendiz.estado || "En formación"
     ];
 
-    fechasAsistencia.forEach(fecha => {
+    fechasAsistencia.forEach((fecha: string) => {
       const estadoReg = aprendiz.registros?.[fecha] || "Presente";
       row.push(estadoReg);
     });
@@ -138,7 +138,8 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
   XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
 
-  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  const sdata = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  return new Uint8Array(sdata);
 }
 
 /**
@@ -164,7 +165,7 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
     "dia", 
     "rol"
   ];
-  const equipoRows = [equipoHeaders];
+  const equipoRows: any[][] = [equipoHeaders];
   
   if (Array.isArray(courseData?.equipo_instructores) && courseData.equipo_instructores.length > 0) {
     courseData.equipo_instructores.forEach((inst: any) => {
@@ -185,7 +186,7 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
   const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"];
-  const aprendicesRows = [aprendicesHeaders];
+  const aprendicesRows: any[][] = [aprendicesHeaders];
 
   const listadoAprendices = Array.isArray(courseData?.asistencias_aprendices) ? courseData.asistencias_aprendices : [];
   if (listadoAprendices.length > 0) {
@@ -207,7 +208,8 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
   XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
 
-  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  const sdata = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  return new Uint8Array(sdata);
 }
 
 export function downloadGoogleSheetsTemplate(courseData?: typeof initialCourseData) {
@@ -273,7 +275,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       };
     }
 
-    const updatedData = JSON.parse(JSON.stringify(baseData || {}));
+    const updatedData: any = JSON.parse(JSON.stringify(baseData || {}));
 
     updatedData.asistencias_aprendices = [];
     updatedData.fechas_asistencia = [];
@@ -300,7 +302,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
         const denomDetectada = first.denominacion || first.programa;
         if (denomDetectada) {
           updatedData.denominacion = String(denomDetectada).trim();
-          updatedData.programa = String(denomDetectada).trim(); // Sincronización dual
+          updatedData.programa = String(denomDetectada).trim();
         }
 
         if (first.centro) updatedData.centro = String(first.centro).trim();
@@ -315,8 +317,8 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (rows.length > 0) {
         const newInstructors = rows
-          .filter(r => r && (r.nombre_del_instructor || r.nombre || r.instructor) && r.competencia)
-          .map(r => ({
+          .filter((r: any) => r && (r.nombre_del_instructor || r.nombre || r.instructor) && r.competencia)
+          .map((r: any) => ({
             competencia: String(r.competencia).trim(),
             nombre_del_instructor: String(r.nombre_del_instructor || r.nombre || r.instructor).trim(),
             correo_google: String(r.correo_google || r.correo || "").trim(),
@@ -368,13 +370,13 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
         const opcionesValidas = ['Presente', 'X', 'Tarde', 'Excusa'];
 
         const parsedAprendices = rawRows
-          .filter(r => {
+          .filter((r: any) => {
             if (!r) return false;
             const docRow = String(r.numero_documento || r.documento || "").trim();
             const nombresRow = String(r.nombres || r.nombre || "").trim();
             return docRow !== "" || nombresRow !== "";
           })
-          .map(uploadedRow => {
+          .map((uploadedRow: any) => {
             const docNum = String(uploadedRow.numero_documento || uploadedRow.documento || "").trim();
             const registrosActuales: Record<string, string> = {};
 
@@ -396,7 +398,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                     finalVal = 'Presente';
                   }
 
-                  // Validar estrictamente que la opción procesada sea una de las permitidas
                   if (opcionesValidas.includes(finalVal)) {
                     if (finalVal !== 'Presente' || !registrosActuales[normalized]) {
                       registrosActuales[normalized] = finalVal;
@@ -424,4 +425,21 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
     updatedData.asistencias_aprendices = Array.isArray(updatedData.asistencias_aprendices) ? updatedData.asistencias_aprendices : [];
     updatedData.fechas_asistencia = Array.isArray(updatedData.fechas_asistencia) ? updatedData.fechas_asistencia : [];
-    updatedData.
+    updatedData.equipo_instructores = Array.isArray(updatedData.equipo_instructores) ? updatedData.equipo_instructores : [];
+
+    return {
+      success: true,
+      message: `Configuración y asistencias cargadas con éxito para la Ficha ${updatedData.ficha_de_caracterizacion || "SENA"}: ${updatedData.asistencias_aprendices.length} aprendices sincronizados.`,
+      data: updatedData,
+      counts: {
+        aprendices: updatedData.asistencias_aprendices.length
+      }
+    };
+
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `Error al procesar el archivo Excel: ${error.message || error}`
+    };
+  }
+}
