@@ -18,7 +18,6 @@ import {
   parseUploadedTemplate,
   ParsedTemplateResult
 } from '../lib/templateGenerator';
-import { downloadBlankAttendanceTemplate } from '../lib/blankTemplateGenerator';
 import { replaceFichaCompleteData } from '../lib/firebase';
 import { courseData as initialCourseData } from '../data';
 
@@ -117,7 +116,9 @@ function mergeInstructorAttendance(
     mergedData.asistencias_aprendices = [];
   }
 
-  // 4. Fusionar los registros de cada aprendiz de forma limpia y sin perder historial previo
+  // 4. Fusionar los registros de cada aprendiz de forma limpia, validando opciones estrictas
+  const opcionesValidas = ['Presente', 'X', 'Tarde', 'Excusa'];
+
   if (!isDifferentFicha) {
     mergedData.asistencias_aprendices = mergedData.asistencias_aprendices.map((cloudStudent: any) => {
       const uploadedStudent = uploadedData.asistencias_aprendices?.find(
@@ -143,8 +144,9 @@ function mergeInstructorAttendance(
           }
         });
 
-        if (val !== null && val !== undefined && String(val).trim() !== '' && String(val).trim() !== '·' && String(val).trim() !== '-') {
-          normalizedCloudRegistros[fecha] = String(val).trim();
+        const trimmedVal = val !== null && val !== undefined ? String(val).trim() : '';
+        if (opcionesValidas.includes(trimmedVal) && trimmedVal !== 'Presente') {
+          normalizedCloudRegistros[fecha] = trimmedVal;
         } else {
           if (!normalizedCloudRegistros[fecha]) {
             delete normalizedCloudRegistros[fecha];
@@ -191,6 +193,11 @@ export function SheetsTemplateModal({
       const result = await parseUploadedTemplate(file, courseData);
       
       if (result.success && result.data) {
+        // Unificar denominación si viene separada
+        if (result.data.programa && !result.data.denominacion) {
+          result.data.denominacion = result.data.programa;
+        }
+
         if (Array.isArray(result.data.fechas_asistencia)) {
           result.data.fechas_asistencia = result.data.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d));
         }
@@ -303,7 +310,7 @@ export function SheetsTemplateModal({
                 Formato de Datos Google Sheets & Excel
               </h2>
               <p className="text-emerald-100 text-xs mt-0.5">
-                Plantilla estandarizada con todos los campos requeridos para la carga en el aplicativo
+                Plantilla estandarizada con precarga de aprendices y validación institucional
               </p>
             </div>
           </div>
@@ -338,7 +345,7 @@ export function SheetsTemplateModal({
             }`}
           >
             <Table className="w-4 h-4" />
-            Estructura de Campos Requeridos
+            Estructura y Opciones Válidas
           </button>
           <button
             onClick={() => setActiveTab('cargar')}
@@ -366,7 +373,7 @@ export function SheetsTemplateModal({
                     Formato oficial compatible con Google Sheets y Microsoft Excel (.xlsx)
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Este archivo contiene las hojas preconfiguradas con los datos de la ficha actual ({currentFicha}), instructores y el listado de aprendices.
+                    Las plantillas descargadas incluyen automáticamente la denominación del programa y la lista completa de aprendices matriculados en la ficha ({currentFicha}).
                   </p>
                 </div>
               </div>
@@ -382,7 +389,7 @@ export function SheetsTemplateModal({
                       Plantilla para Inasistencias (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga el archivo simplificado (2 pestañas) con el listado actual de aprendices para marcar fallas o tardanzas y volver a cargarlo.
+                      Descarga el formato simplificado con los aprendices precargados para registrar asistencia bajo las opciones permitidas.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -391,7 +398,7 @@ export function SheetsTemplateModal({
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
                     >
                       <Download className="w-4 h-4" />
-                      Descargar Plantilla en Blanco
+                      Descargar Plantilla con Aprendices
                     </button>
                   </div>
                 </div>
@@ -405,7 +412,7 @@ export function SheetsTemplateModal({
                       Formato Completo de Configuración
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga la estructura completa de múltiples hojas (incluyendo Equipo Ejecutor) para la configuración inicial de fichas nuevas.
+                      Descarga la estructura completa de múltiples hojas (incluyendo Equipo Ejecutor y denominación del programa) para nuevas fichas.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -422,14 +429,28 @@ export function SheetsTemplateModal({
             </div>
           )}
 
-          {/* TAB 2: ESTRUCTURA DE CAMPOS */}
+          {/* TAB 2: ESTRUCTURA Y OPCIONES */}
           {activeTab === 'estructura' && (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-3">
-                <h4 className="font-bold text-sm text-slate-800">Guía para la carga independiente</h4>
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
+                <h4 className="font-bold text-sm text-slate-800">Opciones Estrictas de Asistencia Permitidas</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Utiliza <strong>Configuración General</strong> para actualizar la estructura de la ficha y aprendices con el formato completo. Utiliza <strong>Inasistencias</strong> para registrar o actualizar las novedades de asistencia manteniendo intacta la estructura general.
+                  Para mantener la limpieza de los reportes y evitar errores de validación, diligencie las celdas de asistencia utilizando estrictamente una de las siguientes opciones:
                 </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-semibold">
+                  <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 text-center">
+                    Presente
+                  </div>
+                  <div className="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-center">
+                    X (Inasistencia)
+                  </div>
+                  <div className="p-3 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 text-center">
+                    Tarde (Retardo)
+                  </div>
+                  <div className="p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 text-center">
+                    Excusa (Justificada)
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -448,7 +469,7 @@ export function SheetsTemplateModal({
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Ideal para inicializar o actualizar la estructura base de fichas nuevas con múltiples hojas.
+                      Actualiza la estructura base, denominación del programa y aprendices de la ficha.
                     </p>
                   </div>
 
@@ -461,7 +482,7 @@ export function SheetsTemplateModal({
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">Cargar Registro de Inasistencias</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Ideal para actualizar únicamente las fallas y tardanzas marcadas en el formato de asistencia simplificado.
+                      Actualiza únicamente las novedades de asistencia marcadas en el formato simplificado.
                     </p>
                   </div>
                 </div>
@@ -488,7 +509,7 @@ export function SheetsTemplateModal({
                         Selecciona tu archivo Excel (.xlsx) diligenciado
                       </h3>
                       <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                        Ficha activa actual: <strong>{currentFicha}</strong>
+                        Ficha activa actual: <strong>{currentFicha}</strong> | Denominación unificada
                       </p>
                     </div>
 
@@ -552,7 +573,7 @@ export function SheetsTemplateModal({
                   </div>
 
                   {uploadResult.success && uploadResult.counts && (
-                    <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 bg-white p-3.5 rounded-lg border border-emerald-100 text-xs">
+                    <div className="grid grid-cols-2 gap-3 bg-white p-3.5 rounded-lg border border-emerald-100 text-xs">
                       <div>
                         <span className="text-slate-400 block font-medium">Ficha detectada:</span>
                         <span className="font-bold text-slate-800 text-sm">
@@ -591,7 +612,7 @@ export function SheetsTemplateModal({
         <div className="px-6 py-3.5 bg-slate-100/80 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            Compatible con Google Sheets, Microsoft Excel y LibreOffice Calc
+            Compatible con Google Sheets y Microsoft Excel
           </span>
           <button
             onClick={onClose}
