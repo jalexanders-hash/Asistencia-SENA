@@ -193,7 +193,6 @@ export function SheetsTemplateModal({
       const result = await parseUploadedTemplate(file, courseData);
       
       if (result.success && result.data) {
-        // Unificar denominación si viene separada
         if (result.data.programa && !result.data.denominacion) {
           result.data.denominacion = result.data.programa;
         }
@@ -373,7 +372,7 @@ export function SheetsTemplateModal({
                     Formato oficial compatible con Google Sheets y Microsoft Excel (.xlsx)
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Las plantillas descargadas incluyen automáticamente la denominación del programa y la lista completa de aprendices matriculados en la ficha ({currentFicha}).
+                    Las plantillas descargadas incluyen automáticamente la denominación unificada del programa y la lista completa de aprendices matriculados en la ficha ({currentFicha}).
                   </p>
                 </div>
               </div>
@@ -394,7 +393,7 @@ export function SheetsTemplateModal({
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadGoogleSheetsTemplate()}
+                      onClick={() => downloadGoogleSheetsTemplate(courseData)}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
                     >
                       <Download className="w-4 h-4" />
@@ -412,12 +411,12 @@ export function SheetsTemplateModal({
                       Formato Completo de Configuración
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga la estructura completa de múltiples hojas (incluyendo Equipo Ejecutor y denominación del programa) para nuevas fichas.
+                      Descarga la estructura completa de múltiples hojas (incluyendo Equipo Ejecutor y denominación unificada) para nuevas fichas.
                     </p>
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadCompleteConfigurationTemplate()}
+                      onClick={() => downloadCompleteConfigurationTemplate(courseData)}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
                     >
                       <Download className="w-4 h-4" />
