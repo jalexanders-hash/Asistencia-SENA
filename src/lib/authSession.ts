@@ -2,24 +2,40 @@ import { courseData as initialCourseData } from '../data';
 
 /**
  * Caracteriza y obtiene el objeto del instructor activo basado en el correo de Google Auth.
- * Realiza una búsqueda flexible y normalizada en el equipo ejecutor.
+ * Realiza una búsqueda flexible, ampliada y normalizada en el equipo ejecutor (Dual-Email / Multi-Key Check).
  */
 export function getInstructorFromSession(user: any, courseData: typeof initialCourseData) {
   const userEmail = String(user?.email || '').toLowerCase().trim();
   
+  if (!userEmail) {
+    return {
+      nombre_del_instructor: 'Invitado',
+      correo_institucional_sena: '',
+      correo_google: '',
+      competencia: '',
+      rol: 'INVITADO',
+      esAdmin: false,
+      isLoggedIn: false
+    };
+  }
+
   const instructors = courseData?.equipo_instructores || [];
 
-  // Buscar coincidencia exacta o parcial normalizada en los correos del instructor
+  // Búsqueda flexible y normalizada evaluando todas las posibles propiedades de correo
   const matchedInstructor = instructors.find((inst: any) => {
-    const googleMail = String(inst.correo_google || '').toLowerCase().trim();
-    const senaMail = String(inst.correo_institucional_sena || '').toLowerCase().trim();
-    const altMail = String(inst.correo || inst.email || '').toLowerCase().trim();
+    if (!inst) return false;
 
-    return (
-      (googleMail && googleMail === userEmail) ||
-      (senaMail && senaMail === userEmail) ||
-      (altMail && altMail === userEmail)
-    );
+    const emailsToCompare = [
+      inst.correo_google,
+      inst.correo_institucional_sena,
+      inst.correo_institucional,
+      inst.correo,
+      inst.email
+    ]
+      .filter(Boolean)
+      .map((e: string) => String(e).toLowerCase().trim());
+
+    return emailsToCompare.includes(userEmail);
   });
 
   if (matchedInstructor) {
@@ -30,14 +46,14 @@ export function getInstructorFromSession(user: any, courseData: typeof initialCo
     };
   }
 
-  // Si no se encuentra en el equipo de la ficha pero hay un usuario autenticado,
-  // evitamos hacer un fallback destructivo al administrador si el correo no corresponde.
+  // Si no se encuentra explícitamente en el equipo de la ficha actual,
+  // devolvemos la sesión real del usuario autenticado sin forzar datos del Administrador.
   return {
     nombre_del_instructor: user?.displayName || 'Usuario Autorizado',
-    correo_institucional_sena: user?.email || '',
-    correo_google: user?.email || '',
+    correo_institucional_sena: userEmail,
+    correo_google: userEmail,
     competencia: 'Sin competencia asignada',
-    rol: 'Invitado / Instructor',
+    rol: 'Instructor / Invitado',
     esAdmin: false,
     isLoggedIn: true
   };
