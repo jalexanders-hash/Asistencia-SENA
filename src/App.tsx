@@ -843,7 +843,7 @@ CC: ${correoInstructorActual}`;
               )}
             </div>
 
-            {/* PERFIL DINÁMICO DE LA SESIÓN ACTIVA (XIMENA / OTRO INSTRUCTOR) */}
+            {/* PERFIL DINÁMICO DE LA SESIÓN ACTIVA (Mapeo automático por Dual-Email Check) */}
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="w-10 h-10 rounded-full bg-[#39a900] text-white flex items-center justify-center font-bold text-sm shadow-sm border-2 border-emerald-100">
                 {activeInstructor.nombre_del_instructor?.charAt(0) || 'U'}
@@ -853,7 +853,7 @@ CC: ${correoInstructorActual}`;
                   {activeInstructor.nombre_del_instructor}
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  {activeInstructor.correo_institucional_sena || activeInstructor.correo_google || user.email}
+                  {activeInstructor.correo_gmail || activeInstructor.correo_institucional_sena || user.email}
                 </p>
               </div>
             </div>
