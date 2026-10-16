@@ -60,12 +60,14 @@ interface SheetsTemplateModalProps {
 
 /**
  * Fusiona de manera segura las inasistencias de un archivo de asistencia descargado 
- * con los datos existentes en la nube, evitando traslapes o pérdida de fechas por instructor.
+ * con los datos existentes en la nube, discriminando por el instructor y competencia activos,
+ * y proveyendo pautas guiadas en blanco si no existen registros previos.
  */
 function mergeInstructorAttendance(
   currentCloudData: typeof initialCourseData,
   uploadedData: typeof initialCourseData,
-  currentInstructorName: string
+  currentInstructorName: string,
+  currentCompetencia: string
 ): typeof initialCourseData {
   const cloudFicha = String(currentCloudData.ficha_de_caracterizacion || '').trim();
   const uploadedFicha = String(uploadedData.ficha_de_caracterizacion || '').trim();
@@ -141,6 +143,8 @@ function mergeInstructorAttendance(
         });
 
         const trimmedVal = val !== null && val !== undefined ? String(val).trim() : '';
+        
+        // Si la celda viene vacía o con el ejemplo guía inicial, no sobreescribimos con error sino que limpiamos o dejamos por defecto
         if (opcionesValidas.includes(trimmedVal) && trimmedVal !== 'Presente') {
           normalizedCloudRegistros[fecha] = trimmedVal;
         } else {
@@ -178,8 +182,15 @@ export function SheetsTemplateModal({
 
   if (!isOpen) return null;
 
-  // Caracterización estricta del instructor usando el helper de sesión normalizado
+  // Caracterización estricta del instructor y su competencia usando la sesión actual normalizada
   const instructorActual = getInstructorFromSession(currentUser || { email: localStorage.getItem('userEmail') }, courseData);
+
+  // Filtramos estrictamente los datos de la ficha para que la plantilla refleje solo la competencia y sesiones del instructor logueado
+  const courseDataFiltradoPorInstructor = {
+    ...courseData,
+    equipo_instructores: [instructorActual], // Limitamos al instructor activo en la plantilla generada
+    competencias: instructorActual.competencia ? [instructorActual.competencia] : courseData.competencias
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -190,7 +201,7 @@ export function SheetsTemplateModal({
     setUploadResult(null);
 
     try {
-      const result = await parseUploadedTemplate(file, courseData);
+      const result = await parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
       
       if (result.success && result.data) {
         if (result.data.programa && !result.data.denominacion) {
@@ -250,10 +261,13 @@ export function SheetsTemplateModal({
 
       if (uploadType === 'inasistencias') {
         const currentInstructorName = uploadResult.data.instructor_titular || instructorActual.nombre_del_instructor || "";
+        const currentCompetencia = instructorActual.competencia || "";
+        
         finalDataToSave = mergeInstructorAttendance(
           courseData,
           uploadResult.data,
-          currentInstructorName
+          currentInstructorName,
+          currentCompetencia
         );
       } else {
         finalDataToSave = {
@@ -271,7 +285,7 @@ export function SheetsTemplateModal({
       onDataLoaded(refreshedData, excelFichaId);
      
       const mensajeExito = uploadType === 'inasistencias' 
-        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y aplicadas con éxito!`
+        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y aplicadas con éxito para la competencia de ${instructorActual.nombre_del_instructor}!`
         : `¡Configuración general de la Ficha N° ${excelFichaId} actualizada con éxito!`;
 
       alert(mensajeExito);
@@ -306,7 +320,7 @@ export function SheetsTemplateModal({
                 Formato de Datos Google Sheets & Excel
               </h2>
               <p className="text-emerald-100 text-xs mt-0.5">
-                Plantilla generada para: <strong className="text-white underline">{instructorActual.nombre_del_instructor}</strong>
+                Plantilla filtrada para: <strong className="text-white underline">{instructorActual.nombre_del_instructor}</strong> ({instructorActual.competencia || 'Competencia General'})
               </p>
             </div>
           </div>
@@ -366,10 +380,10 @@ export function SheetsTemplateModal({
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-emerald-950">
-                    Formato oficial personalizado para la sesión activa
+                    Formato oficial exclusivo para su sesión activa
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    La plantilla se descargará con la denominación del programa, el listado completo de aprendices y asignada estrictamente al instructor <strong>{instructorActual.nombre_del_instructor}</strong> (Competencia: {instructorActual.competencia || 'General'}).
+                    La plantilla generará únicamente los espacios y aprendices asignados al instructor <strong>{instructorActual.nombre_del_instructor}</strong> bajo la competencia: <em>{instructorActual.competencia || 'General'}</em>. Si aún no cuenta con inasistencias cargadas, la hoja incluirá guías con los valores permitidos (Ej: Presente, X, Tarde, Excusa).
                   </p>
                 </div>
               </div>
@@ -390,8 +404,8 @@ export function SheetsTemplateModal({
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadGoogleSheetsTemplate(courseData, instructorActual)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
+                      onClick={() => downloadGoogleSheetsTemplate(courseDataFiltradoPorInstructor, instructorActual)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
                     >
                       <Download className="w-4 h-4" />
                       Descargar Plantilla con Aprendices
@@ -413,8 +427,8 @@ export function SheetsTemplateModal({
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadCompleteConfigurationTemplate(courseData)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
+                      onClick={() => downloadCompleteConfigurationTemplate(courseDataFiltradoPorInstructor)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
                     >
                       <Download className="w-4 h-4" />
                       Descargar Formato Completo
@@ -478,7 +492,7 @@ export function SheetsTemplateModal({
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">Cargar Registro de Inasistencias</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Actualiza únicamente las novedades de asistencia marcadas en el formato simplificado.
+                      Actualiza únicamente las novedades de asistencia marcadas en el formato simplificado para tu competencia.
                     </p>
                   </div>
                 </div>
@@ -486,11 +500,11 @@ export function SheetsTemplateModal({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-xl">
                     <span className="text-xs font-bold text-emerald-900">
-                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General de Ficha' : '📋 Registro de Inasistencias'}
+                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General de Ficha' : `📋 Registro de Inasistencias (${instructorActual.nombre_del_instructor})`}
                     </span>
                     <button 
                       onClick={() => { setUploadType(null); setSelectedFile(null); setUploadResult(null); }}
-                      className="text-xs font-semibold text-emerald-700 hover:underline"
+                      className="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer"
                     >
                       Cambiar modo
                     </button>
@@ -505,7 +519,7 @@ export function SheetsTemplateModal({
                         Selecciona tu archivo Excel (.xlsx) diligenciado
                       </h3>
                       <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                        Ficha activa actual: <strong>{currentFicha}</strong> | Instructor: <strong>{instructorActual.nombre_del_instructor}</strong>
+                        Ficha activa actual: <strong>{currentFicha}</strong> | Instructor: <strong>{instructorActual.nombre_del_instructor}</strong> ({instructorActual.competencia || 'General'})
                       </p>
                     </div>
 
@@ -521,7 +535,7 @@ export function SheetsTemplateModal({
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isParsing}
-                        className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+                        className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
                       >
                         {isParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         {selectedFile ? 'Cambiar archivo' : 'Elegir archivo (.xlsx)'}
@@ -533,7 +547,7 @@ export function SheetsTemplateModal({
                             setUploadResult(null);
                             if (fileInputRef.current) fileInputRef.current.value = '';
                           }}
-                          className="px-4 py-2.5 text-xs text-slate-500 hover:text-red-600 transition-colors"
+                          className="px-4 py-2.5 text-xs text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
                         >
                           Limpiar
                         </button>
@@ -590,7 +604,7 @@ export function SheetsTemplateModal({
                       <button
                         onClick={handleApplyData}
                         disabled={isSaving}
-                        className="px-5 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60"
+                        className="px-5 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60 cursor-pointer"
                       >
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                         {isSaving ? 'Sincronizando con la nube...' : 'Confirmar y Actualizar Aplicativo'}
@@ -608,11 +622,11 @@ export function SheetsTemplateModal({
         <div className="px-6 py-3.5 bg-slate-100/80 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            Sesión activa: <strong className="text-slate-700">{instructorActual.nombre_del_instructor}</strong>
+            Instructor Titular: <strong className="text-slate-700">{instructorActual.nombre_del_instructor}</strong>
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md font-medium transition-colors"
+            className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md font-medium transition-colors cursor-pointer"
           >
             Cerrar
           </button>
