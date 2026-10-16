@@ -78,6 +78,55 @@ export const canManageFichasAndSheets = (user: User | null, equipoInstructores: 
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
 };
 
+/**
+ * Función robusta de normalización de aprendices con fallbacks múltiples obligatorios.
+ */
+export const normalizarListadoAprendices = (courseData: any, externalStudents?: any[]): any[] => {
+  let rawList: any[] = [];
+
+  if (Array.isArray(courseData?.asistencias_aprendices) && courseData.asistencias_aprendices.length > 0) {
+    rawList = courseData.asistencias_aprendices;
+  } else if (Array.isArray(courseData?.aprendices) && courseData.aprendices.length > 0) {
+    rawList = courseData.aprendices;
+  } else if (Array.isArray(courseData?.alumnos) && courseData.alumnos.length > 0) {
+    rawList = courseData.alumnos;
+  } else if (Array.isArray(courseData?.estudiantes) && courseData.estudiantes.length > 0) {
+    rawList = courseData.estudiantes;
+  } else if (Array.isArray(externalStudents) && externalStudents.length > 0) {
+    rawList = externalStudents;
+  }
+
+  if (!Array.isArray(rawList) || rawList.length === 0) {
+    return [];
+  }
+
+  return rawList
+    .filter((item: any) => item && typeof item === 'object')
+    .map((item: any) => {
+      const doc = String(item.numero_documento || item.documento || item.identificacion || item.cedula || "").trim();
+      const nombres = String(item.nombres || item.nombre || item.first_name || "").trim();
+      const apellidos = String(item.apellidos || item.apellido || item.last_name || "").trim();
+      const tipoDoc = String(item.tipo_documento || item.tipo_doc || "CC").trim().toUpperCase();
+      const correo = String(item.correo_electronico || item.correo || item.email || "").trim().toLowerCase();
+      const telefono = String(item.telefono || item.celular || item.phone || "").trim();
+      const estado = String(item.estado || item.estado_aprendiz || "En Formación").trim();
+      const registros = (item.registros && typeof item.registros === 'object') ? item.registros : {};
+
+      return {
+        ...item,
+        tipo_documento: tipoDoc,
+        numero_documento: doc,
+        nombres: nombres.toUpperCase(),
+        apellidos: apellidos.toUpperCase(),
+        correo: correo,
+        telefono: telefono,
+        estado: estado === 'En formación' ? 'En Formación' : estado,
+        registros
+      };
+    })
+    .filter((a) => a.numero_documento !== "" || a.nombres !== "");
+};
+
 export type TipoAccionAuditoria = 
   | 'REGISTRAR_ASISTENCIA' 
   | 'MODIFICAR_ASISTENCIA' 
@@ -215,42 +264,42 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
     ? ficha.equipo_instructores
     : (base.equipo_instructores || []);
 
-  const aprendicesSeguros = Array.isArray(ficha.asistencias_aprendices) && ficha.asistencias_aprendices.length > 0
-    ? ficha.asistencias_aprendices.map((a: any) => {
-        const registrosNormalizados: Record<string, string> = {};
-        const regs = a.registros || {};
-        Object.keys(regs).forEach(fechaKey => {
-          const nuevaFechaKey = displayAsDDMMYYYY(fechaKey);
-          registrosNormalizados[nuevaFechaKey] = regs[fechaKey];
-        });
-        return { 
-          ...a, 
-          tipo_documento: a.tipo_documento || 'CC',
-          telefono: a.telefono || '',
-          estado: a.estado || 'En Formación',
-          tipo_movimiento: a.tipo_movimiento || 'Ninguno',
-          fecha_ingreso: a.fecha_ingreso || '',
-          fecha_novedad: a.fecha_novedad || '',
-          observacion_novedad: a.observacion_novedad || '',
-          registros: registrosNormalizados 
-        };
-      })
-    : (base.asistencias_aprendices || []);
+  const aprendicesSeguros = normalizarListadoAprendices(ficha).map((a: any) => {
+    const registrosNormalizados: Record<string, string> = {};
+    const regs = a.registros || {};
+    Object.keys(regs).forEach(fechaKey => {
+      const nuevaFechaKey = displayAsDDMMYYYY(fechaKey);
+      registrosNormalizados[nuevaFechaKey] = regs[fechaKey];
+    });
+    return { 
+      ...a, 
+      tipo_documento: a.tipo_documento || 'CC',
+      telefono: a.telefono || '',
+      estado: a.estado || 'En Formación',
+      tipo_movimiento: a.tipo_movimiento || 'Ninguno',
+      fecha_ingreso: a.fecha_ingreso || '',
+      fecha_novedad: a.fecha_novedad || '',
+      observacion_novedad: a.observacion_novedad || '',
+      registros: registrosNormalizados 
+    };
+  });
+
+  const finalAprendices = aprendicesSeguros.length > 0 ? aprendicesSeguros : (base.asistencias_aprendices || []);
 
   return {
     ...base,
     ...ficha,
     ficha_de_caracterizacion: fichaId,
     equipo_instructores: instructoresSeguros,
-    asistencias_aprendices: aprendicesSeguros,
+    asistencias_aprendices: finalAprendices,
     fechas_asistencia: Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d)) : [],
     competencias: Array.isArray(ficha.competencias) ? ficha.competencias : [],
-    aprendices: Array.isArray(ficha.aprendices) ? ficha.aprendices : []
+    aprendices: finalAprendices
   };
 };
 
 export default function App() {
-  const [currentFichaId, setCurrentFichaId] = useState<string>("3387401");
+  const [currentFichaId, setCurrentFichaId] = useState<string>("3235418");
   
   const [fichasDataMap, setFichasDataMap] = useState<Record<string, any>>(() => {
     const saved = localStorage.getItem('sena_all_fichas_database');
@@ -265,7 +314,8 @@ export default function App() {
       } catch (e) {}
     }
     return {
-      "3387401": sanitizeFicha(initialCourseData, "3387401")
+      "3235418": sanitizeFicha(initialCourseData, "3235418"),
+      "3311566": sanitizeFicha(initialCourseData, "3311566")
     };
   });
 
@@ -563,7 +613,9 @@ export default function App() {
     let enRiesgo = 0;
     let enRiesgoTarde = 0;
 
-    const augmented = (courseData.asistencias_aprendices || []).map((student: Aprendiz) => {
+    const listadoBase = normalizarListadoAprendices(courseData);
+
+    const augmented = listadoBase.map((student: Aprendiz) => {
       let fallasAcumuladas = 0;
       let tardanzasAcumuladas = 0;
       let fechasTarde: string[] = [];
@@ -944,7 +996,7 @@ CC: ${correoInstructorActual}`;
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
             <button 
               onClick={handleOpenAttendance}
-              className="flex items-center gap-2 px-3.5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] shadow-sm transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] shadow-sm transition-colors cursor-pointer"
             >
               <ClipboardList className="w-4 h-4" />
               Tomar Asistencia
@@ -952,7 +1004,7 @@ CC: ${correoInstructorActual}`;
             {canManageFichasAndSheets(user, courseData.equipo_instructores) && (
               <button 
                 onClick={() => setIsSheetsModalOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-[#39a900] hover:border-[#39a900]/50 shadow-sm transition-colors"
+                className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-[#39a900] hover:border-[#39a900]/50 shadow-sm transition-colors cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4 text-[#39a900]" />
                 <span className="hidden sm:inline">Google Sheets</span>
@@ -976,37 +1028,37 @@ CC: ${correoInstructorActual}`;
             <div className="flex border-b border-slate-200 gap-8 text-sm font-medium overflow-x-auto">
               <button 
                 onClick={() => setActiveTab('asistencia')}
-                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'asistencia' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'asistencia' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 Listado y Control de Asistencia
               </button>
               <button 
                 onClick={() => setActiveTab('ficha')}
-                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'ficha' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'ficha' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 Datos de la Ficha
               </button>
               <button 
                 onClick={() => setActiveTab('novedades')}
-                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'novedades' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'novedades' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 Gestión de Novedades
               </button>
               <button 
                 onClick={() => setActiveTab('reportes')}
-                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'reportes' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'reportes' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 Reportes
               </button>
               <button 
                 onClick={() => setActiveTab('instructores')}
-                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'instructores' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`pb-3 transition-colors whitespace-nowrap cursor-pointer ${activeTab === 'instructores' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 Gestión de Instructores
               </button>
             </div>
 
-            {/* PESTAÑA: DATOS DE LA FICHA (INFORMACIÓN INSTITUCIONAL Y EQUIPO EJECUTOR, SIN APRENDICES NI COMPETENCIAS) */}
+            {/* PESTAÑA: DATOS DE LA FICHA */}
             {activeTab === 'ficha' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
                 <div className="border-b border-slate-200 pb-5">
@@ -1022,7 +1074,7 @@ CC: ${correoInstructorActual}`;
                       Centro: <strong className="text-slate-900">{courseData.centro || 'Centro Agroindustrial'}</strong>
                     </span>
                     <span className="bg-slate-100 px-3 py-1.5 rounded-lg font-semibold border border-slate-200">
-                      Total Nómina: <strong className="text-slate-900">{(courseData.asistencias_aprendices || []).length} aprendices</strong>
+                      Total Nómina: <strong className="text-slate-900">{activeFilteredStudents.length} aprendices</strong>
                     </span>
                   </div>
                 </div>
@@ -1168,41 +1220,51 @@ CC: ${correoInstructorActual}`;
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {filteredStudents.map((student: any) => (
-                          <tr key={student.numero_documento} className="hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedStudentForProfile(student)}>
-                            <td className="p-3.5 font-bold text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap hover:text-[#39a900]">
-                              {student.apellidos} {student.nombres} 🔍
+                        {filteredStudents.length === 0 ? (
+                          <tr>
+                            <td colSpan={4 + currentInstructorDates.length} className="p-8 text-center text-slate-400 italic">
+                              {stats.totalStudents === 0 
+                                ? `No se encontraron aprendices activos para la ficha N° ${currentFichaId}. Verifique el archivo cargado o seleccione otra ficha.` 
+                                : 'No se encontraron aprendices con los filtros especificados.'}
                             </td>
-                            <td className="p-3.5 text-center font-mono text-slate-500 whitespace-nowrap">{student.numero_documento}</td>
-                            <td className="p-3.5 text-center font-bold">
-                              <span className={`px-2 py-0.5 rounded text-[11px] ${student.fallasAcumuladas >= limiteInasistencias ? 'bg-red-100 text-red-700' : 'text-slate-700'}`}>
-                                {student.fallasAcumuladas}
-                              </span>
-                            </td>
-                            <td className="p-3.5 text-center font-bold">
-                              <span className={`px-2 py-0.5 rounded text-[11px] ${student.tardanzasAcumuladas > 0 ? 'bg-amber-100 text-amber-700' : 'text-slate-700'}`}>
-                                {student.tardanzasAcumuladas}
-                              </span>
-                            </td>
-                            {currentInstructorDates.map((date, idx) => {
-                              const standardizedDate = displayAsDDMMYYYY(date);
-                              const status = student.registros[date] || student.registros[standardizedDate];
-                              return (
-                                <td key={idx} className="p-3.5 text-center whitespace-nowrap">
-                                  {!status ? (
-                                    <span className="text-[#39a900] font-bold">·</span>
-                                  ) : status === 'X' ? (
-                                    <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">X</span>
-                                  ) : status === 'Tarde' ? (
-                                    <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">T</span>
-                                  ) : (
-                                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">E</span>
-                                  )}
-                                </td>
-                              );
-                            })}
                           </tr>
-                        ))}
+                        ) : (
+                          filteredStudents.map((student: any) => (
+                            <tr key={student.numero_documento} className="hover:bg-slate-50/80 cursor-pointer" onClick={() => setSelectedStudentForProfile(student)}>
+                              <td className="p-3.5 font-bold text-slate-800 sticky left-0 bg-white z-10 whitespace-nowrap hover:text-[#39a900]">
+                                {student.apellidos} {student.nombres} 🔍
+                              </td>
+                              <td className="p-3.5 text-center font-mono text-slate-500 whitespace-nowrap">{student.numero_documento}</td>
+                              <td className="p-3.5 text-center font-bold">
+                                <span className={`px-2 py-0.5 rounded text-[11px] ${student.fallasAcumuladas >= limiteInasistencias ? 'bg-red-100 text-red-700' : 'text-slate-700'}`}>
+                                  {student.fallasAcumuladas}
+                                </span>
+                              </td>
+                              <td className="p-3.5 text-center font-bold">
+                                <span className={`px-2 py-0.5 rounded text-[11px] ${student.tardanzasAcumuladas > 0 ? 'bg-amber-100 text-amber-700' : 'text-slate-700'}`}>
+                                  {student.tardanzasAcumuladas}
+                                </span>
+                              </td>
+                              {currentInstructorDates.map((date, idx) => {
+                                const standardizedDate = displayAsDDMMYYYY(date);
+                                const status = student.registros[date] || student.registros[standardizedDate];
+                                return (
+                                  <td key={idx} className="p-3.5 text-center whitespace-nowrap">
+                                    {!status ? (
+                                      <span className="text-[#39a900] font-bold">·</span>
+                                    ) : status === 'X' ? (
+                                      <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">X</span>
+                                    ) : status === 'Tarde' ? (
+                                      <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">T</span>
+                                    ) : (
+                                      <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold">E</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1210,7 +1272,7 @@ CC: ${correoInstructorActual}`;
               </div>
             )}
 
-            {/* PESTAÑA DE GESTIÓN DE NOVEDADES (SIN BLOQUE SUPERIOR DE RESUMEN DE FICHA) */}
+            {/* PESTAÑA DE GESTIÓN DE NOVEDADES */}
             {activeTab === 'novedades' && (
               <GestionNovedadesTab 
                 courseData={courseData}
@@ -1305,7 +1367,7 @@ CC: ${correoInstructorActual}`;
                   <p className="text-xs text-slate-500 font-mono">Documento: {selectedStudentForProfile.numero_documento} | Ficha: {courseData.ficha_de_caracterizacion}</p>
                 </div>
               </div>
-              <button onClick={() => setSelectedStudentForProfile(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setSelectedStudentForProfile(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1362,7 +1424,7 @@ CC: ${correoInstructorActual}`;
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
               <button 
                 onClick={() => setSelectedStudentForProfile(null)}
-                className="px-5 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-900"
+                className="px-5 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-900 cursor-pointer"
               >
                 Cerrar Perfil
               </button>
@@ -1379,7 +1441,7 @@ CC: ${correoInstructorActual}`;
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
                 <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Registro Diario de Asistencia
               </h3>
-              <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowAttendanceModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1405,7 +1467,7 @@ CC: ${correoInstructorActual}`;
                     <select
                       value={tempRecords[student.numero_documento] || 'Presente'}
                       onChange={(e) => setTempRecords({ ...tempRecords, [student.numero_documento]: e.target.value })}
-                      className="border border-slate-300 rounded-lg px-3 py-1 text-xs font-bold bg-slate-50 text-slate-800"
+                      className="border border-slate-300 rounded-lg px-3 py-1 text-xs font-bold bg-slate-50 text-slate-800 cursor-pointer"
                     >
                       <option value="Presente">Presente</option>
                       <option value="X">Falta (X)</option>
@@ -1420,14 +1482,14 @@ CC: ${correoInstructorActual}`;
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
               <button 
                 onClick={() => setShowAttendanceModal(false)}
-                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100"
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100 cursor-pointer"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleSaveAttendance}
                 disabled={isSavingAttendance}
-                className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors disabled:opacity-50"
+                className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {isSavingAttendance && <Loader2 className="w-4 h-4 animate-spin" />}
                 Guardar Asistencia
@@ -1445,7 +1507,7 @@ CC: ${correoInstructorActual}`;
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
                 <img src={LOGO_SENA_SVG} alt="" className="w-5 h-5" /> Plantilla Acuerdo 009 de 2024 SENA
               </h3>
-              <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowNotificationModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1454,19 +1516,19 @@ CC: ${correoInstructorActual}`;
               <div className="flex gap-2">
                 <button
                   onClick={() => setNotificationTemplateType('inasistencia')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'inasistencia' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${notificationTemplateType === 'inasistencia' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
                   Inasistencia
                 </button>
                 <button
                   onClick={() => setNotificationTemplateType('llegadas_tarde')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'llegadas_tarde' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${notificationTemplateType === 'llegadas_tarde' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
                   Llegadas Tarde
                 </button>
                 <button
                   onClick={() => setNotificationTemplateType('citacion')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${notificationTemplateType === 'citacion' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${notificationTemplateType === 'citacion' ? 'bg-[#39a900] text-white' : 'bg-slate-100 text-slate-600'}`}
                 >
                   Citación a Comité
                 </button>
@@ -1483,7 +1545,7 @@ CC: ${correoInstructorActual}`;
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
               <button 
                 onClick={() => setShowNotificationModal(false)}
-                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100"
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-100 cursor-pointer"
               >
                 Cerrar
               </button>
@@ -1493,7 +1555,7 @@ CC: ${correoInstructorActual}`;
                   setCopiedNotification(true);
                   setTimeout(() => setCopiedNotification(false), 2000);
                 }}
-                className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors"
+                className="px-5 py-2 bg-[#39a900] text-white rounded-lg text-sm font-semibold hover:bg-[#329600] flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
               >
                 {copiedNotification ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copiedNotification ? 'Copiado al Portapapeles' : 'Copiar Texto'}
@@ -1526,12 +1588,13 @@ CC: ${correoInstructorActual}`;
         onClose={() => setShowExportModal(false)}
         courseData={courseData}
         students={studentsWithStats}
+        currentUser={user}
       />
     </div>
   );
 }
 
-// COMPONENTE DE LA PESTAÑA: GESTIÓN DE NOVEDADES (SOLO ADMINISTRACIÓN DE ENTRADAS Y SALIDAS, SIN RESUMEN DE FICHA)
+// COMPONENTE DE LA PESTAÑA: GESTIÓN DE NOVEDADES
 interface GestionNovedadesTabProps {
   courseData: any;
   currentFichaId: string;
@@ -1563,6 +1626,8 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const listadoAprendicesSeguro = normalizarListadoAprendices(courseData);
+
   const handleSaveSalida = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudentForSalida) return;
@@ -1571,7 +1636,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
     try {
       const estadoAnterior = selectedStudentForSalida.estado || 'En Formación';
 
-      const updatedAprendices = (courseData.asistencias_aprendices || []).map((a: any) => {
+      const updatedAprendices = listadoAprendicesSeguro.map((a: any) => {
         if (a.numero_documento === selectedStudentForSalida.numero_documento) {
           return {
             ...a,
@@ -1621,7 +1686,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
     setIsSubmitting(true);
 
     try {
-      const existe = (courseData.asistencias_aprendices || []).some((a: any) => a.numero_documento === nuevoDoc.trim());
+      const existe = listadoAprendicesSeguro.some((a: any) => a.numero_documento === nuevoDoc.trim());
       if (existe) {
         alert("Ya existe un aprendiz registrado con este número de documento en la ficha.");
         setIsSubmitting(false);
@@ -1643,7 +1708,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
         registros: {}
       };
 
-      const updatedAprendices = [...(courseData.asistencias_aprendices || []), nuevoAprendizObj];
+      const updatedAprendices = [...listadoAprendicesSeguro, nuevoAprendizObj];
 
       const updatedCourseData = {
         ...courseData,
@@ -1681,7 +1746,6 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* PANEL DE ACCIÓN: BOTÓN PARA INCORPORAR NUEVOS APRENDICES Y GESTIÓN DE SALIDAS */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
           <div>
@@ -1698,7 +1762,6 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
           </button>
         </div>
 
-        {/* TABLA DE APRENDICES */}
         <div className="overflow-x-auto border border-slate-200 rounded-xl">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
@@ -1711,50 +1774,57 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(courseData.asistencias_aprendices || []).map((student: any) => {
-                const est = student.estado || 'En Formación';
-                const mov = student.tipo_movimiento || 'Ninguno';
-                return (
-                  <tr key={student.numero_documento} className="hover:bg-slate-50">
-                    <td className="p-3.5 font-bold text-slate-800">
-                      {student.apellidos} {student.nombres}
-                      {student.correo && <span className="block font-normal text-[10px] text-slate-400">{student.correo}</span>}
-                    </td>
-                    <td className="p-3.5 text-center font-mono text-slate-500">{student.tipo_documento || 'CC'} {student.numero_documento}</td>
-                    <td className="p-3.5 text-center">
-                      <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${est === 'En Formación' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
-                        {est}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-center font-semibold text-slate-600">
-                      {mov}
-                    </td>
-                    <td className="p-3.5 text-center">
-                      {est === 'En Formación' ? (
-                        <button
-                          onClick={() => {
-                            setSelectedStudentForSalida(student);
-                            setEstadoSalida('Retiro Voluntario');
-                            setFechaSalida(new Date().toISOString().split('T')[0]);
-                            setObservacionSalida('');
-                          }}
-                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-lg border border-red-200 transition-colors inline-flex items-center gap-1.5"
-                        >
-                          <LogOut className="w-3.5 h-3.5" /> Registrar Salida
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic">Novedad aplicada</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {listadoAprendicesSeguro.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-slate-400 italic">
+                    No hay aprendices registrados en esta ficha.
+                  </td>
+                </tr>
+              ) : (
+                listadoAprendicesSeguro.map((student: any) => {
+                  const est = student.estado || 'En Formación';
+                  const mov = student.tipo_movimiento || 'Ninguno';
+                  return (
+                    <tr key={student.numero_documento} className="hover:bg-slate-50">
+                      <td className="p-3.5 font-bold text-slate-800">
+                        {student.apellidos} {student.nombres}
+                        {student.correo && <span className="block font-normal text-[10px] text-slate-400">{student.correo}</span>}
+                      </td>
+                      <td className="p-3.5 text-center font-mono text-slate-500">{student.tipo_documento || 'CC'} {student.numero_documento}</td>
+                      <td className="p-3.5 text-center">
+                        <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${est === 'En Formación' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
+                          {est}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-center font-semibold text-slate-600">
+                        {mov}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        {est === 'En Formación' ? (
+                          <button
+                            onClick={() => {
+                              setSelectedStudentForSalida(student);
+                              setEstadoSalida('Retiro Voluntario');
+                              setFechaSalida(new Date().toISOString().split('T')[0]);
+                              setObservacionSalida('');
+                            }}
+                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-lg border border-red-200 transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <LogOut className="w-3.5 h-3.5" /> Registrar Salida
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Novedad aplicada</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* MODAL 1: REGISTRAR NOVEDAD DE SALIDA (PARA APRENDICES EXISTENTES) */}
       {selectedStudentForSalida && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
@@ -1762,7 +1832,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
                 <LogOut className="w-5 h-5 text-red-600" /> Registrar Novedad de Salida
               </h3>
-              <button onClick={() => setSelectedStudentForSalida(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setSelectedStudentForSalida(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1817,14 +1887,14 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                 <button 
                   type="button" 
                   onClick={() => setSelectedStudentForSalida(null)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200"
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                  className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors shadow-sm cursor-pointer"
                 >
                   {isSubmitting ? 'Guardando...' : 'Confirmar Salida'}
                 </button>
@@ -1834,7 +1904,6 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
         </div>
       )}
 
-      {/* MODAL 2: INCORPORAR NUEVO APRENDIZ (ENTRADAS) */}
       {showIncorporarModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -1842,7 +1911,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-[#39a900]" /> Incorporar Nuevo Aprendiz a la Ficha
               </h3>
-              <button onClick={() => setShowIncorporarModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowIncorporarModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1962,14 +2031,14 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                 <button 
                   type="button" 
                   onClick={() => setShowIncorporarModal(false)}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200"
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm"
+                  className="px-5 py-2 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm cursor-pointer"
                 >
                   {isSubmitting ? 'Incorporando...' : 'Guardar e Integrar Aprendiz'}
                 </button>
