@@ -34,7 +34,9 @@ import {
   Award,
   Calendar,
   BookOpen,
-  UserCheck
+  UserCheck,
+  UserPlus,
+  LogOut
 } from 'lucide-react';
 
 const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding=%27utf-8%27?%3e%3c!--%20Generator:%20Adobe%20Illustrator%2026.0.1,%20SVG%20Export%20Plug-In%20.%20SVG%20Version:%206.00%20Build%200)%20--%3e%3csvg%20version=%271.1%27%20id=%27Capa_1%27%20xmlns=%27http://www.w3.org/2000/svg%27%20xmlns:xlink=%27http://www.w3.org/1999/xlink%27%20x=%270px%27%20y=%270px%27%20viewBox=%270%200%201000%201000%27%20style=%27enable-background:new%200%200%201000%201000;%27%20xml:space=%27preserve%27%3e%3cstyle%20type=%27text/css%27%3e%20.st0{fill:%2339a900;}%20%3c/style%3e%3cpath%20id=%27path47-5%27%20class=%27st0%27%20d=%27M504.2,20.5c-58.3,0.1-105.6,47.4-105.5,105.8c0.1,58.3,47.4,105.6,105.7,105.6%20c58.3,0,105.6-47.3,105.6-105.7V126C609.9,67.6,562.6,20.4,504.2,20.5z%20M155.6,264.6c-18.6,0.1-37.5,1.1-55.2,5.6%20c-11.7,3-23,7.8-30.3,15.4c-9.2,9.5-10.4,22.3-5.9,33.3c4,9.7,14.8,16.9,26.8,21.1c25.9,8.9,54.6,10.7,81.8,16.3%20c5,1.2,10.6,2.6,13.7,6c3.2,4.1,1.3,9.7-4,12.2c-8.8,4.5-20.1,4.5-30.4,4.4c-9.4-0.4-19.7-1.2-27.2-5.9c-5.5-3.4-6.5-9.1-5.2-14.1%20l-60.6,0c-0.2,9.2,1.6,18.9,8.4,26.8c5.6,6.8,14.8,11.5,24.6,14.4c15.7,4.6,32.7,6,49.4,6.4c22.7,0.4,45.8-0.3,67.6-5.4%20c13-3.2,25.8-8.3,34.1-16.6c14.8-14.8,11.3-38.3-8.3-49.8c-9.8-5.7-21.5-9.2-33.4-11.5c-17.5-3.6-35.3-6.3-52.9-9.2%20c-6.2-1.2-12.8-2.3-18-5.2c-5.5-2.9-5.9-9.8-0.3-12.9c7.2-4.1,16.8-4,25.4-4c9.1,0.2,19,0.7,26.5,5c4.2,2.3,5.9,6.3,5.9,10.1%20l57.6-0.1c-0.2-7.3-1.6-14.9-6.9-21.2c-6.2-7.8-17.1-12.7-28.3-15.5C192.8,265.6,174.1,264.7,155.6,264.6L155.6,264.6z%20M280.6,268.9%20l0,137.7l168.1,0l0-30H342.3v-26.7h94.9v-29.3h-94.9l0-21.9l102.6,0l-0.1-29.7L280.6,268.9z%20M557.5,269c0,0-51.9,0-77.9,0l0,137.7%20l59,0l0-92.7l80.8,92.6l81,0.1l0-137.7l-59.1,0l0.1,92L557.5,269z%20M805.6,269.2c0,0-63.6,91.9-95.6,137.7l61.9,0l14.9-24.8h95.7%20l13.9,24.9l68.8,0L874,269.2L805.6,269.2z%20M836.6,302.1l29.4,49.9l-60.7,0.1L836.6,302.1z%20M10.6,445.6l0.5,75l280.1-1%20c14.3,3.1,22.6,12.4,19.7,33.5L138.6,854.7l56.1,52.5l266.9-461.6L10.6,445.6z%20M545.2,446.2l262.4,459.6l58-52.1L691.3,552.9%20c-2.9-21.2,5.4-30.6,19.7-33.7l280.2,1l-0.1-73.7L545.2,446.2z%20M500.9,522.3L254.8,944.7l65.4,31.9L484.4,699%20c5.7-4.6,11.4-7.1,17.1-7.3c6-0.2,12.2,2,18.3,6.8l163.8,278.4l67.4-35.2L500.9,522.3z%27/%3e%3cg%20id=%27_x23_000000ff-2%27%20transform=%27matrix(0.31570611,0,0,0.23560774,-391.49698,-10.601126)%27%3e%3c/g%3e%3c/svg%3e`;
@@ -57,10 +59,12 @@ export type TipoMovimiento =
   | 'Ninguno';
 
 export interface Aprendiz {
+  tipo_documento?: string;
   numero_documento: string;
   nombres: string;
   apellidos: string;
   correo?: string;
+  telefono?: string;
   estado?: EstadoAprendiz;
   fecha_ingreso?: string;
   fecha_novedad?: string;
@@ -84,6 +88,8 @@ export type TipoAccionAuditoria =
   | 'MODIFICAR_ASISTENCIA' 
   | 'REEMPLAZAR_INSTRUCTOR' 
   | 'MODIFICAR_FICHA'
+  | 'INCORPORAR_APRENDIZ'
+  | 'REGISTRAR_NOVEDAD_SALIDA'
   | 'ELIMINAR_REGISTRO';
 
 export const registrarLogAuditoria = async (
@@ -200,7 +206,6 @@ const formatDateForData = (dateString: string) => {
   return displayAsDDMMYYYY(cleanStr);
 };
 
-// FUNCIÓN SANITIZE FICHA ESTRICTAMENTE DEFENSIVA PARA PREVENIR PÉRDIDA DE DATOS
 const sanitizeFicha = (ficha: any, fichaId: string) => {
   const base = JSON.parse(JSON.stringify(initialCourseData));
   
@@ -225,6 +230,8 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
         });
         return { 
           ...a, 
+          tipo_documento: a.tipo_documento || 'CC',
+          telefono: a.telefono || '',
           estado: a.estado || 'En Formación',
           tipo_movimiento: a.tipo_movimiento || 'Ninguno',
           fecha_ingreso: a.fecha_ingreso || '',
@@ -971,7 +978,6 @@ CC: ${correoInstructorActual}`;
 
         {mainView === 'listado' && (
           <div className="space-y-6">
-            {/* MENÚ DE PESTAÑAS ACTUALIZADO: SE ELIMINÓ "ALERTAS" Y SE CREÓ "GESTIÓN DE NOVEDADES" */}
             <div className="flex border-b border-slate-200 gap-8 text-sm font-medium overflow-x-auto">
               <button 
                 onClick={() => setActiveTab('asistencia')}
@@ -1216,7 +1222,7 @@ CC: ${correoInstructorActual}`;
               </div>
             )}
 
-            {/* PESTAÑA OFICIAL DE GESTIÓN DE NOVEDADES (REEMPLAZA A ALERTAS) */}
+            {/* PESTAÑA OFICIAL DE GESTIÓN DE NOVEDADES */}
             {activeTab === 'novedades' && (
               <GestionNovedadesTab 
                 courseData={courseData}
@@ -1537,7 +1543,7 @@ CC: ${correoInstructorActual}`;
   );
 }
 
-// COMPONENTE DE LA NUEVA PESTAÑA: GESTIÓN DE NOVEDADES, RETIROS E INCORPORACIONES
+// COMPONENTE DE LA PESTAÑA: GESTIÓN DE NOVEDADES (CON TARJETA RESUMEN DE FICHA, SALIDAS E INCORPORACIÓN DE NUEVOS)
 interface GestionNovedadesTabProps {
   courseData: any;
   currentFichaId: string;
@@ -1551,44 +1557,40 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
   updateCourseData,
   userEmail
 }) => {
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [estado, setEstado] = useState('En Formación');
-  const [tipoMovimiento, setTipoMovimiento] = useState('Ninguno');
-  const [fechaMovimiento, setFechaMovimiento] = useState(new Date().toISOString().split('T')[0]);
-  const [observacion, setObservacion] = useState('');
+  const [selectedStudentForSalida, setSelectedStudentForSalida] = useState<any>(null);
+  const [estadoSalida, setEstadoSalida] = useState<EstadoAprendiz>('Retiro Voluntario');
+  const [fechaSalida, setFechaSalida] = useState(new Date().toISOString().split('T')[0]);
+  const [observacionSalida, setObservacionSalida] = useState('');
+
+  const [showIncorporarModal, setShowIncorporarModal] = useState(false);
+  const [nuevoTipoDoc, setNuevoTipoDoc] = useState('CC');
+  const [nuevoDoc, setNuevoDoc] = useState('');
+  const [nuevoNombres, setNuevoNombres] = useState('');
+  const [nuevoApellidos, setNuevoApellidos] = useState('');
+  const [nuevoCorreo, setNuevoCorreo] = useState('');
+  const [nuevoTelefono, setNuevoTelefono] = useState('');
+  const [nuevoTipoMovimiento, setNuevoTipoMovimiento] = useState<'Ingreso_Nuevo' | 'Reingreso' | 'Traslado_Entrada'>('Ingreso_Nuevo');
+  const [nuevoFechaIngreso, setNuevoFechaIngreso] = useState(new Date().toISOString().split('T')[0]);
+  const [nuevoObservacion, setNuevoObservacion] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleOpenEdit = (student: any) => {
-    setSelectedStudent(student);
-    setEstado(student.estado || 'En Formación');
-    setTipoMovimiento(student.tipo_movimiento || 'Ninguno');
-    setFechaMovimiento(student.fecha_novedad || student.fecha_ingreso || new Date().toISOString().split('T')[0]);
-    setObservacion(student.observacion_novedad || '');
-  };
-
-  const handleSaveNovedad = async (e: React.FormEvent) => {
+  const handleSaveSalida = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStudent) return;
+    if (!selectedStudentForSalida) return;
     setIsSubmitting(true);
 
     try {
-      const estadoAnterior = selectedStudent.estado || 'En Formación';
-      
-      const nuevoEstado = (tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' || tipoMovimiento === 'Ingreso_Nuevo') 
-        ? 'En Formación' 
-        : estado;
+      const estadoAnterior = selectedStudentForSalida.estado || 'En Formación';
 
       const updatedAprendices = (courseData.asistencias_aprendices || []).map((a: any) => {
-        if (a.numero_documento === selectedStudent.numero_documento) {
+        if (a.numero_documento === selectedStudentForSalida.numero_documento) {
           return {
             ...a,
-            estado: nuevoEstado,
-            tipo_movimiento: tipoMovimiento,
-            fecha_novedad: nuevoEstado !== 'En Formación' ? fechaMovimiento : '',
-            fecha_ingreso: (tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' || tipoMovimiento === 'Ingreso_Nuevo') 
-              ? fechaMovimiento 
-              : (a.fecha_ingreso || fechaMovimiento),
-            observacion_novedad: observacion
+            estado: estadoSalida,
+            tipo_movimiento: 'Traslado_Salida',
+            fecha_novedad: fechaSalida,
+            observacion_novedad: observacionSalida
           };
         }
         return a;
@@ -1605,139 +1607,274 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
       await registrarLogAuditoria(
         currentFichaId,
         userEmail,
-        'MODIFICAR_FICHA',
-        `Novedad/Movimiento aplicado a aprendiz ${selectedStudent.nombres} ${selectedStudent.apellidos} (${selectedStudent.numero_documento}). Estado anterior: ${estadoAnterior} -> Nuevo estado: ${nuevoEstado} (${tipoMovimiento}).`,
+        'REGISTRAR_NOVEDAD_SALIDA',
+        `Novedad de salida (${estadoSalida}) aplicada al aprendiz ${selectedStudentForSalida.nombres} ${selectedStudentForSalida.apellidos} (${selectedStudentForSalida.numero_documento}).`,
         { estado: estadoAnterior },
-        { estado: nuevoEstado, tipo_movimiento: tipoMovimiento, fecha: fechaMovimiento }
+        { estado: estadoSalida, fecha: fechaSalida, observacion: observacionSalida }
       );
 
-      alert("Novedad o incorporación registrada y auditada exitosamente.");
-      setSelectedStudent(null);
+      alert("Novedad de salida registrada y auditada exitosamente.");
+      setSelectedStudentForSalida(null);
     } catch (error) {
-      console.error("Error al guardar novedad:", error);
+      console.error("Error al registrar novedad de salida:", error);
       alert("Guardado localmente (Error de sincronización con Firestore).");
-      setSelectedStudent(null);
+      setSelectedStudentForSalida(null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveIncorporacion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevoDoc || !nuevoNombres || !nuevoApellidos) {
+      alert("Por favor complete los campos obligatorios del nuevo aprendiz.");
+      return;
+    }
+    setIsSubmitting(true);
+
+    try {
+      const existe = (courseData.asistencias_aprendices || []).some((a: any) => a.numero_documento === nuevoDoc.trim());
+      if (existe) {
+        alert("Ya existe un aprendiz registrado con este número de documento en la ficha.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const nuevoAprendizObj = {
+        tipo_documento: nuevoTipoDoc,
+        numero_documento: nuevoDoc.trim(),
+        nombres: nuevoNombres.trim(),
+        apellidos: nuevoApellidos.trim(),
+        correo: nuevoCorreo.trim(),
+        telefono: nuevoTelefono.trim(),
+        estado: 'En Formación' as EstadoAprendiz,
+        tipo_movimiento: nuevoTipoMovimiento,
+        fecha_ingreso: nuevoFechaIngreso,
+        fecha_novedad: '',
+        observacion_novedad: nuevoObservacion.trim(),
+        registros: {}
+      };
+
+      const updatedAprendices = [...(courseData.asistencias_aprendices || []), nuevoAprendizObj];
+
+      const updatedCourseData = {
+        ...courseData,
+        asistencias_aprendices: updatedAprendices
+      };
+
+      updateCourseData(updatedCourseData);
+      await updateFichaCompleteData(updatedCourseData, currentFichaId);
+
+      await registrarLogAuditoria(
+        currentFichaId,
+        userEmail,
+        'INCORPORAR_APRENDIZ',
+        `Incorporación de nuevo aprendiz ${nuevoNombres} ${nuevoApellidos} (${nuevoDoc}) por ${nuevoTipoMovimiento}.`,
+        null,
+        nuevoAprendizObj
+      );
+
+      alert("Nuevo aprendiz incorporado e integrado exitosamente a la ficha.");
+      setShowIncorporarModal(false);
+      
+      setNuevoDoc('');
+      setNuevoNombres('');
+      setNuevoApellidos('');
+      setNuevoCorreo('');
+      setNuevoTelefono('');
+      setNuevoObservacion('');
+    } catch (error) {
+      console.error("Error al incorporar aprendiz:", error);
+      alert("Error al guardar la incorporación en la base de datos.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-      <div className="border-b border-slate-200 pb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">📋 Panel Central de Gestión de Novedades y Movimientos</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Administre las salidas por retiros/aplazamientos y las entradas por reingresos o traslados para la Ficha {currentFichaId}.
-          </p>
+    <div className="space-y-6">
+      {/* TARJETA RESUMEN DE LA FICHA (VISTA PROFESIONAL Y LIMPIA) */}
+      <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-[#39a900] flex items-center justify-center font-bold text-lg shadow-inner">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-[#39a900] uppercase tracking-wider">Ficha de Caracterización N° {courseData.ficha_de_caracterizacion}</span>
+              <h2 className="text-xl font-bold text-slate-900">{courseData.denominacion || 'Programa de Formación'}</h2>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-semibold border border-slate-200">
+              Centro: <strong>{courseData.centro || 'Centro Agroindustrial'}</strong>
+            </span>
+            <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-semibold border border-slate-200">
+              Total Nómina: <strong>{(courseData.asistencias_aprendices || []).length}</strong>
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+          {/* Equipo Ejecutor de Instructores */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#39a900]" /> Equipo Ejecutor de Instructores
+            </h3>
+            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+              {(courseData.equipo_instructores || []).map((inst: any, idx: number) => {
+                const rol = inst.rol || (inst.es_lider ? 'Instructor Lider' : 'Instructor / Tutor');
+                return (
+                  <div key={idx} className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex justify-between items-center text-xs">
+                    <div>
+                      <p className="font-bold text-slate-800">{inst.nombre_del_instructor || inst.nombre}</p>
+                      <p className="text-[10px] text-slate-500">{inst.competencia}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${rol === 'Instructor Lider' ? 'bg-emerald-100 text-[#39a900]' : 'bg-slate-200 text-slate-700'}`}>
+                      {rol}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Competencias Asignadas */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+              <Award className="w-4 h-4 text-[#39a900]" /> Competencias Asignadas al Programa
+            </h3>
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {(courseData.competencias || []).length > 0 ? (
+                courseData.competencias.map((comp: string, idx: number) => (
+                  <div key={idx} className="p-2 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-700 flex items-start gap-2">
+                    <span className="font-bold text-[#39a900]">•</span>
+                    <span className="leading-tight">{comp}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-400 italic p-3">No hay competencias registradas explícitamente.</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto border border-slate-200 rounded-xl">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b">
-              <th className="p-3.5">Aprendiz</th>
-              <th className="p-3.5 text-center">Documento</th>
-              <th className="p-3.5 text-center">Estado Actual</th>
-              <th className="p-3.5 text-center">Último Movimiento</th>
-              <th className="p-3.5 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {(courseData.asistencias_aprendices || []).map((student: any) => {
-              const est = student.estado || 'En Formación';
-              const mov = student.tipo_movimiento || 'Ninguno';
-              return (
-                <tr key={student.numero_documento} className="hover:bg-slate-50">
-                  <td className="p-3.5 font-bold text-slate-800">{student.apellidos} {student.nombres}</td>
-                  <td className="p-3.5 text-center font-mono text-slate-500">{student.numero_documento}</td>
-                  <td className="p-3.5 text-center">
-                    <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${est === 'En Formación' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
-                      {est}
-                    </span>
-                  </td>
-                  <td className="p-3.5 text-center font-semibold text-slate-600">
-                    {mov}
-                  </td>
-                  <td className="p-3.5 text-center">
-                    <button
-                      onClick={() => handleOpenEdit(student)}
-                      className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#39a900] font-bold rounded-lg border border-[#39a900]/30 transition-colors inline-flex items-center gap-1.5"
-                    >
-                      ✏️ Procesar Novedad
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* PANEL DE ACCIÓN: BOTÓN PARA INCORPORAR NUEVOS APRENDICES */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">📋 Administración de Novedades e Incorporaciones</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Gestione las novedades de salida para aprendices existentes o incorpore nuevos aprendices a la ficha.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowIncorporarModal(true)}
+            className="px-4 py-2.5 bg-[#39a900] hover:bg-[#329600] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+          >
+            <UserPlus className="w-4 h-4" /> ➕ Incorporar Nuevo Aprendiz
+          </button>
+        </div>
+
+        {/* TABLA DE APRENDICES */}
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b">
+                <th className="p-3.5">Aprendiz</th>
+                <th className="p-3.5 text-center">Documento</th>
+                <th className="p-3.5 text-center">Estado Actual</th>
+                <th className="p-3.5 text-center">Movimiento / Novedad</th>
+                <th className="p-3.5 text-center">Acción (Solo Salidas)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {(courseData.asistencias_aprendices || []).map((student: any) => {
+                const est = student.estado || 'En Formación';
+                const mov = student.tipo_movimiento || 'Ninguno';
+                return (
+                  <tr key={student.numero_documento} className="hover:bg-slate-50">
+                    <td className="p-3.5 font-bold text-slate-800">
+                      {student.apellidos} {student.nombres}
+                      {student.correo && <span className="block font-normal text-[10px] text-slate-400">{student.correo}</span>}
+                    </td>
+                    <td className="p-3.5 text-center font-mono text-slate-500">{student.tipo_documento || 'CC'} {student.numero_documento}</td>
+                    <td className="p-3.5 text-center">
+                      <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${est === 'En Formación' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
+                        {est}
+                      </span>
+                    </td>
+                    <td className="p-3.5 text-center font-semibold text-slate-600">
+                      {mov}
+                    </td>
+                    <td className="p-3.5 text-center">
+                      {est === 'En Formación' ? (
+                        <button
+                          onClick={() => {
+                            setSelectedStudentForSalida(student);
+                            setEstadoSalida('Retiro Voluntario');
+                            setFechaSalida(new Date().toISOString().split('T')[0]);
+                            setObservacionSalida('');
+                          }}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-lg border border-red-200 transition-colors inline-flex items-center gap-1.5"
+                        >
+                          <LogOut className="w-3.5 h-3.5" /> Registrar Salida
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Novedad aplicada</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* MODAL INTERNO DE EDICIÓN DE NOVEDAD */}
-      {selectedStudent && (
+      {/* MODAL 1: REGISTRAR NOVEDAD DE SALIDA (PARA APRENDICES EXISTENTES) */}
+      {selectedStudentForSalida && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
-            
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
               <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-                Actualizar Ciclo de Vida del Aprendiz
+                <LogOut className="w-5 h-5 text-red-600" /> Registrar Novedad de Salida
               </h3>
-              <button onClick={() => setSelectedStudent(null)} className="text-slate-400 hover:text-slate-600">
-                ✕
+              <button onClick={() => setSelectedStudentForSalida(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveNovedad} className="p-6 space-y-4 text-xs">
-              <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
-                <span className="font-bold text-emerald-900 block text-sm">
-                  {selectedStudent.apellidos} {selectedStudent.nombres}
+            <form onSubmit={handleSaveSalida} className="p-6 space-y-4 text-xs">
+              <div className="bg-red-50 p-3 rounded-xl border border-red-100">
+                <span className="font-bold text-red-900 block text-sm">
+                  {selectedStudentForSalida.apellidos} {selectedStudentForSalida.nombres}
                 </span>
-                <span className="text-emerald-700 font-mono">Documento: {selectedStudent.numero_documento}</span>
+                <span className="text-red-700 font-mono">Documento: {selectedStudentForSalida.numero_documento}</span>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Tipo de Movimiento (Entrada / Salida)</label>
+                <label className="block font-bold text-slate-700 mb-1">Tipo de Novedad de Salida</label>
                 <select 
-                  value={tipoMovimiento} 
-                  onChange={(e) => setTipoMovimiento(e.target.value)}
+                  value={estadoSalida} 
+                  onChange={(e) => setEstadoSalida(e.target.value as EstadoAprendiz)}
                   className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900]"
                 >
-                  <option value="Ninguno">Ninguno / Sin cambio reciente</option>
-                  <option value="Reingreso">🟢 Reingreso (Incorporar post-aplazamiento)</option>
-                  <option value="Traslado_Entrada">🟢 Traslado de Entrada (Desde otra ficha/centro)</option>
-                  <option value="Ingreso_Nuevo">🟢 Ingreso Nuevo</option>
-                  <option value="Traslado_Salida">🔴 Traslado de Salida (Hacia otra ficha/centro)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Estado de Formación Resultante</label>
-                <select 
-                  value={estado} 
-                  onChange={(e) => setEstado(e.target.value)}
-                  disabled={tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' || tipoMovimiento === 'Ingreso_Nuevo'}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900] disabled:bg-slate-100 disabled:text-slate-500"
-                >
-                  <option value="En Formación">En Formación (Activo)</option>
                   <option value="Retiro Voluntario">Retiro Voluntario</option>
                   <option value="Cancelado">Cancelación de Matrícula</option>
                   <option value="Aplazado">Aplazamiento</option>
-                  <option value="Trasladado">Trasladado</option>
+                  <option value="Trasladado">Traslado de Salida</option>
                   <option value="Desercion">Deserción</option>
                 </select>
-                {(tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' || tipoMovimiento === 'Ingreso_Nuevo') && (
-                  <p className="text-[10px] text-emerald-700 mt-1 font-semibold">ℹ️ Al registrar una entrada, el estado se fija automáticamente en "En Formación".</p>
-                )}
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Fecha del Movimiento / Novedad</label>
+                <label className="block font-bold text-slate-700 mb-1">Fecha de la Novedad</label>
                 <input 
                   type="date" 
-                  value={fechaMovimiento} 
-                  onChange={(e) => setFechaMovimiento(e.target.value)}
+                  value={fechaSalida} 
+                  onChange={(e) => setFechaSalida(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono"
                   required 
                 />
@@ -1747,17 +1884,163 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                 <label className="block font-bold text-slate-700 mb-1">Observación / Soporte Legal (Memorando / Radicado)</label>
                 <textarea 
                   rows={3}
-                  value={observacion}
-                  onChange={(e) => setObservacion(e.target.value)}
+                  value={observacionSalida}
+                  onChange={(e) => setObservacionSalida(e.target.value)}
                   placeholder="Detalle el motivo o número de radicado..."
                   className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 focus:outline-none focus:border-[#39a900]"
+                  required
                 />
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
                 <button 
                   type="button" 
-                  onClick={() => setSelectedStudent(null)}
+                  onClick={() => setSelectedStudentForSalida(null)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                >
+                  {isSubmitting ? 'Guardando...' : 'Confirmar Salida'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: INCORPORAR NUEVO APRENDIZ (ENTRADAS) */}
+      {showIncorporarModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-[#39a900]" /> Incorporar Nuevo Aprendiz a la Ficha
+              </h3>
+              <button onClick={() => setShowIncorporarModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveIncorporacion} className="p-6 space-y-4 text-xs overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Tipo Documento</label>
+                  <select 
+                    value={nuevoTipoDoc} 
+                    onChange={(e) => setNuevoTipoDoc(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold"
+                  >
+                    <option value="CC">CC - Cédula</option>
+                    <option value="TI">TI - Tarjeta Identidad</option>
+                    <option value="CE">CE - Cédula Extranjería</option>
+                    <option value="PP">PP - Pasaporte</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">Número de Documento *</label>
+                  <input 
+                    type="text" 
+                    value={nuevoDoc} 
+                    onChange={(e) => setNuevoDoc(e.target.value)}
+                    placeholder="Ej. 1020304050"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono font-semibold"
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Nombres *</label>
+                  <input 
+                    type="text" 
+                    value={nuevoNombres} 
+                    onChange={(e) => setNuevoNombres(e.target.value)}
+                    placeholder="Nombres completos"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold"
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Apellidos *</label>
+                  <input 
+                    type="text" 
+                    value={nuevoApellidos} 
+                    onChange={(e) => setNuevoApellidos(e.target.value)}
+                    placeholder="Apellidos completos"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold"
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Correo Electrónico</label>
+                  <input 
+                    type="email" 
+                    value={nuevoCorreo} 
+                    onChange={(e) => setNuevoCorreo(e.target.value)}
+                    placeholder="correo@sena.edu.co"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Teléfono / Celular</label>
+                  <input 
+                    type="text" 
+                    value={nuevoTelefono} 
+                    onChange={(e) => setNuevoTelefono(e.target.value)}
+                    placeholder="3001234567"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Tipo de Incorporación (Entrada)</label>
+                <select 
+                  value={nuevoTipoMovimiento} 
+                  onChange={(e) => setNuevoTipoMovimiento(e.target.value as any)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-bold text-[#39a900]"
+                >
+                  <option value="Ingreso_Nuevo">🟢 Ingreso Nuevo</option>
+                  <option value="Reingreso">🟢 Reingreso (Post-aplazamiento)</option>
+                  <option value="Traslado_Entrada">🟢 Traslado de Entrada (Desde otra ficha/centro)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Fecha de Ingreso</label>
+                <input 
+                  type="date" 
+                  value={nuevoFechaIngreso} 
+                  onChange={(e) => setNuevoFechaIngreso(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono"
+                  required 
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Motivo / Soporte Legal (Radicado o Memorando)</label>
+                <textarea 
+                  rows={2}
+                  value={nuevoObservacion}
+                  onChange={(e) => setNuevoObservacion(e.target.value)}
+                  placeholder="Detalle el soporte de ingreso..."
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setShowIncorporarModal(false)}
                   className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200"
                 >
                   Cancelar
@@ -1767,11 +2050,10 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                   disabled={isSubmitting}
                   className="px-5 py-2 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm"
                 >
-                  {isSubmitting ? 'Guardando...' : 'Aplicar Novedad'}
+                  {isSubmitting ? 'Incorporando...' : 'Guardar e Integrar Aprendiz'}
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}
@@ -1965,7 +2247,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
                           >
                             <option value="Instructor / Tutor">Instructor / Tutor</option>
                             <option value="Instructor Lider">Instructor Líder</option>
-                            <option value="Coordinador Academico">Coordinador Académico</option>
+                            <option value="Coordinador Academico">Coordinador Acadêmico</option>
                           </select>
                         ) : (
                           <span className={getRoleBadgeClass(rolActual)}>
