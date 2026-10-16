@@ -200,26 +200,22 @@ const formatDateForData = (dateString: string) => {
   return displayAsDDMMYYYY(cleanStr);
 };
 
+// FUNCIÓN SANITIZE FICHA ESTRICTAMENTE DEFENSIVA PARA PREVENIR PÉRDIDA DE DATOS
 const sanitizeFicha = (ficha: any, fichaId: string) => {
   const base = JSON.parse(JSON.stringify(initialCourseData));
   
   if (!ficha || typeof ficha !== 'object') {
     return { 
       ...base, 
-      ficha_de_caracterizacion: fichaId,
-      equipo_instructores: [], 
-      fechas_asistencia: [],
-      asistencias_aprendices: (base.asistencias_aprendices || []).map((a: any) => ({
-        ...a,
-        estado: 'En Formación',
-        tipo_movimiento: 'Ninguno',
-        registros: {}
-      })),
-      programa: "Tecnología en Gestión Administrativa",
+      ficha_de_caracterizacion: fichaId
     };
   }
 
-  const cleanedAprendices = Array.isArray(ficha.asistencias_aprendices) 
+  const instructoresSeguros = Array.isArray(ficha.equipo_instructores) && ficha.equipo_instructores.length > 0
+    ? ficha.equipo_instructores
+    : (base.equipo_instructores || []);
+
+  const aprendicesSeguros = Array.isArray(ficha.asistencias_aprendices) && ficha.asistencias_aprendices.length > 0
     ? ficha.asistencias_aprendices.map((a: any) => {
         const registrosNormalizados: Record<string, string> = {};
         const regs = a.registros || {};
@@ -237,20 +233,15 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
           registros: registrosNormalizados 
         };
       })
-    : (base.asistencias_aprendices || []).map((a: any) => ({ 
-        ...a, 
-        estado: 'En Formación',
-        tipo_movimiento: 'Ninguno',
-        registros: {} 
-      }));
+    : (base.asistencias_aprendices || []);
 
   return {
     ...base,
     ...ficha,
     ficha_de_caracterizacion: fichaId,
-    equipo_instructores: Array.isArray(ficha.equipo_instructores) ? ficha.equipo_instructores : [],
+    equipo_instructores: instructoresSeguros,
+    asistencias_aprendices: aprendicesSeguros,
     fechas_asistencia: Array.isArray(ficha.fechas_asistencia) ? ficha.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d)) : [],
-    asistencias_aprendices: cleanedAprendices,
     competencias: Array.isArray(ficha.competencias) ? ficha.competencias : [],
     aprendices: Array.isArray(ficha.aprendices) ? ficha.aprendices : []
   };
@@ -334,7 +325,7 @@ export default function App() {
   const [authError, setAuthError] = useState('');
 
   const [mainView, setMainView] = useState<'listado' | 'tablero'>('listado');
-  const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'alertas' | 'reportes' | 'instructores'>('asistencia');
+  const [activeTab, setActiveTab] = useState<'ficha' | 'asistencia' | 'novedades' | 'reportes' | 'instructores'>('asistencia');
   const [limiteInasistencias, setLimiteInasistencias] = useState<number>(1);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -342,7 +333,6 @@ export default function App() {
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
   const [selectedStudentForProfile, setSelectedStudentForProfile] = useState<any>(null);
-  const [selectedStudentForNovedad, setSelectedStudentForNovedad] = useState<any>(null);
 
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedStudentForNotification, setSelectedStudentForNotification] = useState<any>(null);
@@ -489,7 +479,6 @@ export default function App() {
     const formattedDate = formatDateForData(attendanceDate);
     const existingRecords: Record<string, string> = {};
      
-    // Tomar asistencia únicamente a los aprendices activos 'En Formación'
     activeFilteredStudents.forEach((student: any) => {
       const status = student.registros[formattedDate];
       existingRecords[student.numero_documento] = status || 'Presente';
@@ -517,7 +506,7 @@ export default function App() {
      
     const newAprendices = courseData.asistencias_aprendices.map((student: any) => {
       if (student.estado && student.estado !== 'En Formación') {
-        return student; // Mantener intacto si no está activo
+        return student; 
       }
       const status = tempRecords[student.numero_documento];
       if (status === undefined) return student;
@@ -563,7 +552,6 @@ export default function App() {
     }
   };
 
-  // Lógica analítica avanzada con manejo de Altas, Bajas, Reingresos y Traslados
   const { stats, studentsWithStats, activeFilteredStudents } = useMemo(() => {
     let present = 0;
     let absent = 0;
@@ -586,7 +574,6 @@ export default function App() {
         const standardizedDate = displayAsDDMMYYYY(date);
         const sessionDateObj = parseDateForSorting(standardizedDate);
 
-        // Excluir sesiones fuera del rango activo del aprendiz (reingresos o traslados)
         if (sessionDateObj < fechaIngresoObj || sessionDateObj > fechaNovedadObj) {
           return; 
         }
@@ -658,7 +645,7 @@ export default function App() {
   }, [courseData, currentInstructorDates, limiteInasistencias]);
 
   const filteredStudents = useMemo(() => {
-    let filtered = activeFilteredStudents; // Por defecto mostramos solo los activos en el listado diario
+    let filtered = activeFilteredStudents; 
      
     if (selectedStudentDoc) {
       return filtered.filter(s => s.numero_documento === selectedStudentDoc);
@@ -857,12 +844,12 @@ CC: ${correoInstructorActual}`;
                 <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 py-3 z-50">
                   <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">Centro de Notificaciones</span>
-                    <span className="text-[11px] text-[#39a900] font-semibold cursor-pointer hover:underline" onClick={() => { setMainView('listado'); setActiveTab('alertas'); setShowNotificationsDropdown(false); }}>Configurar alertas</span>
+                    <span className="text-[11px] text-[#39a900] font-semibold">Acuerdo 009 de 2024</span>
                   </div>
 
                   <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-700">Notificar a partir de:</span>
+                      <span className="text-xs font-medium text-slate-700">Umbral de Inasistencia:</span>
                       <div className="flex items-center gap-1">
                         <input 
                           type="number" 
@@ -908,7 +895,6 @@ CC: ${correoInstructorActual}`;
               )}
             </div>
 
-            {/* PERFIL DINÁMICO DE LA SESIÓN ACTIVA */}
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="w-10 h-10 rounded-full bg-[#39a900] text-white flex items-center justify-center font-bold text-sm shadow-sm border-2 border-emerald-100">
                 {activeInstructor.nombre_del_instructor?.charAt(0) || 'U'}
@@ -985,6 +971,7 @@ CC: ${correoInstructorActual}`;
 
         {mainView === 'listado' && (
           <div className="space-y-6">
+            {/* MENÚ DE PESTAÑAS ACTUALIZADO: SE ELIMINÓ "ALERTAS" Y SE CREÓ "GESTIÓN DE NOVEDADES" */}
             <div className="flex border-b border-slate-200 gap-8 text-sm font-medium overflow-x-auto">
               <button 
                 onClick={() => setActiveTab('asistencia')}
@@ -999,10 +986,10 @@ CC: ${correoInstructorActual}`;
                 Datos de la Ficha
               </button>
               <button 
-                onClick={() => setActiveTab('alertas')}
-                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'alertas' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setActiveTab('novedades')}
+                className={`pb-3 transition-colors whitespace-nowrap ${activeTab === 'novedades' ? 'text-[#39a900] border-b-2 border-[#39a900] font-semibold' : 'text-slate-500 hover:text-slate-800'}`}
               >
-                Configuración de Alertas
+                Gestión de Novedades
               </button>
               <button 
                 onClick={() => setActiveTab('reportes')}
@@ -1042,11 +1029,11 @@ CC: ${correoInstructorActual}`;
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Users className="w-5 h-5 text-emerald-700" />
-                      <h3 className="text-base font-bold text-slate-800">Nómina de Aprendices y Gestión de Novedades</h3>
+                      <h3 className="text-base font-bold text-slate-800">Nómina de Aprendices Registrados</h3>
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Consulte el estado actual de los aprendices, gestione sus novedades (retiros, aplazamientos, traslados) o reingresos directamente desde la siguiente tabla:
+                    Consulte el estado general de los aprendices de la ficha. Para gestionar retiros o incorporaciones, diríjase a la pestaña <strong>Gestión de Novedades</strong>.
                   </p>
 
                   <div className="overflow-x-auto border border-slate-200 rounded-xl">
@@ -1057,7 +1044,6 @@ CC: ${correoInstructorActual}`;
                           <th className="p-3 text-center">Documento</th>
                           <th className="p-3 text-center">Estado</th>
                           <th className="p-3 text-center">Movimiento</th>
-                          <th className="p-3 text-center">Acciones / Novedad</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1072,14 +1058,6 @@ CC: ${correoInstructorActual}`;
                             </td>
                             <td className="p-3 text-center font-semibold text-slate-600">
                               {student.tipo_movimiento || 'Ninguno'}
-                            </td>
-                            <td className="p-3 text-center">
-                              <button
-                                onClick={() => setSelectedStudentForNovedad(student)}
-                                className="px-3 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-[#39a900] text-slate-700 font-bold rounded-lg border border-slate-200 transition-colors flex items-center gap-1 mx-auto"
-                              >
-                                <UserCheck className="w-3.5 h-3.5" /> Gestionar Novedad
-                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1238,24 +1216,14 @@ CC: ${correoInstructorActual}`;
               </div>
             )}
 
-            {activeTab === 'alertas' && (
-              <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-                <h2 className="text-lg font-bold text-slate-800 border-b pb-3">Configuración de Alertas y Notificaciones</h2>
-                <div className="max-w-md space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Límite de Inasistencias para Alertas</label>
-                    <input 
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={limiteInasistencias}
-                      onChange={(e) => setLimiteInasistencias(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold bg-white text-[#39a900]"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Los aprendices que alcancen o superen este número de faltas aparecerán destacados en el centro de notificaciones según el Acuerdo 009 de 2024.</p>
-                  </div>
-                </div>
-              </div>
+            {/* PESTAÑA OFICIAL DE GESTIÓN DE NOVEDADES (REEMPLAZA A ALERTAS) */}
+            {activeTab === 'novedades' && (
+              <GestionNovedadesTab 
+                courseData={courseData}
+                currentFichaId={currentFichaId}
+                updateCourseData={updateCurrentFichaData}
+                userEmail={user.email || ADMIN_EMAIL}
+              />
             )}
 
             {activeTab === 'reportes' && (
@@ -1330,19 +1298,6 @@ CC: ${correoInstructorActual}`;
           </div>
         )}
       </main>
-
-      {/* MODAL: GESTIÓN DE NOVEDADES DEL APRENDIZ */}
-      {selectedStudentForNovedad && (
-        <GestionNovedadesModal
-          isOpen={Boolean(selectedStudentForNovedad)}
-          onClose={() => setSelectedStudentForNovedad(null)}
-          aprendiz={selectedStudentForNovedad}
-          currentFichaId={currentFichaId}
-          courseData={courseData}
-          updateCourseData={updateCurrentFichaData}
-          userEmail={user.email || ADMIN_EMAIL}
-        />
-      )}
 
       {/* MODAL: PERFIL HISTÓRICO DEL APRENDIZ */}
       {selectedStudentForProfile && (
@@ -1582,48 +1537,57 @@ CC: ${correoInstructorActual}`;
   );
 }
 
-interface GestionNovedadesModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  aprendiz: any;
-  currentFichaId: string;
+// COMPONENTE DE LA NUEVA PESTAÑA: GESTIÓN DE NOVEDADES, RETIROS E INCORPORACIONES
+interface GestionNovedadesTabProps {
   courseData: any;
+  currentFichaId: string;
   updateCourseData: (newData: any) => void;
   userEmail: string;
 }
 
-export const GestionNovedadesModal: React.FC<GestionNovedadesModalProps> = ({
-  isOpen,
-  onClose,
-  aprendiz,
-  currentFichaId,
+export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
   courseData,
+  currentFichaId,
   updateCourseData,
   userEmail
 }) => {
-  const [estado, setEstado] = useState(aprendiz?.estado || 'En Formación');
-  const [tipoMovimiento, setTipoMovimiento] = useState(aprendiz?.tipo_movimiento || 'Ninguno');
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [estado, setEstado] = useState('En Formación');
+  const [tipoMovimiento, setTipoMovimiento] = useState('Ninguno');
   const [fechaMovimiento, setFechaMovimiento] = useState(new Date().toISOString().split('T')[0]);
-  const [observacion, setObservacion] = useState(aprendiz?.observacion_novedad || '');
+  const [observacion, setObservacion] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isOpen || !aprendiz) return null;
+  const handleOpenEdit = (student: any) => {
+    setSelectedStudent(student);
+    setEstado(student.estado || 'En Formación');
+    setTipoMovimiento(student.tipo_movimiento || 'Ninguno');
+    setFechaMovimiento(student.fecha_novedad || student.fecha_ingreso || new Date().toISOString().split('T')[0]);
+    setObservacion(student.observacion_novedad || '');
+  };
 
   const handleSaveNovedad = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedStudent) return;
     setIsSubmitting(true);
 
     try {
-      const estadoAnterior = aprendiz.estado || 'En Formación';
+      const estadoAnterior = selectedStudent.estado || 'En Formación';
       
-      const updatedAprendices = courseData.asistencias_aprendices.map((a: any) => {
-        if (a.numero_documento === aprendiz.numero_documento) {
+      const nuevoEstado = (tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' || tipoMovimiento === 'Ingreso_Nuevo') 
+        ? 'En Formación' 
+        : estado;
+
+      const updatedAprendices = (courseData.asistencias_aprendices || []).map((a: any) => {
+        if (a.numero_documento === selectedStudent.numero_documento) {
           return {
             ...a,
-            estado: estado,
+            estado: nuevoEstado,
             tipo_movimiento: tipoMovimiento,
-            fecha_novedad: estado !== 'En Formación' ? fechaMovimiento : a.fecha_novedad,
-            fecha_ingreso: tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' ? fechaMovimiento : (a.fecha_ingreso || fechaMovimiento),
+            fecha_novedad: nuevoEstado !== 'En Formación' ? fechaMovimiento : '',
+            fecha_ingreso: (tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' || tipoMovimiento === 'Ingreso_Nuevo') 
+              ? fechaMovimiento 
+              : (a.fecha_ingreso || fechaMovimiento),
             observacion_novedad: observacion
           };
         }
@@ -1636,121 +1600,181 @@ export const GestionNovedadesModal: React.FC<GestionNovedadesModalProps> = ({
       };
 
       updateCourseData(updatedCourseData);
-
       await updateFichaCompleteData(updatedCourseData, currentFichaId);
 
       await registrarLogAuditoria(
         currentFichaId,
         userEmail,
         'MODIFICAR_FICHA',
-        `Actualización de novedad/estado para el aprendiz ${aprendiz.nombres} ${aprendiz.apellidos} (${aprendiz.numero_documento}). Estado anterior: ${estadoAnterior} -> Nuevo estado: ${estado} (${tipoMovimiento}).`,
+        `Novedad/Movimiento aplicado a aprendiz ${selectedStudent.nombres} ${selectedStudent.apellidos} (${selectedStudent.numero_documento}). Estado anterior: ${estadoAnterior} -> Nuevo estado: ${nuevoEstado} (${tipoMovimiento}).`,
         { estado: estadoAnterior },
-        { estado, tipo_movimiento: tipoMovimiento, fecha: fechaMovimiento }
+        { estado: nuevoEstado, tipo_movimiento: tipoMovimiento, fecha: fechaMovimiento }
       );
 
-      alert("Novedad registrada y auditada exitosamente.");
-      onClose();
+      alert("Novedad o incorporación registrada y auditada exitosamente.");
+      setSelectedStudent(null);
     } catch (error) {
-      console.error("Error al guardar la novedad:", error);
-      alert("Novedad guardada localmente (Error de sincronización con Firestore).");
-      onClose();
+      console.error("Error al guardar novedad:", error);
+      alert("Guardado localmente (Error de sincronización con Firestore).");
+      setSelectedStudent(null);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
-        
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-          <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-[#39a900]" /> Gestión de Novedades y Movimientos
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
-          </button>
+    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
+      <div className="border-b border-slate-200 pb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">📋 Panel Central de Gestión de Novedades y Movimientos</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Administre las salidas por retiros/aplazamientos y las entradas por reingresos o traslados para la Ficha {currentFichaId}.
+          </p>
         </div>
-
-        <form onSubmit={handleSaveNovedad} className="p-6 space-y-4 text-xs">
-          <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
-            <span className="font-bold text-emerald-900 block text-sm">
-              {aprendiz.apellidos} {aprendiz.nombres}
-            </span>
-            <span className="text-emerald-700 font-mono">Documento: {aprendiz.numero_documento}</span>
-          </div>
-
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Estado de Formación actual</label>
-            <select 
-              value={estado} 
-              onChange={(e) => setEstado(e.target.value as any)}
-              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900]"
-            >
-              <option value="En Formación">En Formación (Activo)</option>
-              <option value="Retiro Voluntario">Retiro Voluntario</option>
-              <option value="Cancelado">Cancelación de Matrícula</option>
-              <option value="Aplazado">Aplazamiento</option>
-              <option value="Trasladado">Trasladado (Salida)</option>
-              <option value="Desercion">Deserción</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Tipo de Movimiento / Incorporación</label>
-            <select 
-              value={tipoMovimiento} 
-              onChange={(e) => setTipoMovimiento(e.target.value as any)}
-              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900]"
-            >
-              <option value="Ninguno">Ninguno / Sin cambio de ingreso</option>
-              <option value="Reingreso">Reingreso (Post-aplazamiento)</option>
-              <option value="Traslado_Entrada">Traslado de Entrada (Desde otra ficha/centro)</option>
-              <option value="Ingreso_Nuevo">Ingreso Nuevo</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Fecha del Movimiento / Novedad</label>
-            <input 
-              type="date" 
-              value={fechaMovimiento} 
-              onChange={(e) => setFechaMovimiento(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono"
-              required 
-            />
-          </div>
-
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">Observación o Soporte Legal</label>
-            <textarea 
-              rows={3}
-              value={observacion}
-              onChange={(e) => setObservacion(e.target.value)}
-              placeholder="Describa el motivo o número de memorando/radicado..."
-              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 focus:outline-none focus:border-[#39a900]"
-            />
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-            <button 
-              type="button" 
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="px-5 py-2 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm"
-            >
-              {isSubmitting ? 'Guardando...' : 'Guardar Novedad'}
-            </button>
-          </div>
-        </form>
-
       </div>
+
+      <div className="overflow-x-auto border border-slate-200 rounded-xl">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b">
+              <th className="p-3.5">Aprendiz</th>
+              <th className="p-3.5 text-center">Documento</th>
+              <th className="p-3.5 text-center">Estado Actual</th>
+              <th className="p-3.5 text-center">Último Movimiento</th>
+              <th className="p-3.5 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {(courseData.asistencias_aprendices || []).map((student: any) => {
+              const est = student.estado || 'En Formación';
+              const mov = student.tipo_movimiento || 'Ninguno';
+              return (
+                <tr key={student.numero_documento} className="hover:bg-slate-50">
+                  <td className="p-3.5 font-bold text-slate-800">{student.apellidos} {student.nombres}</td>
+                  <td className="p-3.5 text-center font-mono text-slate-500">{student.numero_documento}</td>
+                  <td className="p-3.5 text-center">
+                    <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] ${est === 'En Formación' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
+                      {est}
+                    </span>
+                  </td>
+                  <td className="p-3.5 text-center font-semibold text-slate-600">
+                    {mov}
+                  </td>
+                  <td className="p-3.5 text-center">
+                    <button
+                      onClick={() => handleOpenEdit(student)}
+                      className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#39a900] font-bold rounded-lg border border-[#39a900]/30 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      ✏️ Procesar Novedad
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* MODAL INTERNO DE EDICIÓN DE NOVEDAD */}
+      {selectedStudent && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                Actualizar Ciclo de Vida del Aprendiz
+              </h3>
+              <button onClick={() => setSelectedStudent(null)} className="text-slate-400 hover:text-slate-600">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNovedad} className="p-6 space-y-4 text-xs">
+              <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                <span className="font-bold text-emerald-900 block text-sm">
+                  {selectedStudent.apellidos} {selectedStudent.nombres}
+                </span>
+                <span className="text-emerald-700 font-mono">Documento: {selectedStudent.numero_documento}</span>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Tipo de Movimiento (Entrada / Salida)</label>
+                <select 
+                  value={tipoMovimiento} 
+                  onChange={(e) => setTipoMovimiento(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900]"
+                >
+                  <option value="Ninguno">Ninguno / Sin cambio reciente</option>
+                  <option value="Reingreso">🟢 Reingreso (Incorporar post-aplazamiento)</option>
+                  <option value="Traslado_Entrada">🟢 Traslado de Entrada (Desde otra ficha/centro)</option>
+                  <option value="Ingreso_Nuevo">🟢 Ingreso Nuevo</option>
+                  <option value="Traslado_Salida">🔴 Traslado de Salida (Hacia otra ficha/centro)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Estado de Formación Resultante</label>
+                <select 
+                  value={estado} 
+                  onChange={(e) => setEstado(e.target.value)}
+                  disabled={tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' || tipoMovimiento === 'Ingreso_Nuevo'}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900] disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="En Formación">En Formación (Activo)</option>
+                  <option value="Retiro Voluntario">Retiro Voluntario</option>
+                  <option value="Cancelado">Cancelación de Matrícula</option>
+                  <option value="Aplazado">Aplazamiento</option>
+                  <option value="Trasladado">Trasladado</option>
+                  <option value="Desercion">Deserción</option>
+                </select>
+                {(tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' || tipoMovimiento === 'Ingreso_Nuevo') && (
+                  <p className="text-[10px] text-emerald-700 mt-1 font-semibold">ℹ️ Al registrar una entrada, el estado se fija automáticamente en "En Formación".</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Fecha del Movimiento / Novedad</label>
+                <input 
+                  type="date" 
+                  value={fechaMovimiento} 
+                  onChange={(e) => setFechaMovimiento(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono"
+                  required 
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Observación / Soporte Legal (Memorando / Radicado)</label>
+                <textarea 
+                  rows={3}
+                  value={observacion}
+                  onChange={(e) => setObservacion(e.target.value)}
+                  placeholder="Detalle el motivo o número de radicado..."
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 focus:outline-none focus:border-[#39a900]"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setSelectedStudent(null)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm"
+                >
+                  {isSubmitting ? 'Guardando...' : 'Aplicar Novedad'}
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };
