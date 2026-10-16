@@ -33,12 +33,41 @@ import {
   Shield,
   Award,
   Calendar,
-  BookOpen
+  BookOpen,
+  UserCheck
 } from 'lucide-react';
 
 const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding=%27utf-8%27?%3e%3c!--%20Generator:%20Adobe%20Illustrator%2026.0.1,%20SVG%20Export%20Plug-In%20.%20SVG%20Version:%206.00%20Build%200)%20--%3e%3csvg%20version=%271.1%27%20id=%27Capa_1%27%20xmlns=%27http://www.w3.org/2000/svg%27%20xmlns:xlink=%27http://www.w3.org/1999/xlink%27%20x=%270px%27%20y=%270px%27%20viewBox=%270%200%201000%201000%27%20style=%27enable-background:new%200%200%201000%201000;%27%20xml:space=%27preserve%27%3e%3cstyle%20type=%27text/css%27%3e%20.st0{fill:%2339a900;}%20%3c/style%3e%3cpath%20id=%27path47-5%27%20class=%27st0%27%20d=%27M504.2,20.5c-58.3,0.1-105.6,47.4-105.5,105.8c0.1,58.3,47.4,105.6,105.7,105.6%20c58.3,0,105.6-47.3,105.6-105.7V126C609.9,67.6,562.6,20.4,504.2,20.5z%20M155.6,264.6c-18.6,0.1-37.5,1.1-55.2,5.6%20c-11.7,3-23,7.8-30.3,15.4c-9.2,9.5-10.4,22.3-5.9,33.3c4,9.7,14.8,16.9,26.8,21.1c25.9,8.9,54.6,10.7,81.8,16.3%20c5,1.2,10.6,2.6,13.7,6c3.2,4.1,1.3,9.7-4,12.2c-8.8,4.5-20.1,4.5-30.4,4.4c-9.4-0.4-19.7-1.2-27.2-5.9c-5.5-3.4-6.5-9.1-5.2-14.1%20l-60.6,0c-0.2,9.2,1.6,18.9,8.4,26.8c5.6,6.8,14.8,11.5,24.6,14.4c15.7,4.6,32.7,6,49.4,6.4c22.7,0.4,45.8-0.3,67.6-5.4%20c13-3.2,25.8-8.3,34.1-16.6c14.8-14.8,11.3-38.3-8.3-49.8c-9.8-5.7-21.5-9.2-33.4-11.5c-17.5-3.6-35.3-6.3-52.9-9.2%20c-6.2-1.2-12.8-2.3-18-5.2c-5.5-2.9-5.9-9.8-0.3-12.9c7.2-4.1,16.8-4,25.4-4c9.1,0.2,19,0.7,26.5,5c4.2,2.3,5.9,6.3,5.9,10.1%20l57.6-0.1c-0.2-7.3-1.6-14.9-6.9-21.2c-6.2-7.8-17.1-12.7-28.3-15.5C192.8,265.6,174.1,264.7,155.6,264.6L155.6,264.6z%20M280.6,268.9%20l0,137.7l168.1,0l0-30H342.3v-26.7h94.9v-29.3h-94.9l0-21.9l102.6,0l-0.1-29.7L280.6,268.9z%20M557.5,269c0,0-51.9,0-77.9,0l0,137.7%20l59,0l0-92.7l80.8,92.6l81,0.1l0-137.7l-59.1,0l0.1,92L557.5,269z%20M805.6,269.2c0,0-63.6,91.9-95.6,137.7l61.9,0l14.9-24.8h95.7%20l13.9,24.9l68.8,0L874,269.2L805.6,269.2z%20M836.6,302.1l29.4,49.9l-60.7,0.1L836.6,302.1z%20M10.6,445.6l0.5,75l280.1-1%20c14.3,3.1,22.6,12.4,19.7,33.5L138.6,854.7l56.1,52.5l266.9-461.6L10.6,445.6z%20M545.2,446.2l262.4,459.6l58-52.1L691.3,552.9%20c-2.9-21.2,5.4-30.6,19.7-33.7l280.2,1l-0.1-73.7L545.2,446.2z%20M500.9,522.3L254.8,944.7l65.4,31.9L484.4,699%20c5.7-4.6,11.4-7.1,17.1-7.3c6-0.2,12.2,2,18.3,6.8l163.8,278.4l67.4-35.2L500.9,522.3z%27/%3e%3cg%20id=%27_x23_000000ff-2%27%20transform=%27matrix(0.31570611,0,0,0.23560774,-391.49698,-10.601126)%27%3e%3c/g%3e%3c/svg%3e`;
 
 const ADMIN_EMAIL = "jalexanders@gmail.com";
+
+export type EstadoAprendiz = 
+  | 'En Formación' 
+  | 'Retiro Voluntario' 
+  | 'Cancelado' 
+  | 'Aplazado' 
+  | 'Trasladado' 
+  | 'Desercion';
+
+export type TipoMovimiento = 
+  | 'Ingreso_Nuevo' 
+  | 'Reingreso' 
+  | 'Traslado_Entrada' 
+  | 'Traslado_Salida' 
+  | 'Ninguno';
+
+export interface Aprendiz {
+  numero_documento: string;
+  nombres: string;
+  apellidos: string;
+  correo?: string;
+  estado?: EstadoAprendiz;
+  fecha_ingreso?: string;
+  fecha_novedad?: string;
+  tipo_movimiento?: TipoMovimiento;
+  observacion_novedad?: string;
+  registros: Record<string, string>;
+}
 
 export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = []): boolean => {
   const role = getUserSystemRole(user, equipoInstructores);
@@ -182,6 +211,8 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
       fechas_asistencia: [],
       asistencias_aprendices: (base.asistencias_aprendices || []).map((a: any) => ({
         ...a,
+        estado: 'En Formación',
+        tipo_movimiento: 'Ninguno',
         registros: {}
       })),
       programa: "Tecnología en Gestión Administrativa",
@@ -198,10 +229,20 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
         });
         return { 
           ...a, 
+          estado: a.estado || 'En Formación',
+          tipo_movimiento: a.tipo_movimiento || 'Ninguno',
+          fecha_ingreso: a.fecha_ingreso || '',
+          fecha_novedad: a.fecha_novedad || '',
+          observacion_novedad: a.observacion_novedad || '',
           registros: registrosNormalizados 
         };
       })
-    : (base.asistencias_aprendices || []).map((a: any) => ({ ...a, registros: {} }));
+    : (base.asistencias_aprendices || []).map((a: any) => ({ 
+        ...a, 
+        estado: 'En Formación',
+        tipo_movimiento: 'Ninguno',
+        registros: {} 
+      }));
 
   return {
     ...base,
@@ -301,6 +342,7 @@ export default function App() {
   const [kpiFilter, setKpiFilter] = useState<'all' | 'present' | 'absent' | 'late' | 'risk'>('all');
   
   const [selectedStudentForProfile, setSelectedStudentForProfile] = useState<any>(null);
+  const [selectedStudentForNovedad, setSelectedStudentForNovedad] = useState<any>(null);
 
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedStudentForNotification, setSelectedStudentForNotification] = useState<any>(null);
@@ -326,7 +368,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Caracterización estricta y dinámica del instructor en sesión mediante el helper seguro
   const activeInstructor = useMemo(() => {
     return getInstructorFromSession(user, courseData);
   }, [user, courseData]);
@@ -448,7 +489,8 @@ export default function App() {
     const formattedDate = formatDateForData(attendanceDate);
     const existingRecords: Record<string, string> = {};
      
-    courseData.asistencias_aprendices.forEach((student: any) => {
+    // Tomar asistencia únicamente a los aprendices activos 'En Formación'
+    activeFilteredStudents.forEach((student: any) => {
       const status = student.registros[formattedDate];
       existingRecords[student.numero_documento] = status || 'Presente';
     });
@@ -474,7 +516,12 @@ export default function App() {
     }
      
     const newAprendices = courseData.asistencias_aprendices.map((student: any) => {
+      if (student.estado && student.estado !== 'En Formación') {
+        return student; // Mantener intacto si no está activo
+      }
       const status = tempRecords[student.numero_documento];
+      if (status === undefined) return student;
+
       const newRegistros = { ...student.registros } as Record<string, string>;
       if (status === 'Presente') {
         delete newRegistros[formattedDate];
@@ -516,7 +563,8 @@ export default function App() {
     }
   };
 
-  const { stats, studentsWithStats } = useMemo(() => {
+  // Lógica analítica avanzada con manejo de Altas, Bajas, Reingresos y Traslados
+  const { stats, studentsWithStats, activeFilteredStudents } = useMemo(() => {
     let present = 0;
     let absent = 0;
     let late = 0;
@@ -524,16 +572,25 @@ export default function App() {
     let totalRecords = 0;
     let enRiesgo = 0;
     let enRiesgoTarde = 0;
-    let totalPossibleRecords = courseData.asistencias_aprendices.length * currentInstructorDates.length;
 
-    const augmented = courseData.asistencias_aprendices.map((student: any) => {
+    const augmented = (courseData.asistencias_aprendices || []).map((student: Aprendiz) => {
       let fallasAcumuladas = 0;
       let tardanzasAcumuladas = 0;
       let fechasTarde: string[] = [];
       let fechasFalla: string[] = [];
-       
+      
+      const fechaIngresoObj = student.fecha_ingreso ? parseDateForSorting(student.fecha_ingreso) : new Date(0);
+      const fechaNovedadObj = student.fecha_novedad ? parseDateForSorting(student.fecha_novedad) : new Date(8640000000000000);
+
       currentInstructorDates.forEach(date => {
         const standardizedDate = displayAsDDMMYYYY(date);
+        const sessionDateObj = parseDateForSorting(standardizedDate);
+
+        // Excluir sesiones fuera del rango activo del aprendiz (reingresos o traslados)
+        if (sessionDateObj < fechaIngresoObj || sessionDateObj > fechaNovedadObj) {
+          return; 
+        }
+
         const status = student.registros[date] || student.registros[standardizedDate];
         
         if (status) {
@@ -542,32 +599,36 @@ export default function App() {
             absent++;
             fallasAcumuladas++;
             fechasFalla.push(standardizedDate);
-          }
-          else if (status === 'Tarde') {
+          } else if (status === 'Tarde') {
             late++;
             tardanzasAcumuladas++;
             fechasTarde.push(standardizedDate);
+          } else if (status === 'Excusa' || status === 'Evento') {
+            excused++;
           }
-          else if (status === 'Excusa' || status === 'Evento') excused++;
         } else {
           present++;
         }
       });
 
-      const isRisk = fallasAcumuladas >= limiteInasistencias;
-      const isLateRisk = tardanzasAcumuladas >= 3;
+      const estadoActual = student.estado || 'En Formación';
+      const isActivo = estadoActual === 'En Formación';
+      const isRisk = isActivo && (fallasAcumuladas >= limiteInasistencias);
+      const isLateRisk = isActivo && (tardanzasAcumuladas >= 3);
 
       if (isRisk) enRiesgo++;
       if (isLateRisk) enRiesgoTarde++;
 
       return {
         ...student,
+        estado: estadoActual,
         fallasAcumuladas,
         tardanzasAcumuladas,
         fechasTarde,
         fechasFalla,
         enRiesgo: isRisk,
-        enRiesgoTarde: isLateRisk
+        enRiesgoTarde: isLateRisk,
+        isActivo
       };
     });
 
@@ -577,8 +638,12 @@ export default function App() {
       return nameA.localeCompare(nameB);
     });
 
+    const activeFilteredStudents = augmented.filter(s => s.isActivo);
+    const totalPossibleRecords = activeFilteredStudents.length * currentInstructorDates.length;
+
     return {
       studentsWithStats: augmented,
+      activeFilteredStudents,
       stats: {
         present,
         absent,
@@ -586,14 +651,14 @@ export default function App() {
         excused,
         enRiesgo,
         enRiesgoTarde,
-        totalStudents: courseData.asistencias_aprendices.length,
+        totalStudents: activeFilteredStudents.length,
         attendanceRate: totalPossibleRecords > 0 ? Math.round(((totalPossibleRecords - absent) / totalPossibleRecords) * 100) : 100
       }
     };
   }, [courseData, currentInstructorDates, limiteInasistencias]);
 
   const filteredStudents = useMemo(() => {
-    let filtered = studentsWithStats;
+    let filtered = activeFilteredStudents; // Por defecto mostramos solo los activos en el listado diario
      
     if (selectedStudentDoc) {
       return filtered.filter(s => s.numero_documento === selectedStudentDoc);
@@ -623,13 +688,13 @@ export default function App() {
     }
      
     return filtered;
-  }, [searchTerm, selectedStudentDoc, showRiskOnly, studentsWithStats, kpiFilter]);
+  }, [searchTerm, selectedStudentDoc, showRiskOnly, activeFilteredStudents, kpiFilter]);
 
   const correoInstructorActual = activeInstructor.correo_institucional_sena || activeInstructor.correo_google || user?.email || '';
 
   const riskStudentsList = useMemo(() => {
-    return studentsWithStats.filter(s => s.enRiesgo || s.enRiesgoTarde);
-  }, [studentsWithStats]);
+    return activeFilteredStudents.filter(s => s.enRiesgo || s.enRiesgoTarde);
+  }, [activeFilteredStudents]);
 
   const getNotificationTemplateText = (student: any) => {
     const instructorName = activeInstructor.nombre_del_instructor || "Instructor SENA";
@@ -843,7 +908,7 @@ CC: ${correoInstructorActual}`;
               )}
             </div>
 
-            {/* PERFIL DINÁMICO DE LA SESIÓN ACTIVA (Mapeo automático por Dual-Email Check) */}
+            {/* PERFIL DINÁMICO DE LA SESIÓN ACTIVA */}
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
               <div className="w-10 h-10 rounded-full bg-[#39a900] text-white flex items-center justify-center font-bold text-sm shadow-sm border-2 border-emerald-100">
                 {activeInstructor.nombre_del_instructor?.charAt(0) || 'U'}
@@ -974,80 +1039,53 @@ CC: ${correoInstructorActual}`;
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-emerald-700" />
-                    <h3 className="text-base font-bold text-slate-800">Equipo Ejecutor e Instructores Asignados</h3>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-emerald-700" />
+                      <h3 className="text-base font-bold text-slate-800">Nómina de Aprendices y Gestión de Novedades</h3>
+                    </div>
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    A continuación se relacionan los instructores a cargo de la formación, su respectivo rol institucional, la competencia asignada y el día asignado para el desarrollo de las sesiones:
+                    Consulte el estado actual de los aprendices, gestione sus novedades (retiros, aplazamientos, traslados) o reingresos directamente desde la siguiente tabla:
                   </p>
 
-                  {(!courseData.equipo_instructores || courseData.equipo_instructores.length === 0) ? (
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-400 italic">
-                      No hay instructores registrados en la estructura actual de esta ficha.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {courseData.equipo_instructores.map((inst: any, idx: number) => {
-                        const gmailVal = inst.correo_gmail || inst.correo_google || inst.correo || '';
-                        const institucionalVal = inst.correo_institucional_sena || inst.correo_institucional || '';
-                        const rolActual = inst.rol || (inst.es_lider ? 'Instructor Lider' : 'Instructor / Tutor');
-                        
-                        const cardBorder = rolActual === 'Instructor Lider' 
-                          ? 'border-emerald-500 ring-1 ring-emerald-500/30' 
-                          : rolActual === 'Coordinador Academico' 
-                          ? 'border-blue-400 ring-1 ring-blue-400/30' 
-                          : 'border-slate-200 hover:border-emerald-300';
-
-                        return (
-                          <div 
-                            key={idx} 
-                            className={`bg-gradient-to-br from-slate-50 to-white p-4 rounded-xl border shadow-xs transition-all space-y-3 ${cardBorder}`}
-                          >
-                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
-                              <div>
-                                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-1.5 flex-wrap">
-                                  {inst.nombre_del_instructor || 'Instructor sin nombre'}
-                                  {rolActual === 'Instructor Lider' && <span className="bg-emerald-100 text-[#39a900] text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-300">Líder</span>}
-                                  {rolActual === 'Coordinador Academico' && <span className="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full font-bold border border-blue-300">Coordinador</span>}
-                                </h4>
-                                <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
-                                  <Shield className="w-3 h-3" /> {rolActual}
-                                </span>
-                                
-                                <div className="mt-2 space-y-1 text-[11px] text-slate-600 font-mono">
-                                  <p className="flex items-center gap-1">
-                                    <Mail className="w-3 h-3 text-slate-400" />
-                                    <span>Gmail:</span> 
-                                    <strong className="text-slate-800">{gmailVal || 'No registrado'}</strong>
-                                  </p>
-                                  <p className="flex items-center gap-1">
-                                    <Shield className="w-3 h-3 text-emerald-600" />
-                                    <span>Institucional:</span> 
-                                    <strong className="text-slate-800">{institucionalVal || 'No registrado'}</strong>
-                                  </p>
-                                </div>
-                              </div>
-                              {inst.dia && (
-                                <span className="bg-emerald-100 text-emerald-800 font-bold text-[11px] px-2.5 py-1 rounded-full flex items-center gap-1 whitespace-nowrap">
-                                  <Calendar className="w-3 h-3" /> {inst.dia}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="space-y-1 text-xs">
-                              <span className="text-slate-400 font-medium flex items-center gap-1">
-                                <Award className="w-3.5 h-3.5 text-slate-500" /> Competencia a Cargo:
+                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b">
+                          <th className="p-3">Aprendiz</th>
+                          <th className="p-3 text-center">Documento</th>
+                          <th className="p-3 text-center">Estado</th>
+                          <th className="p-3 text-center">Movimiento</th>
+                          <th className="p-3 text-center">Acciones / Novedad</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {studentsWithStats.map((student: any) => (
+                          <tr key={student.numero_documento} className="hover:bg-slate-50">
+                            <td className="p-3 font-bold text-slate-800">{student.apellidos} {student.nombres}</td>
+                            <td className="p-3 text-center font-mono text-slate-500">{student.numero_documento}</td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${student.estado === 'En Formación' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
+                                {student.estado}
                               </span>
-                              <p className="text-slate-700 font-medium bg-white p-2 rounded-lg border border-slate-100 leading-relaxed">
-                                {inst.competencia || 'Competencia general asignada a la ficha'}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                            </td>
+                            <td className="p-3 text-center font-semibold text-slate-600">
+                              {student.tipo_movimiento || 'Ninguno'}
+                            </td>
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() => setSelectedStudentForNovedad(student)}
+                                className="px-3 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-[#39a900] text-slate-700 font-bold rounded-lg border border-slate-200 transition-colors flex items-center gap-1 mx-auto"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" /> Gestionar Novedad
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -1060,11 +1098,11 @@ CC: ${correoInstructorActual}`;
                     className={`bg-white rounded-xl border p-4 shadow-sm flex flex-col justify-between cursor-pointer transition-all ${kpiFilter === 'all' && !selectedStudentDoc ? 'border-[#39a900] ring-2 ring-[#39a900]/20 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300'}`}
                   >
                     <div className="flex justify-between items-start">
-                      <span className="text-xs font-semibold text-slate-500">Total Aprendices</span>
+                      <span className="text-xs font-semibold text-slate-500">Total Aprendices Activos</span>
                       <div className="p-2 bg-emerald-50 rounded-lg text-[#39a900]"><Users className="w-4 h-4" /></div>
                     </div>
                     <span className="text-2xl font-bold text-slate-900 mt-3">{stats.totalStudents}</span>
-                    <span className="text-[10px] text-slate-400 mt-1">Clic para mostrar todos</span>
+                    <span className="text-[10px] text-slate-400 mt-1">En formación</span>
                   </div>
                   
                   <div 
@@ -1277,7 +1315,7 @@ CC: ${correoInstructorActual}`;
             <p className="text-sm text-slate-600">Resumen analítico del comportamiento de asistencia de la ficha {courseData.ficha_de_caracterizacion}.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 border-l-4 border-l-[#39a900]">
-                <span className="text-xs font-semibold text-slate-500">Total Aprendices Matriculados</span>
+                <span className="text-xs font-semibold text-slate-500">Total Aprendices Activos</span>
                 <p className="text-3xl font-bold text-slate-800 mt-1">{stats.totalStudents}</p>
               </div>
               <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 border-l-4 border-l-blue-500">
@@ -1292,6 +1330,19 @@ CC: ${correoInstructorActual}`;
           </div>
         )}
       </main>
+
+      {/* MODAL: GESTIÓN DE NOVEDADES DEL APRENDIZ */}
+      {selectedStudentForNovedad && (
+        <GestionNovedadesModal
+          isOpen={Boolean(selectedStudentForNovedad)}
+          onClose={() => setSelectedStudentForNovedad(null)}
+          aprendiz={selectedStudentForNovedad}
+          currentFichaId={currentFichaId}
+          courseData={courseData}
+          updateCourseData={updateCurrentFichaData}
+          userEmail={user.email || ADMIN_EMAIL}
+        />
+      )}
 
       {/* MODAL: PERFIL HISTÓRICO DEL APRENDIZ */}
       {selectedStudentForProfile && (
@@ -1396,7 +1447,7 @@ CC: ${correoInstructorActual}`;
               </div>
 
               <div className="space-y-2">
-                {courseData.asistencias_aprendices.map((student: any) => (
+                {activeFilteredStudents.map((student: any) => (
                   <div key={student.numero_documento} className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-4">
                     <div>
                       <p className="text-xs font-bold text-slate-800">{student.apellidos} {student.nombres}</p>
@@ -1530,6 +1581,179 @@ CC: ${correoInstructorActual}`;
     </div>
   );
 }
+
+interface GestionNovedadesModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  aprendiz: any;
+  currentFichaId: string;
+  courseData: any;
+  updateCourseData: (newData: any) => void;
+  userEmail: string;
+}
+
+export const GestionNovedadesModal: React.FC<GestionNovedadesModalProps> = ({
+  isOpen,
+  onClose,
+  aprendiz,
+  currentFichaId,
+  courseData,
+  updateCourseData,
+  userEmail
+}) => {
+  const [estado, setEstado] = useState(aprendiz?.estado || 'En Formación');
+  const [tipoMovimiento, setTipoMovimiento] = useState(aprendiz?.tipo_movimiento || 'Ninguno');
+  const [fechaMovimiento, setFechaMovimiento] = useState(new Date().toISOString().split('T')[0]);
+  const [observacion, setObservacion] = useState(aprendiz?.observacion_novedad || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!isOpen || !aprendiz) return null;
+
+  const handleSaveNovedad = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const estadoAnterior = aprendiz.estado || 'En Formación';
+      
+      const updatedAprendices = courseData.asistencias_aprendices.map((a: any) => {
+        if (a.numero_documento === aprendiz.numero_documento) {
+          return {
+            ...a,
+            estado: estado,
+            tipo_movimiento: tipoMovimiento,
+            fecha_novedad: estado !== 'En Formación' ? fechaMovimiento : a.fecha_novedad,
+            fecha_ingreso: tipoMovimiento === 'Reingreso' || tipoMovimiento === 'Traslado_Entrada' ? fechaMovimiento : (a.fecha_ingreso || fechaMovimiento),
+            observacion_novedad: observacion
+          };
+        }
+        return a;
+      });
+
+      const updatedCourseData = {
+        ...courseData,
+        asistencias_aprendices: updatedAprendices
+      };
+
+      updateCourseData(updatedCourseData);
+
+      await updateFichaCompleteData(updatedCourseData, currentFichaId);
+
+      await registrarLogAuditoria(
+        currentFichaId,
+        userEmail,
+        'MODIFICAR_FICHA',
+        `Actualización de novedad/estado para el aprendiz ${aprendiz.nombres} ${aprendiz.apellidos} (${aprendiz.numero_documento}). Estado anterior: ${estadoAnterior} -> Nuevo estado: ${estado} (${tipoMovimiento}).`,
+        { estado: estadoAnterior },
+        { estado, tipo_movimiento: tipoMovimiento, fecha: fechaMovimiento }
+      );
+
+      alert("Novedad registrada y auditada exitosamente.");
+      onClose();
+    } catch (error) {
+      console.error("Error al guardar la novedad:", error);
+      alert("Novedad guardada localmente (Error de sincronización con Firestore).");
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+        
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+          <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-[#39a900]" /> Gestión de Novedades y Movimientos
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSaveNovedad} className="p-6 space-y-4 text-xs">
+          <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+            <span className="font-bold text-emerald-900 block text-sm">
+              {aprendiz.apellidos} {aprendiz.nombres}
+            </span>
+            <span className="text-emerald-700 font-mono">Documento: {aprendiz.numero_documento}</span>
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Estado de Formación actual</label>
+            <select 
+              value={estado} 
+              onChange={(e) => setEstado(e.target.value as any)}
+              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900]"
+            >
+              <option value="En Formación">En Formación (Activo)</option>
+              <option value="Retiro Voluntario">Retiro Voluntario</option>
+              <option value="Cancelado">Cancelación de Matrícula</option>
+              <option value="Aplazado">Aplazamiento</option>
+              <option value="Trasladado">Trasladado (Salida)</option>
+              <option value="Desercion">Deserción</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Tipo de Movimiento / Incorporación</label>
+            <select 
+              value={tipoMovimiento} 
+              onChange={(e) => setTipoMovimiento(e.target.value as any)}
+              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900]"
+            >
+              <option value="Ninguno">Ninguno / Sin cambio de ingreso</option>
+              <option value="Reingreso">Reingreso (Post-aplazamiento)</option>
+              <option value="Traslado_Entrada">Traslado de Entrada (Desde otra ficha/centro)</option>
+              <option value="Ingreso_Nuevo">Ingreso Nuevo</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Fecha del Movimiento / Novedad</label>
+            <input 
+              type="date" 
+              value={fechaMovimiento} 
+              onChange={(e) => setFechaMovimiento(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono"
+              required 
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1">Observación o Soporte Legal</label>
+            <textarea 
+              rows={3}
+              value={observacion}
+              onChange={(e) => setObservacion(e.target.value)}
+              placeholder="Describa el motivo o número de memorando/radicado..."
+              className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 focus:outline-none focus:border-[#39a900]"
+            />
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+            <button 
+              type="button" 
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="px-5 py-2 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm"
+            >
+              {isSubmitting ? 'Guardando...' : 'Guardar Novedad'}
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  );
+};
 
 interface GestionInstructoresProps {
   courseData: any;
