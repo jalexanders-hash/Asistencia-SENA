@@ -1,60 +1,70 @@
-import { courseData as initialCourseData } from '../data';
+import { User } from 'firebase/auth';
+
+export interface Instructor {
+  nombre_del_instructor: string;
+  competencia: string;
+  correo_gmail?: string;
+  correo_google?: string;
+  correo_institucional?: string;
+  correo_institucional_sena?: string;
+  correo?: string;
+  rol?: string;
+  es_lider?: boolean;
+  dia?: string;
+}
 
 /**
- * Caracteriza y obtiene el objeto del instructor activo basado en el correo de Google Auth.
- * Realiza una búsqueda flexible, ampliada y normalizada en el equipo ejecutor (Dual-Email / Multi-Key Check).
+ * Mapea de forma robusta y dinámica el usuario autenticado de Firebase Auth 
+ * contra el equipo ejecutor de la ficha utilizando un chequeo de múltiples variantes (Dual-Email Check).
  */
-export function getInstructorFromSession(user: any, courseData: typeof initialCourseData) {
-  const userEmail = String(user?.email || '').toLowerCase().trim();
-  
-  if (!userEmail) {
-    return {
-      nombre_del_instructor: 'Invitado',
-      correo_institucional_sena: '',
-      correo_google: '',
-      competencia: '',
-      rol: 'INVITADO',
-      esAdmin: false,
-      isLoggedIn: false
-    };
+export function getInstructorFromSession(user: User | null, courseData: any): Instructor {
+  const defaultFallbackInstructor: Instructor = {
+    nombre_del_instructor: "Usuario Invitado / Sin Asignar",
+    competencia: "General",
+    correo_gmail: user?.email || "",
+    correo_institucional: "",
+    rol: "INVITADO",
+    es_lider: false
+  };
+
+  if (!user || !user.email) {
+    return defaultFallbackInstructor;
   }
 
-  const instructors = courseData?.equipo_instructores || [];
+  const userEmailNormalized = user.email.toLowerCase().trim();
+  const equipoInstructores: Instructor[] = courseData?.equipo_instructores || [];
 
-  // Búsqueda flexible y normalizada evaluando todas las posibles propiedades de correo
-  const matchedInstructor = instructors.find((inst: any) => {
-    if (!inst) return false;
-
-    const emailsToCompare = [
+  // Buscar coincidencia exacta o parcial en cualquiera de los campos de correo del instructor
+  const instructorEncontrado = equipoInstructores.find((inst: any) => {
+    const posiblesCorreos = [
+      inst.correo_gmail,
       inst.correo_google,
-      inst.correo_institucional_sena,
       inst.correo_institucional,
-      inst.correo,
-      inst.email
-    ]
-      .filter(Boolean)
-      .map((e: string) => String(e).toLowerCase().trim());
+      inst.correo_institucional_sena,
+      inst.correo
+    ];
 
-    return emailsToCompare.includes(userEmail);
+    return posiblesCorreos.some(
+      (correo) => correo && String(correo).toLowerCase().trim() === userEmailNormalized
+    );
   });
 
-  if (matchedInstructor) {
-    return {
-      ...matchedInstructor,
-      esAdmin: false,
-      isLoggedIn: true
-    };
+  if (instructorEncontrado) {
+    return instructorEncontrado;
   }
 
-  // Si no se encuentra explícitamente en el equipo de la ficha actual,
-  // devolvemos la sesión real del usuario autenticado sin forzar datos del Administrador.
+  // Si el usuario autenticado es el administrador principal configurado por defecto
+  if (userEmailNormalized === "jalexanders@gmail.com" && equipoInstructores.length > 0) {
+    return equipoInstructores[0]; // Retorna al líder principal o admin
+  }
+
+  // Si no se encuentra en el equipo pero está autenticado, retornar su info base de Google Auth
   return {
-    nombre_del_instructor: user?.displayName || 'Usuario Autorizado',
-    correo_institucional_sena: userEmail,
-    correo_google: userEmail,
-    competencia: 'Sin competencia asignada',
-    rol: 'Instructor / Invitado',
-    esAdmin: false,
-    isLoggedIn: true
+    nombre_del_instructor: user.displayName || user.email.split('@')[0],
+    competencia: "Competencia General / Transversal",
+    correo_gmail: user.email,
+    correo_institucional: user.email,
+    rol: "INSTRUCTOR",
+    es_lider: false
   };
 }
