@@ -15,7 +15,6 @@ import {
   Clock,
   AlertCircle,
   Search,
-  Mail,
   AlertTriangle,
   Loader2,
   ClipboardList,
@@ -30,11 +29,7 @@ import {
   Check,
   Wifi,
   WifiOff,
-  Shield,
-  Award,
-  Calendar,
   BookOpen,
-  UserCheck,
   UserPlus,
   LogOut
 } from 'lucide-react';
@@ -1011,6 +1006,7 @@ CC: ${correoInstructorActual}`;
               </button>
             </div>
 
+            {/* PESTAÑA: DATOS DE LA FICHA (INFORMACIÓN INSTITUCIONAL Y EQUIPO EJECUTOR, SIN APRENDICES NI COMPETENCIAS) */}
             {activeTab === 'ficha' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
                 <div className="border-b border-slate-200 pb-5">
@@ -1026,49 +1022,41 @@ CC: ${correoInstructorActual}`;
                       Centro: <strong className="text-slate-900">{courseData.centro || 'Centro Agroindustrial'}</strong>
                     </span>
                     <span className="bg-slate-100 px-3 py-1.5 rounded-lg font-semibold border border-slate-200">
-                      Programa: <strong className="text-slate-900">{courseData.programa}</strong>
+                      Total Nómina: <strong className="text-slate-900">{(courseData.asistencias_aprendices || []).length} aprendices</strong>
                     </span>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-5 h-5 text-emerald-700" />
-                      <h3 className="text-base font-bold text-slate-800">Nómina de Aprendices Registrados</h3>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-emerald-700" />
+                    <h3 className="text-base font-bold text-slate-800">Equipo Ejecutor de Instructores</h3>
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Consulte el estado general de los aprendices de la ficha. Para gestionar retiros o incorporaciones, diríjase a la pestaña <strong>Gestión de Novedades</strong>.
+                    Listado oficial de instructores y tutores asignados a los procesos formativos de esta ficha.
                   </p>
 
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 text-slate-600 uppercase font-bold border-b">
-                          <th className="p-3">Aprendiz</th>
-                          <th className="p-3 text-center">Documento</th>
-                          <th className="p-3 text-center">Estado</th>
-                          <th className="p-3 text-center">Movimiento</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {studentsWithStats.map((student: any) => (
-                          <tr key={student.numero_documento} className="hover:bg-slate-50">
-                            <td className="p-3 font-bold text-slate-800">{student.apellidos} {student.nombres}</td>
-                            <td className="p-3 text-center font-mono text-slate-500">{student.numero_documento}</td>
-                            <td className="p-3 text-center">
-                              <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${student.estado === 'En Formación' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
-                                {student.estado}
-                              </span>
-                            </td>
-                            <td className="p-3 text-center font-semibold text-slate-600">
-                              {student.tipo_movimiento || 'Ninguno'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(courseData.equipo_instructores || []).map((inst: any, idx: number) => {
+                      const rol = inst.rol || (inst.es_lider ? 'Instructor Lider' : 'Instructor / Tutor');
+                      return (
+                        <div key={idx} className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-bold text-slate-800 text-sm">{inst.nombre_del_instructor || inst.nombre}</h4>
+                              <p className="text-xs text-emerald-700 font-medium">{inst.competencia}</p>
+                            </div>
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${rol === 'Instructor Lider' ? 'bg-emerald-100 text-[#39a900]' : 'bg-slate-200 text-slate-700'}`}>
+                              {rol}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 space-y-0.5 pt-1 border-t border-slate-200/60">
+                            <p>Correo: <strong>{inst.correo_institucional || inst.correo_institucional_sena || inst.correo_gmail}</strong></p>
+                            <p>Día asignado: <strong>{inst.dia || inst.dia_semana || 'N/A'}</strong></p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -1222,7 +1210,7 @@ CC: ${correoInstructorActual}`;
               </div>
             )}
 
-            {/* PESTAÑA OFICIAL DE GESTIÓN DE NOVEDADES */}
+            {/* PESTAÑA DE GESTIÓN DE NOVEDADES (SIN BLOQUE SUPERIOR DE RESUMEN DE FICHA) */}
             {activeTab === 'novedades' && (
               <GestionNovedadesTab 
                 courseData={courseData}
@@ -1543,7 +1531,7 @@ CC: ${correoInstructorActual}`;
   );
 }
 
-// COMPONENTE DE LA PESTAÑA: GESTIÓN DE NOVEDADES (CON TARJETA RESUMEN DE FICHA, SALIDAS E INCORPORACIÓN DE NUEVOS)
+// COMPONENTE DE LA PESTAÑA: GESTIÓN DE NOVEDADES (SOLO ADMINISTRACIÓN DE ENTRADAS Y SALIDAS, SIN RESUMEN DE FICHA)
 interface GestionNovedadesTabProps {
   courseData: any;
   currentFichaId: string;
@@ -1693,74 +1681,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* TARJETA RESUMEN DE LA FICHA (VISTA PROFESIONAL Y LIMPIA) */}
-      <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-[#39a900] flex items-center justify-center font-bold text-lg shadow-inner">
-              <BookOpen className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-[#39a900] uppercase tracking-wider">Ficha de Caracterización N° {courseData.ficha_de_caracterizacion}</span>
-              <h2 className="text-xl font-bold text-slate-900">{courseData.denominacion || 'Programa de Formación'}</h2>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-semibold border border-slate-200">
-              Centro: <strong>{courseData.centro || 'Centro Agroindustrial'}</strong>
-            </span>
-            <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-lg text-xs font-semibold border border-slate-200">
-              Total Nómina: <strong>{(courseData.asistencias_aprendices || []).length}</strong>
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-          {/* Equipo Ejecutor de Instructores */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#39a900]" /> Equipo Ejecutor de Instructores
-            </h3>
-            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-              {(courseData.equipo_instructores || []).map((inst: any, idx: number) => {
-                const rol = inst.rol || (inst.es_lider ? 'Instructor Lider' : 'Instructor / Tutor');
-                return (
-                  <div key={idx} className="p-2 bg-slate-50 rounded-lg border border-slate-100 flex justify-between items-center text-xs">
-                    <div>
-                      <p className="font-bold text-slate-800">{inst.nombre_del_instructor || inst.nombre}</p>
-                      <p className="text-[10px] text-slate-500">{inst.competencia}</p>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${rol === 'Instructor Lider' ? 'bg-emerald-100 text-[#39a900]' : 'bg-slate-200 text-slate-700'}`}>
-                      {rol}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Competencias Asignadas */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-              <Award className="w-4 h-4 text-[#39a900]" /> Competencias Asignadas al Programa
-            </h3>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-              {(courseData.competencias || []).length > 0 ? (
-                courseData.competencias.map((comp: string, idx: number) => (
-                  <div key={idx} className="p-2 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-700 flex items-start gap-2">
-                    <span className="font-bold text-[#39a900]">•</span>
-                    <span className="leading-tight">{comp}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-400 italic p-3">No hay competencias registradas explícitamente.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* PANEL DE ACCIÓN: BOTÓN PARA INCORPORAR NUEVOS APRENDICES */}
+      {/* PANEL DE ACCIÓN: BOTÓN PARA INCORPORAR NUEVOS APRENDICES Y GESTIÓN DE SALIDAS */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
           <div>
@@ -2247,7 +2168,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
                           >
                             <option value="Instructor / Tutor">Instructor / Tutor</option>
                             <option value="Instructor Lider">Instructor Líder</option>
-                            <option value="Coordinador Academico">Coordinador Acadêmico</option>
+                            <option value="Coordinador Academico">Coordinador Académico</option>
                           </select>
                         ) : (
                           <span className={getRoleBadgeClass(rolActual)}>
