@@ -57,16 +57,33 @@ function toStrictDDMMYYYY(key: string | number): string {
 }
 
 /**
- * 1. Genera la Plantilla Simplificada con datos precargados del instructor y listado de aprendices de la ficha.
+ * Convierte una fecha DD/MM/YYYY a objeto Date para comparaciones seguras de rangos
  */
-export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseData): Uint8Array {
+function parseDateToObj(dateStr: string): Date {
+  const clean = toStrictDDMMYYYY(dateStr);
+  const parts = clean.split('/');
+  if (parts.length === 3) {
+    const d = Number(parts[0]);
+    const m = Number(parts[1]) - 1;
+    const y = Number(parts[2]);
+    return new Date(y, m, d);
+  }
+  return new Date(0);
+}
+
+/**
+ * 1. Genera la Plantilla Simplificada con datos precargados del instructor, filtrando estrictamente
+ * sus fechas válidas (respetando su fecha de inicio) y aislando su hoja de aprendices de históricos ajenos.
+ */
+export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseData, instructorActual?: any): Uint8Array {
   const wb = XLSX.utils.book_new();
 
   const fichaActual = courseData?.ficha_de_caracterizacion || "";
   const denominacionProg = courseData?.denominacion || courseData?.programa || "";
   const centroFormacion = courseData?.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico";
-  const instructorTitular = courseData?.instructor_titular || courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "";
-  const competenciaActiva = courseData?.competencia_activa || courseData?.equipo_instructores?.[0]?.competencia || "";
+  
+  const nombreInst = instructorActual?.nombre_del_instructor || courseData?.instructor_titular || courseData?.equipo_instructores?.[0]?.nombre_del_instructor || "";
+  const compInst = instructorActual?.competencia || courseData?.competencia_activa || courseData?.equipo_instructores?.[0]?.competencia || "";
 
   // Hoja de Ficha y Metadatos Institucionales unificados
   const fichaHeaders = [
@@ -78,12 +95,33 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
   ];
   const fichaRows = [
     fichaHeaders, 
-    [fichaActual, denominacionProg, centroFormacion, instructorTitular, competenciaActiva]
+    [fichaActual, denominacionProg, centroFormacion, nombreInst, compInst]
   ];
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // Hoja de Aprendices precargada con la base de datos de la ficha y fechas existentes
+  // Filtrado estricto de fechas para el instructor (ej. si inicia el lunes 19, se omiten fechas anteriores)
+  const todasLasFechas = Array.isArray(courseData?.fechas_asistencia) && courseData.fechas_asistencia.length > 0
+    ? courseData.fechas_asistencia
+    : [];
+
+  const fechaInicioInstStr = instructorActual?.fecha_de_inicio || instructorActual?.fecha_inicio || "";
+  const fechaInicioInstObj = fechaInicioInstStr ? parseDateToObj(fechaInicioInstStr) : null;
+
+  const fechasAsistencia = todasLasFechas.filter((fechaStr: string) => {
+    if (fechaInicioInstObj && !isNaN(fechaInicioInstObj.getTime())) {
+      const fechaItemObj = parseDateToObj(fechaStr);
+      if (fechaItemObj < fechaInicioInstObj) {
+        return false; // Omitimos fechas anteriores a la fecha de inicio del instructor (Ej: Ximena desde el lunes 19)
+      }
+    }
+    return true;
+  });
+
+  // Si no quedan fechas tras el filtro o está vacío, se provee una fecha por defecto o se respeta el array limpio
+  const fechasFinales = fechasAsistencia.length > 0 ? fechasAsistencia : (todasLasFechas.length > 0 ? [todasLasFechas[todasLasFechas.length - 1]] : ["19/10/2026"]);
+
+  // Hoja de Aprendices precargada con la base de datos de la ficha
   const aprendicesHeaders = [
     "tipo_documento", 
     "numero_documento", 
@@ -94,11 +132,7 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
     "estado"
   ];
 
-  const fechasAsistencia: string[] = Array.isArray(courseData?.fechas_asistencia) && courseData.fechas_asistencia.length > 0
-    ? courseData.fechas_asistencia
-    : ["20/01/2026", "21/01/2026"];
-
-  const fullAprendicesHeaders = [...aprendicesHeaders, ...fechasAsistencia];
+  const fullAprendicesHeaders = [...aprendicesHeaders, ...fechasFinales];
   const aprendicesRows: any[][] = [fullAprendicesHeaders];
 
   const listadoAprendices: any[] = Array.isArray(courseData?.asistencias_aprendices) && courseData.asistencias_aprendices.length > 0
@@ -127,8 +161,9 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
       aprendiz.estado || "En formación"
     ];
 
-    fechasAsistencia.forEach((fecha: string) => {
-      const estadoReg = aprendiz.registros?.[fecha] || "Presente";
+    fechasFinales.forEach((fecha: string) => {
+      // Si el instructor no tiene registros previos para sus fechas válidas, se deja limpio o con guía vacía/presente
+      const estadoReg = instructorActual ? (aprendiz.registros?.[fecha] || "") : (aprendiz.registros?.[fecha] || "Presente");
       row.push(estadoReg);
     });
 
@@ -163,7 +198,8 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
     "correo_google", 
     "correo_institucional_sena", 
     "dia", 
-    "rol"
+    "rol",
+    "fecha_de_inicio"
   ];
   const equipoRows: any[][] = [equipoHeaders];
   
@@ -175,11 +211,12 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
         inst.correo_google || "",
         inst.correo_institucional_sena || "",
         inst.dia || "Lunes",
-        inst.rol || "Instructor"
+        inst.rol || "Instructor",
+        inst.fecha_de_inicio || ""
       ]);
     });
   } else {
-    equipoRows.push(["", "", "", "", "", ""]);
+    equipoRows.push(["", "", "", "", "", "", ""]);
   }
 
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
@@ -212,13 +249,13 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
   return new Uint8Array(sdata);
 }
 
-export function downloadGoogleSheetsTemplate(courseData?: typeof initialCourseData) {
-  const data = generateGoogleSheetsTemplate(courseData);
+export function downloadGoogleSheetsTemplate(courseData?: typeof initialCourseData, instructorActual?: any) {
+  const data = generateGoogleSheetsTemplate(courseData, instructorActual);
   const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Plantilla_Asistencia_Ficha_${courseData?.ficha_de_caracterizacion || 'SENA'}.xlsx`;
+  a.download = `Plantilla_Asistencia_Ficha_${courseData?.ficha_de_caracterizacion || 'SENA'}_${instructorActual?.nombre_del_instructor || 'Instructor'}.xlsx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -290,13 +327,12 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
     updatedData.instructor_titular = updatedData.instructor_titular || "";
     updatedData.competencia_activa = updatedData.competencia_activa || "";
 
-    // 1. Parsear Ficha y Denominación unificada (con soporte robusto para formato tabular o vertical)
+    // 1. Parsear Ficha y Denominación unificada
     const parseMetaFromSheet = (sheetNameVal: string) => {
       const ws = wb.Sheets[sheetNameVal];
       if (!ws) return;
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       rows.forEach((row: any) => {
-        // Soporte formato tabular (claves en columnas)
         const fichaDetectada = row.ficha_de_caracterizacion || row.ficha || row.numero_ficha;
         if (fichaDetectada) updatedData.ficha_de_caracterizacion = String(fichaDetectada).trim();
         
@@ -310,7 +346,6 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
         if (row.instructor_titular) updatedData.instructor_titular = String(row.instructor_titular).trim();
         if (row.competencia_activa) updatedData.competencia_activa = String(row.competencia_activa).trim();
 
-        // Soporte formato vertical clave-valor (ej: Col 0 clave, Col 1 valor)
         const keys = Object.keys(row);
         if (keys.length >= 2) {
           const k = String(row[keys[0]] || '').trim().toLowerCase();
@@ -328,7 +363,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
     };
 
     if (fichaSheetName) parseMetaFromSheet(fichaSheetName);
-    if (aprendicesSheetName) parseMetaFromSheet(aprendicesSheetName); // Permite leer metadatos incrustados en la hoja de aprendices si aplica
+    if (aprendicesSheetName) parseMetaFromSheet(aprendicesSheetName);
 
     // 2. Parsear Equipo Ejecutor
     if (equipoSheetName) {
@@ -344,8 +379,8 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             correo_institucional_sena: String(r.correo_institucional_sena || "").trim(),
             dia: String(r.dia || "Lunes").trim(),
             rol: String(r.rol || "Instructor").trim(),
-            fecha_de_inicio: "20/01/2026",
-            fecha_terminacion: "03/12/2026"
+            fecha_de_inicio: String(r.fecha_de_inicio || r.fecha_inicio || "20/01/2026").trim(),
+            fecha_terminacion: String(r.fecha_terminacion || "03/12/2026").trim()
           }));
 
         if (newInstructors.length > 0) {
