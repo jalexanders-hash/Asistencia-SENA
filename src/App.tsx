@@ -8,6 +8,7 @@ import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
 import { getUserSystemRole } from './lib/securityRoles';
+import { getInstructorFromSession } from './lib/authSession';
 import { 
   Users, 
   XCircle,
@@ -39,19 +40,16 @@ const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding
 
 const ADMIN_EMAIL = "jalexanders@gmail.com";
 
-// Permitir edición de asistencia tanto a líderes, coordinadores, administradores como a instructores técnicos
 export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = []): boolean => {
   const role = getUserSystemRole(user, equipoInstructores);
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
 };
 
-// Permitir gestión de plantillas y vistas colaborativas a todo el equipo ejecutor
 export const canManageFichasAndSheets = (user: User | null, equipoInstructores: any[] = []): boolean => {
   const role = getUserSystemRole(user, equipoInstructores);
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
 };
 
-// MÓDULO DE AUDITORÍA INMUTABLE
 export type TipoAccionAuditoria = 
   | 'REGISTRAR_ASISTENCIA' 
   | 'MODIFICAR_ASISTENCIA' 
@@ -328,7 +326,11 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Validación de rol global utilizando el mapa completo de fichas (fichasDataMap)
+  // Caracterización estricta y dinámica del instructor en sesión mediante el helper seguro
+  const activeInstructor = useMemo(() => {
+    return getInstructorFromSession(user, courseData);
+  }, [user, courseData]);
+
   const currentUserRole = useMemo(() => {
     return getUserSystemRole(user, fichasDataMap);
   }, [user, fichasDataMap]);
@@ -343,7 +345,6 @@ export default function App() {
       const userEmail = user.email?.toLowerCase().trim();
       let encontrado = false;
 
-      // Buscar al instructor en todas las fichas cargadas en el sistema (multifiche)
       for (const [fichaIdKey, fichaObj] of Object.entries(fichasDataMap)) {
         const equipo = fichaObj.equipo_instructores || [];
         const idx = equipo.findIndex(
@@ -384,7 +385,7 @@ export default function App() {
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
     
-  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : null;
+  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : activeInstructor;
 
   const currentInstructorDates = useMemo(() => {
     const dates = courseData.fechas_asistencia || [];
@@ -624,14 +625,14 @@ export default function App() {
     return filtered;
   }, [searchTerm, selectedStudentDoc, showRiskOnly, studentsWithStats, kpiFilter]);
 
-  const correoInstructorActual = (currentInstructor as any)?.correo_institucional_sena || (currentInstructor as any)?.correo_institucional || (currentInstructor as any)?.correo || user?.email || '';
+  const correoInstructorActual = activeInstructor.correo_institucional_sena || activeInstructor.correo_google || user?.email || '';
 
   const riskStudentsList = useMemo(() => {
     return studentsWithStats.filter(s => s.enRiesgo || s.enRiesgoTarde);
   }, [studentsWithStats]);
 
   const getNotificationTemplateText = (student: any) => {
-    const instructorName = (currentInstructor as any)?.nombre_del_instructor || (currentUserRole === 'ADMIN' ? "Jorge Alexander Sepúlveda (Administrador)" : currentUserRole === 'COORDINADOR' ? "Coordinación Académica SENA" : "Instructor SENA");
+    const instructorName = activeInstructor.nombre_del_instructor || "Instructor SENA";
     const fechasFallasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'X' || student.registros[displayAsDDMMYYYY(date)] === 'X');
     const fechasTardanzasInstructor = currentInstructorDates.filter(date => student.registros[date] === 'Tarde' || student.registros[displayAsDDMMYYYY(date)] === 'Tarde');
 
@@ -728,7 +729,7 @@ CC: ${correoInstructorActual}`;
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12 flex flex-col justify-between">
       
-      {/* HEADER INSTITUCIONAL */}
+      {/* HEADER INSTITUCIONAL DINÁMICO */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-3">
           
@@ -842,15 +843,18 @@ CC: ${correoInstructorActual}`;
               )}
             </div>
 
+            {/* PERFIL DINÁMICO DE LA SESIÓN ACTIVA (XIMENA / OTRO INSTRUCTOR) */}
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
-              <div className="w-9 h-9 rounded-full bg-[#39a900]/10 flex items-center justify-center font-bold text-[#39a900] text-xs border-2 border-[#39a900]/20">
-                {currentUserRole === 'ADMIN' ? "JA" : currentUserRole === 'COORDINADOR' ? "CA" : "JS"}
+              <div className="w-10 h-10 rounded-full bg-[#39a900] text-white flex items-center justify-center font-bold text-sm shadow-sm border-2 border-emerald-100">
+                {activeInstructor.nombre_del_instructor?.charAt(0) || 'U'}
               </div>
               <div className="hidden md:block text-left leading-tight">
                 <p className="text-xs font-bold text-slate-800">
-                  {currentUserRole === 'ADMIN' ? "Jorge Alexander (Administrador)" : currentUserRole === 'COORDINADOR' ? "Coordinación Académica" : "Jorge Alexander Sepúlveda"}
+                  {activeInstructor.nombre_del_instructor}
                 </p>
-                <p className="text-[11px] text-slate-500">{user.email}</p>
+                <p className="text-[11px] text-slate-500">
+                  {activeInstructor.correo_institucional_sena || activeInstructor.correo_google || user.email}
+                </p>
               </div>
             </div>
           </div>
@@ -1505,6 +1509,7 @@ CC: ${correoInstructorActual}`;
         onClose={() => setIsSheetsModalOpen(false)} 
         currentFicha={currentFichaId}
         courseData={courseData} 
+        currentUser={user}
         onDataLoaded={(newData, targetFichaId) => {
           const fichaToUse = targetFichaId || currentFichaId;
           if (fichaToUse !== currentFichaId) {
@@ -1526,7 +1531,6 @@ CC: ${correoInstructorActual}`;
   );
 }
 
-// COMPONENTE GESTIÓN E INSTRUCTORES CON GESTIÓN DINÁMICA DE ROLES Y AUDITORÍA
 interface GestionInstructoresProps {
   courseData: any;
   currentFichaId: string;
@@ -1678,7 +1682,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-sm font-bold text-slate-800">Equipo Ejecutor y Trazabilidad Histórica</h3>
+        <h3 className="text-sm font-bold text-slate-800">Equipo Ejecutor e Instructores Asignados</h3>
         {equipoInstructores.length === 0 ? (
           <p className="text-xs text-slate-400 italic p-4 bg-slate-50 rounded-lg">No hay instructores registrados actualmente.</p>
         ) : (
@@ -1745,7 +1749,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
               <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
             </div>
             <div>
-              <label className="no block font-bold text-slate-700 mb-1">Competencia asociada</label>
+              <label className="block font-bold text-slate-700 mb-1">Competencia asociada</label>
               <input type="text" value={competencia} onChange={e => setCompetencia(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
             </div>
             <div>
