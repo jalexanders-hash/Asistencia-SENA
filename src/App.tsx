@@ -346,28 +346,6 @@ export default function App() {
     fetchAllFichasFromCloud();
   }, []);
 
-  const courseData = useMemo(() => {
-    const rawData = fichasDataMap[currentFichaId] || {
-      ...JSON.parse(JSON.stringify(initialCourseData)),
-      ficha_de_caracterizacion: currentFichaId,
-      fechas_asistencia: [],
-      asistencias_aprendices: initialCourseData.asistencias_aprendices.map(a => ({ ...a, registros: {} }))
-    };
-    return sanitizeFicha(rawData, currentFichaId);
-  }, [fichasDataMap, currentFichaId]);
-
-  const updateCurrentFichaData = (newData: any) => {
-    const cleanData = sanitizeFicha(newData, currentFichaId);
-    setFichasDataMap(prev => {
-      const updated = {
-        ...prev,
-        [currentFichaId]: cleanData
-      };
-      localStorage.setItem('sena_all_fichas_database', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
@@ -410,13 +388,82 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const activeInstructor = useMemo(() => {
-    return getInstructorFromSession(user, courseData);
-  }, [user, courseData]);
-
   const currentUserRole = useMemo(() => {
     return getUserSystemRole(user, fichasDataMap);
   }, [user, fichasDataMap]);
+
+  // Cálculo optimizado: Fichas disponibles para el usuario logueado según su rol y equipo instructor
+  const fichasDisponiblesMap = useMemo(() => {
+    if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
+      return fichasDataMap;
+    }
+
+    if (!user || !user.email) {
+      return {};
+    }
+
+    const userEmail = user.email.toLowerCase().trim();
+    const fichasFiltradas: Record<string, any> = {};
+
+    Object.keys(fichasDataMap).forEach((fichaId) => {
+      const fichaObj = fichasDataMap[fichaId];
+      const equipo = fichaObj.equipo_instructores || [];
+
+      const estaVinculado = equipo.some((inst: any) => {
+        const instEmails = [
+          inst.correo_institucional_sena,
+          inst.correo_institucional,
+          inst.correo_gmail,
+          inst.correo_google,
+          inst.correo
+        ];
+        return instEmails.some(e => e && e.toLowerCase().trim() === userEmail);
+      });
+
+      if (estaVinculado) {
+        fichasFiltradas[fichaId] = fichaObj;
+      }
+    });
+
+    return fichasFiltradas;
+  }, [fichasDataMap, user, currentUserRole]);
+
+  const llavesFichasDisponibles = useMemo(() => {
+    return Object.keys(fichasDisponiblesMap);
+  }, [fichasDisponiblesMap]);
+
+  // Asegurar que si la ficha actual no está disponible para el instructor, salte a la primera permitida
+  useEffect(() => {
+    if (llavesFichasDisponibles.length > 0 && !fichasDisponiblesMap[currentFichaId]) {
+      setCurrentFichaId(llavesFichasDisponibles[0]);
+    }
+  }, [llavesFichasDisponibles, currentFichaId, fichasDisponiblesMap]);
+
+  const courseData = useMemo(() => {
+    const rawData = fichasDataMap[currentFichaId] || {
+      ...JSON.parse(JSON.stringify(initialCourseData)),
+      ficha_de_caracterizacion: currentFichaId,
+      fechas_asistencia: [],
+      asistencias_aprendices: initialCourseData.asistencias_aprendices.map(a => ({ ...a, registros: {} }))
+    };
+    return sanitizeFicha(rawData, currentFichaId);
+  }, [fichasDataMap, currentFichaId]);
+
+  const updateCurrentFichaData = (newData: any) => {
+    const cleanData = sanitizeFicha(newData, currentFichaId);
+    setFichasDataMap(prev => {
+      const updated = {
+        ...prev,
+        [currentFichaId]: cleanData
+      };
+      localStorage.setItem('sena_all_fichas_database', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const activeInstructor = useMemo(() => {
+    return getInstructorFromSession(user, courseData);
+  }, [user, courseData]);
 
   useEffect(() => {
     if (user && fichasDataMap) {
@@ -823,7 +870,7 @@ CC: ${correoInstructorActual}`;
 
           <button 
             onClick={() => signOut(auth)}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto"
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 mx-auto cursor-pointer"
           >
             Cerrar Sesión
           </button>
@@ -854,11 +901,15 @@ CC: ${correoInstructorActual}`;
                   onChange={(e) => setCurrentFichaId(e.target.value)}
                   className="bg-emerald-50 text-[#39a900] text-xs font-bold px-2 py-0.5 rounded border border-[#39a900]/30 focus:outline-none cursor-pointer"
                 >
-                 {Object.keys(fichasDataMap).map((fichaKey) => (
-                  <option key={fichaKey} value={fichaKey}>
-                    Ficha: {fichaKey}
-                  </option>
-                ))}
+                 {llavesFichasDisponibles.length > 0 ? (
+                   llavesFichasDisponibles.map((fichaKey) => (
+                    <option key={fichaKey} value={fichaKey}>
+                      Ficha: {fichaKey}
+                    </option>
+                  ))
+                 ) : (
+                  <option value="" disabled>Sin fichas asignadas</option>
+                 )}
                 </select>
               </div>
             </div>
@@ -868,7 +919,7 @@ CC: ${correoInstructorActual}`;
             {currentUserRole === 'ADMIN' && (
               <button
                 onClick={() => generarBackupGlobalFichas(fichasDataMap, user.email || ADMIN_EMAIL)}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors cursor-pointer"
                 title="Descargar copia de seguridad estructurada (.JSON)"
               >
                 💾 Backup Global (.JSON)
@@ -883,7 +934,7 @@ CC: ${correoInstructorActual}`;
             <div className="relative">
               <button 
                 onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
-                className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 relative transition-colors"
+                className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 relative transition-colors cursor-pointer"
                 title="Centro de Notificaciones"
               >
                 <Bell className="w-5 h-5" />
@@ -933,7 +984,7 @@ CC: ${correoInstructorActual}`;
                               setShowNotificationModal(true);
                               setShowNotificationsDropdown(false);
                             }}
-                            className="px-2.5 py-1 bg-emerald-50 text-[#39a900] hover:bg-emerald-100 rounded text-[11px] font-bold transition-colors whitespace-nowrap"
+                            className="px-2.5 py-1 bg-emerald-50 text-[#39a900] hover:bg-emerald-100 rounded text-[11px] font-bold transition-colors whitespace-nowrap cursor-pointer"
                           >
                             Plantilla
                           </button>
@@ -979,14 +1030,14 @@ CC: ${correoInstructorActual}`;
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setMainView('listado')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${mainView === 'listado' ? 'bg-[#39a900] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${mainView === 'listado' ? 'bg-[#39a900] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               <Users className="w-4 h-4" />
               Listado y Asistencia
             </button>
             <button
               onClick={() => setMainView('tablero')}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all ${mainView === 'tablero' ? 'bg-[#39a900] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${mainView === 'tablero' ? 'bg-[#39a900] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               <LayoutDashboard className="w-4 h-4" />
               Vista de Tablero (KPI)
