@@ -31,7 +31,10 @@ import {
   WifiOff,
   BookOpen,
   UserPlus,
-  LogOut
+  LogOut,
+  Edit3,
+  Save,
+  ShieldAlert
 } from 'lucide-react';
 
 const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding=%27utf-8%27?%3e%3c!--%20Generator:%20Adobe%20Illustrator%2026.0.1,%20SVG%20Export%20Plug-In%20.%20SVG%20Version:%206.00%20Build%200)%20--%3e%3csvg%20version=%271.1%27%20id=%27Capa_1%27%20xmlns=%27http://www.w3.org/2000/svg%27%20xmlns:xlink=%27http://www.w3.org/1999/xlink%27%20x=%270px%27%20y=%270px%27%20viewBox=%270%200%201000%201000%27%20style=%27enable-background:new%200%200%201000%201000;%27%20xml:space=%27preserve%27%3e%3cstyle%20type=%27text/css%27%3e%20.st0{fill:%2339a900;}%20%3c/style%3e%3cpath%20id=%27path47-5%27%20class=%27st0%27%20d=%27M504.2,20.5c-58.3,0.1-105.6,47.4-105.5,105.8c0.1,58.3,47.4,105.6,105.7,105.6%20c58.3,0,105.6-47.3,105.6-105.7V126C609.9,67.6,562.6,20.4,504.2,20.5z%20M155.6,264.6c-18.6,0.1-37.5,1.1-55.2,5.6%20c-11.7,3-23,7.8-30.3,15.4c-9.2,9.5-10.4,22.3-5.9,33.3c4,9.7,14.8,16.9,26.8,21.1c25.9,8.9,54.6,10.7,81.8,16.3%20c5,1.2,10.6,2.6,13.7,6c3.2,4.1,1.3,9.7-4,12.2c-8.8,4.5-20.1,4.5-30.4,4.4c-9.4-0.4-19.7-1.2-27.2-5.9c-5.5-3.4-6.5-9.1-5.2-14.1%20l-60.6,0c-0.2,9.2,1.6,18.9,8.4,26.8c5.6,6.8,14.8,11.5,24.6,14.4c15.7,4.6,32.7,6,49.4,6.4c22.7,0.4,45.8-0.3,67.6-5.4%20c13-3.2,25.8-8.3,34.1-16.6c14.8-14.8,11.3-38.3-8.3-49.8c-9.8-5.7-21.5-9.2-33.4-11.5c-17.5-3.6-35.3-6.3-52.9-9.2%20c-6.2-1.2-12.8-2.3-18-5.2c-5.5-2.9-5.9-9.8-0.3-12.9c7.2-4.1,16.8-4,25.4-4c9.1,0.2,19,0.7,26.5,5c4.2,2.3,5.9,6.3,5.9,10.1%20l57.6-0.1c-0.2-7.3-1.6-14.9-6.9-21.2c-6.2-7.8-17.1-12.7-28.3-15.5C192.8,265.6,174.1,264.7,155.6,264.6L155.6,264.6z%20M280.6,268.9%20l0,137.7l168.1,0l0-30H342.3v-26.7h94.9v-29.3h-94.9l0-21.9l102.6,0l-0.1-29.7L280.6,268.9z%20M557.5,269c0,0-51.9,0-77.9,0l0,137.7%20l59,0l0-92.7l80.8,92.6l81,0.1l0-137.7l-59.1,0l0.1,92L557.5,269z%20M805.6,269.2c0,0-63.6,91.9-95.6,137.7l61.9,0l14.9-24.8h95.7%20l13.9,24.9l68.8,0L874,269.2L805.6,269.2z%20M836.6,302.1l29.4,49.9l-60.7,0.1L836.6,302.1z%20M10.6,445.6l0.5,75l280.1-1%20c14.3,3.1,22.6,12.4,19.7,33.5L138.6,854.7l56.1,52.5l266.9-461.6L10.6,445.6z%20M545.2,446.2l262.4,459.6l58-52.1L691.3,552.9%20c-2.9-21.2,5.4-30.6,19.7-33.7l280.2,1l-0.1-73.7L545.2,446.2z%20M500.9,522.3L254.8,944.7l65.4,31.9L484.4,699%20c5.7-4.6,11.4-7.1,17.1-7.3c6-0.2,12.2,2,18.3,6.8l163.8,278.4l67.4-35.2L500.9,522.3z%27/%3e%3cg%20id=%27_x23_000000ff-2%27%20transform=%27matrix(0.31570611,0,0,0.23560774,-391.49698,-10.601126)%27%3e%3c/g%3e%3c/svg%3e`;
@@ -78,9 +81,6 @@ export const canManageFichasAndSheets = (user: User | null, equipoInstructores: 
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
 };
 
-/**
- * Función robusta de normalización de aprendices con fallbacks múltiples obligatorios.
- */
 export const normalizarListadoAprendices = (courseData: any, externalStudents?: any[]): any[] => {
   let rawList: any[] = [];
 
@@ -392,7 +392,6 @@ export default function App() {
     return getUserSystemRole(user, fichasDataMap);
   }, [user, fichasDataMap]);
 
-  // Cálculo optimizado: Fichas disponibles para el usuario logueado según su rol y equipo instructor
   const fichasDisponiblesMap = useMemo(() => {
     if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
       return fichasDataMap;
@@ -432,7 +431,6 @@ export default function App() {
     return Object.keys(fichasDisponiblesMap);
   }, [fichasDisponiblesMap]);
 
-  // Asegurar que si la ficha actual no está disponible para el instructor, salte a la primera permitida
   useEffect(() => {
     if (llavesFichasDisponibles.length > 0 && !fichasDisponiblesMap[currentFichaId]) {
       setCurrentFichaId(llavesFichasDisponibles[0]);
@@ -2109,7 +2107,12 @@ interface GestionInstructoresProps {
   user: User | null;
 }
 
-export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ courseData, currentFichaId, updateCourseData, user }) => {
+export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ 
+  courseData, 
+  currentFichaId, 
+  updateCourseData, 
+  user 
+}) => {
   const [nombre, setNombre] = useState('');
   const [competencia, setCompetencia] = useState('');
   const [correoGmail, setCorreoGmail] = useState('');
@@ -2119,57 +2122,96 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
   const [rolNuevo, setRolNuevo] = useState('Instructor / Tutor');
   const [registradoPor, setRegistradoPor] = useState(user?.email || '');
 
-  const equipoInstructores = courseData.equipo_instructores || [];
-  const tienePermisosEdicion = canUserEditFicha(user, equipoInstructores);
+  // Estados para el Modal de Edición de Instructor
+  const [editingInstructorIndex, setEditingInstructorIndex] = useState<number | null>(null);
+  const [editNombre, setEditNombre] = useState('');
+  const [editCompetencia, setEditCompetencia] = useState('');
+  const [editCorreoGmail, setEditCorreoGmail] = useState('');
+  const [editCorreoInst, setEditCorreoInst] = useState('');
+  const [editDia, setEditDia] = useState('');
+  const [editRol, setEditRol] = useState('');
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
-  const handleRolChange = async (index: number, nuevoRol: string) => {
-    if (!tienePermisosEdicion) {
-      alert("Acceso denegado: No tienes privilegios para modificar roles en esta ficha.");
+  const equipoInstructores = courseData.equipo_instructores || [];
+  const userRole = getUserSystemRole(user, equipoInstructores);
+  const esLiderOSuperior = userRole === 'ADMIN' || userRole === 'COORDINADOR' || userRole === 'INSTRUCTOR_LIDER';
+
+  const handleOpenEditModal = (instructor: any, index: number) => {
+    if (!esLiderOSuperior) {
+      alert("Acceso denegado: Solo el Instructor Líder, Coordinador o Administrador pueden editar los datos del equipo ejecutor.");
+      return;
+    }
+    setEditingInstructorIndex(index);
+    setEditNombre(instructor.nombre_del_instructor || instructor.nombre || '');
+    setEditCompetencia(instructor.competencia || '');
+    setEditCorreoGmail(instructor.correo_gmail || '');
+    setEditCorreoInst(instructor.correo_institucional || instructor.correo_institucional_sena || '');
+    setEditDia(instructor.dia || instructor.dia_semana || 'Lunes');
+    setEditRol(instructor.rol || (instructor.es_lider ? 'Instructor Lider' : 'Instructor / Tutor'));
+  };
+
+  const handleSaveEditedInstructor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingInstructorIndex === null) return;
+    if (!esLiderOSuperior) {
+      alert("No tienes permisos suficientes para realizar esta modificación.");
       return;
     }
 
-    const instructorOriginal = equipoInstructores[index];
-    const rolAnterior = instructorOriginal.rol || 'Instructor / Tutor';
+    setIsSubmittingEdit(true);
+    const instructorOriginal = equipoInstructores[editingInstructorIndex];
 
-    if (rolAnterior === nuevoRol) return;
-
-    const updatedEquipo = [...equipoInstructores];
-    updatedEquipo[index] = {
+    const instructorActualizado = {
       ...instructorOriginal,
-      rol: nuevoRol,
-      es_lider: nuevoRol === 'Instructor Lider'
+      nombre_del_instructor: editNombre.trim(),
+      competencia: editCompetencia.trim(),
+      correo_gmail: editCorreoGmail.trim().toLowerCase(),
+      correo_institucional: editCorreoInst.trim().toLowerCase(),
+      correo_institucional_sena: editCorreoInst.trim().toLowerCase(),
+      dia: editDia,
+      rol: editRol,
+      es_lider: editRol === 'Instructor Lider'
     };
+
+    const nuevoEquipo = [...equipoInstructores];
+    nuevoEquipo[editingInstructorIndex] = instructorActualizado;
 
     const updatedCourseData = {
       ...courseData,
-      equipo_instructores: updatedEquipo
+      equipo_instructores: nuevoEquipo
     };
 
     try {
       await updateFichaCompleteData(updatedCourseData, currentFichaId);
       updateCourseData(updatedCourseData);
+      localStorage.setItem(`sena_ficha_data_${currentFichaId}`, JSON.stringify(updatedCourseData));
 
       await registrarLogAuditoria(
         currentFichaId,
-        user?.email || registradoPor,
+        user?.email || 'sistema@sena.edu.co',
         'MODIFICAR_FICHA',
-        `Se actualizó el rol del instructor ${instructorOriginal.nombre_del_instructor} de "${rolAnterior}" a "${nuevoRol}" en la ficha ${currentFichaId}.`,
-        { rol: rolAnterior },
-        { rol: nuevoRol }
+        `El Instructor Líder (${user?.email}) editó los datos del instructor ${instructorOriginal.nombre_del_instructor} en la ficha ${currentFichaId}.`,
+        instructorOriginal,
+        instructorActualizado
       );
 
-      alert(`Rol actualizado exitosamente a: ${nuevoRol}`);
+      alert("¡Datos del instructor actualizados y auditados exitosamente!");
+      setEditingInstructorIndex(null);
     } catch (error) {
-      console.error("Error al actualizar el rol en Firestore:", error);
-      alert("Error de sincronización con la base de datos.");
+      console.error("Error al actualizar instructor en Firestore:", error);
+      updateCourseData(updatedCourseData);
+      alert("Guardado localmente (Error de sincronización con Firestore).");
+      setEditingInstructorIndex(null);
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
   const handleRegistrarInstructor = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!tienePermisosEdicion) {
-      alert("Acceso denegado: No tienes privilegios para registrar o reemplazar instructores en esta ficha.");
+    if (!esLiderOSuperior) {
+      alert("Acceso denegado: Solo el Instructor Líder o superior pueden registrar nuevos instructores.");
       return;
     }
 
@@ -2179,11 +2221,11 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
     }
 
     const nuevoInstructor = {
-      nombre_del_instructor: nombre,
-      competencia: competencia,
-      correo_gmail: correoGmail,
-      correo_institucional: correoInst,
-      correo_institucional_sena: correoInst,
+      nombre_del_instructor: nombre.trim(),
+      competencia: competencia.trim(),
+      correo_gmail: correoGmail.trim().toLowerCase(),
+      correo_institucional: correoInst.trim().toLowerCase(),
+      correo_institucional_sena: correoInst.trim().toLowerCase(),
       dia: diaSemana,
       rol: rolNuevo,
       es_lider: rolNuevo === 'Instructor Lider',
@@ -2245,11 +2287,16 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-      <div className="border-b border-slate-200 pb-4">
-        <h2 className="text-xl font-bold text-slate-900">👥 Módulo de Gestión y Reemplazo de Instructores - Ficha {currentFichaId}</h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Gestione los roles institucionales (Líder, Tutor, Coordinador Académico) y reemplace instructores garantizando la inmutabilidad de los registros.
-        </p>
+      <div className="border-b border-slate-200 pb-4 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">👥 Módulo de Gestión y Reemplazo de Instructores - Ficha {currentFichaId}</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Gestione los roles institucionales y edite la información del equipo ejecutor.
+          </p>
+        </div>
+        <span className="px-3 py-1 bg-emerald-50 text-[#39a900] font-bold text-xs rounded-lg border border-emerald-200">
+          Rol: {userRole}
+        </span>
       </div>
 
       <div className="space-y-4">
@@ -2265,9 +2312,8 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
                   <th className="p-3">Rol Institucional</th>
                   <th className="p-3">Competencia</th>
                   <th className="p-3">Día</th>
-                  <th className="p-3">Inicio</th>
-                  <th className="p-3">Fin (Histórico)</th>
                   <th className="p-3">Correo Institucional</th>
+                  <th className="p-3 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -2280,28 +2326,27 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
                       </td>
                       
                       <td className="p-3 whitespace-nowrap">
-                        {tienePermisosEdicion ? (
-                          <select
-                            value={rolActual}
-                            onChange={(e) => handleRolChange(idx, e.target.value)}
-                            className="border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold bg-white text-slate-800 focus:outline-none focus:border-[#39a900] cursor-pointer shadow-xs"
-                          >
-                            <option value="Instructor / Tutor">Instructor / Tutor</option>
-                            <option value="Instructor Lider">Instructor Líder</option>
-                            <option value="Coordinador Academico">Coordinador Académico</option>
-                          </select>
-                        ) : (
-                          <span className={getRoleBadgeClass(rolActual)}>
-                            {rolActual}
-                          </span>
-                        )}
+                        <span className={getRoleBadgeClass(rolActual)}>
+                          {rolActual}
+                        </span>
                       </td>
 
                       <td className="p-3 max-w-xs truncate" title={inst.competencia}>{inst.competencia}</td>
                       <td className="p-3">{inst.dia || inst.dia_semana || 'N/A'}</td>
-                      <td className="p-3 font-mono">{inst.fecha_inicio || 'Inicial'}</td>
-                      <td className="p-3 font-mono">{inst.fecha_fin || 'Activo (Actual)'}</td>
-                      <td className="p-3">{inst.correo_institucional || inst.correo_institucional_sena}</td>
+                      <td className="p-3">{inst.correo_institucional || inst.correo_institucional_sena || inst.correo_gmail}</td>
+                      <td className="p-3 text-center whitespace-nowrap">
+                        {esLiderOSuperior ? (
+                          <button
+                            onClick={() => handleOpenEditModal(inst, idx)}
+                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#39a900] font-bold rounded-lg border border-emerald-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            title="Editar instructor"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" /> Editar
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">Solo Líder</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -2311,7 +2356,111 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
         )}
       </div>
 
-      {tienePermisosEdicion ? (
+      {/* MODAL DE EDICIÓN DE INSTRUCTOR */}
+      {editingInstructorIndex !== null && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-[#39a900]" /> Editar Datos del Instructor
+              </h3>
+              <button onClick={() => setEditingInstructorIndex(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedInstructor} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nombre Completo</label>
+                <input 
+                  type="text" 
+                  value={editNombre} 
+                  onChange={e => setEditNombre(e.target.value)} 
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900]" 
+                  required 
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Competencia Asociada</label>
+                <input 
+                  type="text" 
+                  value={editCompetencia} 
+                  onChange={e => setEditCompetencia(e.target.value)} 
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 focus:outline-none focus:border-[#39a900]" 
+                  required 
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Correo Gmail / Personal</label>
+                  <input 
+                    type="email" 
+                    value={editCorreoGmail} 
+                    onChange={e => setEditCorreoGmail(e.target.value)} 
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800" 
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Correo Institucional SENA</label>
+                  <input 
+                    type="email" 
+                    value={editCorreoInst} 
+                    onChange={e => setEditCorreoInst(e.target.value)} 
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold" 
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Día Asignado</label>
+                  <select 
+                    value={editDia} 
+                    onChange={e => setEditDia(e.target.value)} 
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold"
+                  >
+                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Rol Institucional</label>
+                  <select 
+                    value={editRol} 
+                    onChange={e => setEditRol(e.target.value)} 
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-bold text-[#39a900]"
+                  >
+                    <option value="Instructor / Tutor">Instructor / Tutor</option>
+                    <option value="Instructor Lider">Instructor Líder</option>
+                    <option value="Coordinador Academico">Coordinador Académico</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingInstructorIndex(null)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-lg hover:bg-slate-200 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSubmittingEdit}
+                  className="px-5 py-2 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" /> {isSubmittingEdit ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {esLiderOSuperior ? (
         <div className="border-t border-slate-200 pt-6">
           <h3 className="text-sm font-bold text-slate-800 mb-4">➕ Registrar o Reemplazar Instructor</h3>
           <form onSubmit={handleRegistrarInstructor} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -2354,15 +2503,15 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({ course
               <input type="email" value={registradoPor} onChange={e => setRegistradoPor(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
             </div>
             <div className="md:col-span-2 flex justify-end">
-              <button type="submit" className="px-6 py-2.5 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm cursor-pointer">
-                Guardar e Integrar Instructor
+              <button type="submit" className="px-6 py-2.5 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm cursor-pointer flex items-center gap-2">
+                <UserPlus className="w-4 h-4" /> Guardar e Integrar Instructor
               </button>
             </div>
           </form>
         </div>
       ) : (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold text-center">
-          🔒 Modo de solo lectura: Tu cuenta actual no tiene privilegios de líder o administrador para registrar o modificar instructores en esta ficha.
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-semibold text-center flex items-center justify-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-amber-600" /> Los formularios de registro y adición de instructores están restringidos exclusivamente al Instructor Líder y Coordinación.
         </div>
       )}
     </div>
