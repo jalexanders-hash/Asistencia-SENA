@@ -71,6 +71,25 @@ export interface Aprendiz {
   registros: Record<string, string>;
 }
 
+/**
+ * Utilidades estrictas de sanitización para blindar la aplicación frente a errores de formato.
+ */
+export const sanitizarEmail = (email: string): string => {
+  if (!email) return "";
+  return String(email).trim().toLowerCase();
+};
+
+export const sanitizarDocumento = (doc: string): string => {
+  if (!doc) return "";
+  // Remueve puntos, comas, espacios intermedios y extremos para evitar duplicados por formato
+  return String(doc).trim().replace(/[.,\s]/g, '');
+};
+
+export const sanitizarTextoNombre = (texto: string): string => {
+  if (!texto) return "";
+  return String(texto).trim().replace(/\s+/g, ' ').toUpperCase();
+};
+
 export const canUserEditFicha = (user: User | null, equipoInstructores: any[] = []): boolean => {
   const role = getUserSystemRole(user, equipoInstructores);
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
@@ -81,6 +100,9 @@ export const canManageFichasAndSheets = (user: User | null, equipoInstructores: 
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
 };
 
+/**
+ * Función robusta de normalización de aprendices con prevención de duplicados estrictos.
+ */
 export const normalizarListadoAprendices = (courseData: any, externalStudents?: any[]): any[] => {
   let rawList: any[] = [];
 
@@ -100,31 +122,41 @@ export const normalizarListadoAprendices = (courseData: any, externalStudents?: 
     return [];
   }
 
-  return rawList
+  const mapaUnico = new Map<string, any>();
+
+  rawList
     .filter((item: any) => item && typeof item === 'object')
-    .map((item: any) => {
-      const doc = String(item.numero_documento || item.documento || item.identificacion || item.cedula || "").trim();
-      const nombres = String(item.nombres || item.nombre || item.first_name || "").trim();
-      const apellidos = String(item.apellidos || item.apellido || item.last_name || "").trim();
+    .forEach((item: any) => {
+      const doc = sanitizarDocumento(item.numero_documento || item.documento || item.identificacion || item.cedula || "");
+      const nombres = sanitizarTextoNombre(item.nombres || item.nombre || item.first_name || "");
+      const apellidos = sanitizarTextoNombre(item.apellidos || item.apellido || item.last_name || "");
       const tipoDoc = String(item.tipo_documento || item.tipo_doc || "CC").trim().toUpperCase();
-      const correo = String(item.correo_electronico || item.correo || item.email || "").trim().toLowerCase();
+      const correo = sanitizarEmail(item.correo_electronico || item.correo || item.email || "");
       const telefono = String(item.telefono || item.celular || item.phone || "").trim();
       const estado = String(item.estado || item.estado_aprendiz || "En Formación").trim();
       const registros = (item.registros && typeof item.registros === 'object') ? item.registros : {};
 
-      return {
-        ...item,
-        tipo_documento: tipoDoc,
-        numero_documento: doc,
-        nombres: nombres.toUpperCase(),
-        apellidos: apellidos.toUpperCase(),
-        correo: correo,
-        telefono: telefono,
-        estado: estado === 'En formación' ? 'En Formación' : estado,
-        registros
-      };
-    })
-    .filter((a) => a.numero_documento !== "" || a.nombres !== "");
+      if (doc !== "" || nombres !== "") {
+        const claveUnica = doc !== "" ? doc : `${nombres}_${apellidos}`;
+        
+        // Prevención estricta de duplicados en importaciones masivas (Sheets/JSON)
+        if (!mapaUnico.has(claveUnica)) {
+          mapaUnico.set(claveUnica, {
+            ...item,
+            tipo_documento: tipoDoc,
+            numero_documento: doc,
+            nombres: nombres,
+            apellidos: apellidos,
+            correo: correo,
+            telefono: telefono,
+            estado: estado === 'En formación' ? 'En Formación' : estado,
+            registros
+          });
+        }
+      }
+    });
+
+  return Array.from(mapaUnico.values());
 };
 
 export type TipoAccionAuditoria = 
@@ -153,7 +185,7 @@ export const registrarLogAuditoria = async (
 
     const logData = {
       ficha_id: fichaId,
-      correo_usuario: correoUsuario.toLowerCase().trim(),
+      correo_usuario: sanitizarEmail(correoUsuario),
       tipo_accion: tipoAccion,
       detalles: detalles,
       valor_anterior: valorAnterior ? JSON.stringify(valorAnterior) : null,
@@ -174,9 +206,9 @@ export const generarBackupGlobalFichas = (fichasMap: any, userEmail: string) => 
     const horaColombia = new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" });
 
     const backupPayload = {
-      version: "2.0",
+      version: "2.1",
       sistema: "SENA - Gestión Académica y Asistencia",
-      autor_respaldo: userEmail,
+      autor_respaldo: sanitizarEmail(userEmail),
       fecha_hora_colombia: horaColombia,
       total_fichas: Object.keys(fichasMap).length,
       data_fichas: fichasMap
@@ -261,7 +293,13 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
   }
 
   const instructoresSeguros = Array.isArray(ficha.equipo_instructores) && ficha.equipo_instructores.length > 0
-    ? ficha.equipo_instructores
+    ? ficha.equipo_instructores.map((inst: any) => ({
+        ...inst,
+        nombre_del_instructor: sanitizarTextoNombre(inst.nombre_del_instructor || inst.nombre || ''),
+        correo_gmail: sanitizarEmail(inst.correo_gmail || ''),
+        correo_institucional: sanitizarEmail(inst.correo_institucional || inst.correo_institucional_sena || ''),
+        correo_institucional_sena: sanitizarEmail(inst.correo_institucional || inst.correo_institucional_sena || '')
+      }))
     : (base.equipo_instructores || []);
 
   const aprendicesSeguros = normalizarListadoAprendices(ficha).map((a: any) => {
@@ -401,7 +439,7 @@ export default function App() {
       return {};
     }
 
-    const userEmail = user.email.toLowerCase().trim();
+    const userEmail = sanitizarEmail(user.email);
     const fichasFiltradas: Record<string, any> = {};
 
     Object.keys(fichasDataMap).forEach((fichaId) => {
@@ -410,13 +448,13 @@ export default function App() {
 
       const estaVinculado = equipo.some((inst: any) => {
         const instEmails = [
-          inst.correo_institucional_sena,
-          inst.correo_institucional,
-          inst.correo_gmail,
-          inst.correo_google,
-          inst.correo
+          sanitizarEmail(inst.correo_institucional_sena),
+          sanitizarEmail(inst.correo_institucional),
+          sanitizarEmail(inst.correo_gmail),
+          sanitizarEmail(inst.correo_google),
+          sanitizarEmail(inst.correo)
         ];
-        return instEmails.some(e => e && e.toLowerCase().trim() === userEmail);
+        return instEmails.some(e => e && e === userEmail);
       });
 
       if (estaVinculado) {
@@ -470,7 +508,7 @@ export default function App() {
         setAuthError('');
         return;
       }
-      const userEmail = user.email?.toLowerCase().trim();
+      const userEmail = sanitizarEmail(user.email);
       let encontrado = false;
 
       for (const [fichaIdKey, fichaObj] of Object.entries(fichasDataMap)) {
@@ -478,13 +516,13 @@ export default function App() {
         const idx = equipo.findIndex(
           (inst: any) => {
             const instEmails = [
-              inst.correo_institucional_sena,
-              inst.correo_institucional,
-              inst.correo_gmail,
-              inst.correo_google,
-              inst.correo
+              sanitizarEmail(inst.correo_institucional_sena),
+              sanitizarEmail(inst.correo_institucional),
+              sanitizarEmail(inst.correo_gmail),
+              sanitizarEmail(inst.correo_google),
+              sanitizarEmail(inst.correo)
             ];
-            return instEmails.some(e => e && e.toLowerCase().trim() === userEmail);
+            return instEmails.some(e => e && e === userEmail);
           }
         );
 
@@ -776,7 +814,7 @@ export default function App() {
     return filtered;
   }, [searchTerm, selectedStudentDoc, showRiskOnly, activeFilteredStudents, kpiFilter]);
 
-  const correoInstructorActual = activeInstructor.correo_institucional_sena || activeInstructor.correo_google || user?.email || '';
+  const correoInstructorActual = sanitizarEmail(activeInstructor.correo_institucional_sena || activeInstructor.correo_google || user?.email || '');
 
   const riskStudentsList = useMemo(() => {
     return activeFilteredStudents.filter(s => s.enRiesgo || s.enRiesgoTarde);
@@ -1692,7 +1730,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
             estado: estadoSalida,
             tipo_movimiento: 'Traslado_Salida',
             fecha_novedad: fechaSalida,
-            observacion_novedad: observacionSalida
+            observacion_novedad: observacionSalida.trim()
           };
         }
         return a;
@@ -1728,14 +1766,18 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
 
   const handleSaveIncorporacion = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevoDoc || !nuevoNombres || !nuevoApellidos) {
+    const docLimpios = sanitizarDocumento(nuevoDoc);
+    const nombresLimpios = sanitizarTextoNombre(nuevoNombres);
+    const apellidosLimpios = sanitizarTextoNombre(nuevoApellidos);
+
+    if (!docLimpios || !nombresLimpios || !apellidosLimpios) {
       alert("Por favor complete los campos obligatorios del nuevo aprendiz.");
       return;
     }
     setIsSubmitting(true);
 
     try {
-      const existe = listadoAprendicesSeguro.some((a: any) => a.numero_documento === nuevoDoc.trim());
+      const existe = listadoAprendicesSeguro.some((a: any) => a.numero_documento === docLimpios);
       if (existe) {
         alert("Ya existe un aprendiz registrado con este número de documento en la ficha.");
         setIsSubmitting(false);
@@ -1744,10 +1786,10 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
 
       const nuevoAprendizObj = {
         tipo_documento: nuevoTipoDoc,
-        numero_documento: nuevoDoc.trim(),
-        nombres: nuevoNombres.trim(),
-        apellidos: nuevoApellidos.trim(),
-        correo: nuevoCorreo.trim(),
+        numero_documento: docLimpios,
+        nombres: nombresLimpios,
+        apellidos: apellidosLimpios,
+        correo: sanitizarEmail(nuevoCorreo),
         telefono: nuevoTelefono.trim(),
         estado: 'En Formación' as EstadoAprendiz,
         tipo_movimiento: nuevoTipoMovimiento,
@@ -1771,7 +1813,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
         currentFichaId,
         userEmail,
         'INCORPORAR_APRENDIZ',
-        `Incorporación de nuevo aprendiz ${nuevoNombres} ${nuevoApellidos} (${nuevoDoc}) por ${nuevoTipoMovimiento}.`,
+        `Incorporación de nuevo aprendiz ${nombresLimpios} ${apellidosLimpios} (${docLimpios}) por ${nuevoTipoMovimiento}.`,
         null,
         nuevoAprendizObj
       );
@@ -1966,6 +2008,11 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
             </div>
 
             <form onSubmit={handleSaveIncorporacion} className="p-6 space-y-4 text-xs overflow-y-auto">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-[11px] flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#39a900] flex-shrink-0" />
+                <span>Los documentos se limpian automáticamente y los nombres se formatean en mayúsculas para evitar duplicados.</span>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Tipo Documento</label>
@@ -1986,7 +2033,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                     type="text" 
                     value={nuevoDoc} 
                     onChange={(e) => setNuevoDoc(e.target.value)}
-                    placeholder="Ej. 1020304050"
+                    placeholder="Ej. 1020.304.050 (sin puntos)"
                     className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono font-semibold"
                     required 
                   />
@@ -2001,7 +2048,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                     value={nuevoNombres} 
                     onChange={(e) => setNuevoNombres(e.target.value)}
                     placeholder="Nombres completos"
-                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold uppercase"
                     required 
                   />
                 </div>
@@ -2012,7 +2059,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                     value={nuevoApellidos} 
                     onChange={(e) => setNuevoApellidos(e.target.value)}
                     placeholder="Apellidos completos"
-                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold uppercase"
                     required 
                   />
                 </div>
@@ -2026,7 +2073,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                     value={nuevoCorreo} 
                     onChange={(e) => setNuevoCorreo(e.target.value)}
                     placeholder="correo@sena.edu.co"
-                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 lowercase"
                   />
                 </div>
                 <div>
@@ -2036,7 +2083,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                     value={nuevoTelefono} 
                     onChange={(e) => setNuevoTelefono(e.target.value)}
                     placeholder="3001234567"
-                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800"
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono"
                   />
                 </div>
               </div>
@@ -2163,11 +2210,11 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
 
     const instructorActualizado = {
       ...instructorOriginal,
-      nombre_del_instructor: editNombre.trim(),
+      nombre_del_instructor: sanitizarTextoNombre(editNombre),
       competencia: editCompetencia.trim(),
-      correo_gmail: editCorreoGmail.trim().toLowerCase(),
-      correo_institucional: editCorreoInst.trim().toLowerCase(),
-      correo_institucional_sena: editCorreoInst.trim().toLowerCase(),
+      correo_gmail: sanitizarEmail(editCorreoGmail),
+      correo_institucional: sanitizarEmail(editCorreoInst),
+      correo_institucional_sena: sanitizarEmail(editCorreoInst),
       dia: editDia,
       rol: editRol,
       es_lider: editRol === 'Instructor Lider'
@@ -2221,17 +2268,17 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
     }
 
     const nuevoInstructor = {
-      nombre_del_instructor: nombre.trim(),
+      nombre_del_instructor: sanitizarTextoNombre(nombre),
       competencia: competencia.trim(),
-      correo_gmail: correoGmail.trim().toLowerCase(),
-      correo_institucional: correoInst.trim().toLowerCase(),
-      correo_institucional_sena: correoInst.trim().toLowerCase(),
+      correo_gmail: sanitizarEmail(correoGmail),
+      correo_institucional: sanitizarEmail(correoInst),
+      correo_institucional_sena: sanitizarEmail(correoInst),
       dia: diaSemana,
       rol: rolNuevo,
       es_lider: rolNuevo === 'Instructor Lider',
       fecha_inicio: fechaInicio,
       fecha_fin: null,
-      registrado_por: registradoPor
+      registrado_por: sanitizarEmail(registradoPor)
     };
 
     const updatedEquipo = equipoInstructores.map((inst: any) => {
@@ -2370,13 +2417,18 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
             </div>
 
             <form onSubmit={handleSaveEditedInstructor} className="p-6 space-y-4 text-xs">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-[11px] flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#39a900] flex-shrink-0" />
+                <span>Los correos se convertirán a minúsculas y los nombres a mayúsculas automáticamente.</span>
+              </div>
+
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Nombre Completo</label>
                 <input 
                   type="text" 
                   value={editNombre} 
                   onChange={e => setEditNombre(e.target.value)} 
-                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold focus:outline-none focus:border-[#39a900]" 
+                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold uppercase focus:outline-none focus:border-[#39a900]" 
                   required 
                 />
               </div>
@@ -2399,7 +2451,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
                     type="email" 
                     value={editCorreoGmail} 
                     onChange={e => setEditCorreoGmail(e.target.value)} 
-                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800" 
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 lowercase" 
                   />
                 </div>
                 <div>
@@ -2408,7 +2460,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
                     type="email" 
                     value={editCorreoInst} 
                     onChange={e => setEditCorreoInst(e.target.value)} 
-                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold" 
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-semibold lowercase" 
                     required 
                   />
                 </div>
@@ -2466,7 +2518,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
           <form onSubmit={handleRegistrarInstructor} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
               <label className="block font-bold text-slate-700 mb-1">Nombre completo del instructor</label>
-              <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+              <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900] uppercase font-semibold" required />
             </div>
             <div>
               <label className="block font-bold text-slate-700 mb-1">Competencia asociada</label>
@@ -2474,11 +2526,11 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
             </div>
             <div>
               <label className="block font-bold text-slate-700 mb-1">Correo Gmail / Personal</label>
-              <input type="email" value={correoGmail} onChange={e => setCorreoGmail(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" />
+              <input type="email" value={correoGmail} onChange={e => setCorreoGmail(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900] lowercase" />
             </div>
             <div>
               <label className="block font-bold text-slate-700 mb-1">Correo institucional</label>
-              <input type="email" value={correoInst} onChange={e => setCorreoInst(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+              <input type="email" value={correoInst} onChange={e => setCorreoInst(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900] lowercase" required />
             </div>
             <div>
               <label className="block font-bold text-slate-700 mb-1">Día de la semana asignado</label>
@@ -2500,7 +2552,7 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
             </div>
             <div>
               <label className="block font-bold text-slate-700 mb-1">Tu Correo (Autorización)</label>
-              <input type="email" value={registradoPor} onChange={e => setRegistradoPor(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900]" required />
+              <input type="email" value={registradoPor} onChange={e => setRegistradoPor(e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 focus:bg-white focus:outline-none focus:border-[#39a900] lowercase" required />
             </div>
             <div className="md:col-span-2 flex justify-end">
               <button type="submit" className="px-6 py-2.5 bg-[#39a900] text-white font-bold rounded-lg hover:bg-[#329600] transition-colors shadow-sm cursor-pointer flex items-center gap-2">
