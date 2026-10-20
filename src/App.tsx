@@ -380,7 +380,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
-  const [currentInstructorIdx, setCurrentInstructorIdx] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -423,6 +422,11 @@ export default function App() {
     return getUserSystemRole(user, fichasDataMap);
   }, [user, fichasDataMap]);
 
+  /**
+   * MAPEO FLEXIBLE MULTI-FICHA:
+   * Evalúa todas las fichas en fichasDataMap comparando el correo del usuario contra
+   * todos los campos posibles de correo en el equipo ejecutor.
+   */
   const fichasDisponiblesMap = useMemo(() => {
     if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
       return fichasDataMap;
@@ -462,6 +466,7 @@ export default function App() {
     return Object.keys(fichasDisponiblesMap);
   }, [fichasDisponiblesMap]);
 
+  // Si la ficha actual no está en las permitidas para el usuario, se ajusta a la primera disponible.
   useEffect(() => {
     if (llavesFichasDisponibles.length > 0 && !fichasDisponiblesMap[currentFichaId]) {
       setCurrentFichaId(llavesFichasDisponibles[0]);
@@ -494,17 +499,17 @@ export default function App() {
     return getInstructorFromSession(user, courseData);
   }, [user, courseData]);
 
+  // CORRECCIÓN CLAVE: Verificación de autorización de sesión sin sobreescribir la selección manual de ficha del usuario.
   useEffect(() => {
     if (user && fichasDataMap) {
       if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
-        setCurrentInstructorIdx(0);
         setAuthError('');
         return;
       }
       const userEmail = sanitizarEmail(user.email);
       let encontrado = false;
 
-      for (const [fichaIdKey, fichaObj] of Object.entries(fichasDataMap)) {
+      for (const [_, fichaObj] of Object.entries(fichasDataMap)) {
         const equipo = fichaObj.equipo_instructores || [];
         const idx = equipo.findIndex(
           (inst: any) => {
@@ -521,31 +526,22 @@ export default function App() {
 
         if (idx !== -1) {
           encontrado = true;
-          if (currentFichaId !== fichaIdKey) {
-            setCurrentFichaId(fichaIdKey);
-          }
-          setCurrentInstructorIdx(idx);
           setAuthError('');
           break;
         }
       }
 
       if (!encontrado) {
-        setCurrentInstructorIdx(null);
         setAuthError('Tu correo no está registrado como instructor o coordinador en ninguna ficha del sistema.');
       }
-    } else {
-      setCurrentInstructorIdx(null);
     }
-  }, [user, fichasDataMap, currentUserRole, currentFichaId]);
+  }, [user, fichasDataMap, currentUserRole]);
     
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentDoc, setSelectedStudentDoc] = useState<string | null>(null);
   const [showRiskOnly, setShowRiskOnly] = useState(false);
   const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
     
-  const currentInstructor = currentInstructorIdx !== null ? courseData.equipo_instructores[currentInstructorIdx] : activeInstructor;
-
   const currentInstructorDates = useMemo(() => {
     const dates = courseData.fechas_asistencia || [];
     return [...dates].sort((a, b) => {
@@ -879,7 +875,7 @@ CC: ${correoInstructorActual}`;
     return <Login />;
   }
 
-  if (currentUserRole === 'INVITADO' && currentInstructorIdx === null) {
+  if (currentUserRole === 'INVITADO' && llavesFichasDisponibles.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 p-8 text-center space-y-4">
@@ -890,7 +886,7 @@ CC: ${correoInstructorActual}`;
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Acceso Restringido</h1>
-          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor o coordinador en esta ficha.'}</p>
+          <p className="text-slate-600">{authError || 'Tu correo no está registrado como instructor o coordinador en ninguna ficha.'}</p>
            
           <div className="p-4 bg-slate-50 rounded-lg text-sm text-slate-500 text-left">
             <span className="font-semibold text-slate-700 block mb-1">Correo actual:</span>
