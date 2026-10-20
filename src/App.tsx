@@ -71,9 +71,6 @@ export interface Aprendiz {
   registros: Record<string, string>;
 }
 
-/**
- * Utilidades estrictas de sanitización para blindar la aplicación frente a errores de formato.
- */
 export const sanitizarEmail = (email: string): string => {
   if (!email) return "";
   return String(email).trim().toLowerCase();
@@ -81,7 +78,6 @@ export const sanitizarEmail = (email: string): string => {
 
 export const sanitizarDocumento = (doc: string): string => {
   if (!doc) return "";
-  // Remueve puntos, comas, espacios intermedios y extremos para evitar duplicados por formato
   return String(doc).trim().replace(/[.,\s]/g, '');
 };
 
@@ -100,9 +96,6 @@ export const canManageFichasAndSheets = (user: User | null, equipoInstructores: 
   return role === 'ADMIN' || role === 'COORDINADOR' || role === 'INSTRUCTOR_LIDER' || role === 'INSTRUCTOR';
 };
 
-/**
- * Función robusta de normalización de aprendices con prevención de duplicados estrictos.
- */
 export const normalizarListadoAprendices = (courseData: any, externalStudents?: any[]): any[] => {
   let rawList: any[] = [];
 
@@ -139,7 +132,6 @@ export const normalizarListadoAprendices = (courseData: any, externalStudents?: 
       if (doc !== "" || nombres !== "") {
         const claveUnica = doc !== "" ? doc : `${nombres}_${apellidos}`;
         
-        // Prevención estricta de duplicados en importaciones masivas (Sheets/JSON)
         if (!mapaUnico.has(claveUnica)) {
           mapaUnico.set(claveUnica, {
             ...item,
@@ -297,8 +289,9 @@ const sanitizeFicha = (ficha: any, fichaId: string) => {
         ...inst,
         nombre_del_instructor: sanitizarTextoNombre(inst.nombre_del_instructor || inst.nombre || ''),
         correo_gmail: sanitizarEmail(inst.correo_gmail || ''),
-        correo_institucional: sanitizarEmail(inst.correo_institucional || inst.correo_institucional_sena || ''),
-        correo_institucional_sena: sanitizarEmail(inst.correo_institucional || inst.correo_institucional_sena || '')
+        correo_institucional: sanitizarEmail(inst.correo_institucional || inst.correo_institucional_sena || inst.correo || ''),
+        correo_institucional_sena: sanitizarEmail(inst.correo_institucional || inst.correo_institucional_sena || inst.correo || ''),
+        correo: sanitizarEmail(inst.correo || inst.correo_gmail || '')
       }))
     : (base.equipo_instructores || []);
 
@@ -430,6 +423,11 @@ export default function App() {
     return getUserSystemRole(user, fichasDataMap);
   }, [user, fichasDataMap]);
 
+  /**
+   * Mapeo flexible unificado: Compara el correo autenticado del usuario contra CUALQUIERA
+   * de los campos de correo posibles en el equipo de instructores (correo_gmail, correo_institucional,
+   * correo_institucional_sena, correo) en TODAS las fichas de forma automática.
+   */
   const fichasDisponiblesMap = useMemo(() => {
     if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
       return fichasDataMap;
@@ -1048,6 +1046,16 @@ CC: ${correoInstructorActual}`;
                   {activeInstructor.correo_gmail || activeInstructor.correo_institucional_sena || user.email}
                 </p>
               </div>
+              
+              {/* Botón de Cierre de Sesión Seguro (Optimizado para equipos públicos y acceso rápido) */}
+              <button
+                onClick={() => signOut(auth)}
+                className="ml-2 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold border border-red-200 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                title="Cerrar Sesión de forma segura (Ideal para computadores públicos)"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Cerrar Sesión</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2169,7 +2177,6 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
   const [rolNuevo, setRolNuevo] = useState('Instructor / Tutor');
   const [registradoPor, setRegistradoPor] = useState(user?.email || '');
 
-  // Estados para el Modal de Edición de Instructor
   const [editingInstructorIndex, setEditingInstructorIndex] = useState<number | null>(null);
   const [editNombre, setEditNombre] = useState('');
   const [editCompetencia, setEditCompetencia] = useState('');
@@ -2403,7 +2410,6 @@ export const GestionInstructores: React.FC<GestionInstructoresProps> = ({
         )}
       </div>
 
-      {/* MODAL DE EDICIÓN DE INSTRUCTOR */}
       {editingInstructorIndex !== null && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col">
