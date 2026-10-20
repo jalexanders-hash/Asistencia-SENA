@@ -423,11 +423,6 @@ export default function App() {
     return getUserSystemRole(user, fichasDataMap);
   }, [user, fichasDataMap]);
 
-  /**
-   * Mapeo flexible unificado: Compara el correo autenticado del usuario contra CUALQUIERA
-   * de los campos de correo posibles en el equipo de instructores (correo_gmail, correo_institucional,
-   * correo_institucional_sena, correo) en TODAS las fichas de forma automática.
-   */
   const fichasDisponiblesMap = useMemo(() => {
     if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
       return fichasDataMap;
@@ -1047,7 +1042,6 @@ CC: ${correoInstructorActual}`;
                 </p>
               </div>
               
-              {/* Botón de Cierre de Sesión Seguro (Optimizado para equipos públicos y acceso rápido) */}
               <button
                 onClick={() => signOut(auth)}
                 className="ml-2 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold border border-red-200 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
