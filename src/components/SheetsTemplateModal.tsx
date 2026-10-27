@@ -30,7 +30,7 @@ import { courseData as initialCourseData } from '../data';
 // ==========================================
 
 const EMAIL_INSTRUCTOR_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
-const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/; // Permite cualquier proveedor de correo para aprendices
+const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/; // Permite cualquier proveedor de correo válido para aprendices
 
 const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
 const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
@@ -189,7 +189,6 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
   });
 };
 
-// Función unificada global para asegurar formato estricto DD/MM/YYYY
 const displayAsDDMMYYYY = (dateStr: string) => {
   if (!dateStr) return "";
   let cleanStr = String(dateStr).trim().replace(/['"]/g, '');
@@ -360,36 +359,20 @@ export function SheetsTemplateModal({
     setUploadResult(null);
 
     try {
-      // Cargar catálogo dinámico de instructores desde Firebase para validación cruzada
       let instructoresCatalogo: any[] = [];
       try {
         const snap = await getDocs(collection(db, 'instructores_maestros'));
         snap.forEach(d => instructoresCatalogo.push(d.data()));
       } catch (err) {}
 
-      const result = await procesarArchivoExcelPreParsing(file, instructoresCatalogo);
-      
-      if (result.success && result.data) {
-        if (result.data.programa && !result.data.denominacion) {
-          result.data.denominacion = result.data.programa;
-        }
-
-        if (Array.isArray(result.data.fechas_asistencia)) {
-          result.data.fechas_asistencia = result.data.fechas_asistencia.map((d: string) => displayAsDDMMYYYY(d));
-        }
-        if (result.data.asistencias_aprendices && Array.isArray(result.data.asistencias_aprendices)) {
-          result.data.asistencias_aprendices = result.data.asistencias_aprendices.map((student: any) => {
-            const regs = student.registros || {};
-            const normalizedRegs: Record<string, string> = {};
-            Object.keys(regs).forEach(k => {
-              normalizedRegs[displayAsDDMMYYYY(k)] = regs[k];
-            });
-            return { ...student, registros: normalizedRegs };
-          });
-        }
+      // Si es carga de configuración, usamos la pasarela de pre-parsing con validación estricta cruzada
+      if (uploadType === 'configuracion') {
+        const result = await procesarArchivoExcelPreParsing(file, instructoresCatalogo);
+        setUploadResult(result);
+      } else {
+        const result = await parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
+        setUploadResult(result);
       }
-
-      setUploadResult(result);
     } catch (err: any) {
       console.error("Error al procesar plantilla Excel:", err);
       setUploadResult({
@@ -644,7 +627,7 @@ export function SheetsTemplateModal({
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Actualiza la estructura base, denominación del programa y aprendices de la ficha.
+                      Actualiza la estructura base, denominación del programa y aprendices de la ficha mediante Pasarela de Validación Previa.
                     </p>
                   </div>
 
@@ -665,7 +648,7 @@ export function SheetsTemplateModal({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-xl">
                     <span className="text-xs font-bold text-emerald-900">
-                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General de Ficha' : `📋 Registro de Inasistencias (${instructorActual.nombre_del_instructor})`}
+                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General de Ficha (Pre-Parsing)' : `📋 Registro de Inasistencias (${instructorActual.nombre_del_instructor})`}
                     </span>
                     <button 
                       onClick={() => { setUploadType(null); setSelectedFile(null); setUploadResult(null); }}
