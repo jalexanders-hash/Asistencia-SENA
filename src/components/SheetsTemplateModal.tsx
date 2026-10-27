@@ -62,7 +62,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
         const instructoresProcesados: any[] = [];
         const aprendicesProcesados: any[] = [];
 
-        // 1. Procesar Hoja 'Aprendices'
+        // 1. Procesar Hoja 'Aprendices' (Ignorando la hoja de Instrucciones si existe)
         const hojaAprendicesName = workbook.SheetNames.find(s => s.toLowerCase().includes('aprendiz')) || workbook.SheetNames[2] || workbook.SheetNames[0];
         const sheetAprendices = workbook.Sheets[hojaAprendicesName];
         if (sheetAprendices) {
@@ -151,7 +151,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
         } else {
           resolve({
             success: true,
-            message: "Archivo validado y sanitizado correctamente.",
+            message: "Archivo validado y sanitizado correctamente mediante Parsing.",
             counts: {
               aprendices: aprendicesProcesados.length,
               instructores: instructoresProcesados.length
@@ -359,7 +359,20 @@ export function SheetsTemplateModal({
     const wb = XLSX.utils.book_new();
 
     if (type === 'configuracion') {
-      // 1. Hoja Ficha
+      // 1. Hoja de Instrucciones y Opciones Válidas
+      const wsInstruccionesData = [
+        ["INSTRUCCIONES GENERALES DE DILIGENCIAMIENTO - PLATAFORMA ACADÉMICA SENA"],
+        ["1. Lea detenidamente cada columna y asegúrese de no alterar los nombres de las cabeceras en las siguientes hojas."],
+        ["2. Al cargar este archivo en la plataforma, el sistema ejecutará un motor de Parsing para corroborar y depurar la información antes de guardarla."],
+        ["3. VALORES Y OPCIONES VÁLIDAS PARA MINIMIZAR ERRORES:"],
+        ["- Roles de Instructores permitidos:", "Instructor / Tutor, Instructor Líder, Instructor Técnico, Coordinador Académico"],
+        ["- Estados válidos de Aprendices:", "En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Desercion"],
+        ["- Formatos obligatorios:", "Nombres completos (nombres y apellidos), correo SENA (@sena.edu.co / @misena.edu.co) y Google (@gmail.com)"]
+      ];
+      const wsInstrucciones = XLSX.utils.aoa_to_sheet(wsInstruccionesData);
+      XLSX.utils.book_append_sheet(wb, wsInstrucciones, "Instrucciones");
+
+      // 2. Hoja Ficha
       const wsFichaData = [
         ["ficha_de_caracterizacion", "denominacion", "centro", "fecha_inicio", "fecha_terminacion", "jornada"],
         [currentFicha, courseData.denominacion || "GESTIÓN ADMINISTRATIVA", courseData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "Diurna"]
@@ -367,18 +380,12 @@ export function SheetsTemplateModal({
       const wsFicha = XLSX.utils.aoa_to_sheet(wsFichaData);
       XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-      // 2. Hoja Equipo_Ejecutor (Catálogo de Firebase en tiempo real + Instructor Nuevo)
-      const nombresInstructores = instructoresCatalogo.map(i => i.nombreCompleto || i.nombre_del_instructor).filter(Boolean);
-      if (nombresInstructores.length === 0) {
-        nombresInstructores.push(instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPÚLVEDA VÉLEZ");
-      }
-      nombresInstructores.push("[ + Instructor Nuevo ]");
-
+      // 3. Hoja Equipo_Ejecutor (Plana y limpia)
       const wsEquipoData = [
         ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "rol", "fecha_de_inicio"],
         [
           "Competencia General de Formación",
-          nombresInstructores[0],
+          instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPÚLVEDA VÉLEZ",
           "instructor@gmail.com",
           "instructor@sena.edu.co",
           "Viernes",
@@ -387,54 +394,36 @@ export function SheetsTemplateModal({
         ]
       ];
       const wsEquipo = XLSX.utils.aoa_to_sheet(wsEquipoData);
-
-      const rangeEquipo = XLSX.utils.decode_range(wsEquipo['!ref'] || "A1:G2");
-      (wsEquipo as any)['!dataValidation'] = [
-        {
-          sqref: `B2:B${rangeEquipo.e.r + 100}`,
-          type: 'list',
-          formula1: `"${nombresInstructores.join(',')}"`,
-          allowBlank: true,
-          showDropDown: true
-        },
-        {
-          sqref: `F2:F${rangeEquipo.e.r + 100}`,
-          type: 'list',
-          formula1: `"Instructor / Tutor,Instructor Líder,Instructor Técnico,Coordinador Académico"`,
-          allowBlank: true,
-          showDropDown: true
-        }
-      ];
-
       XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-      // 3. Hoja Aprendices (Lista desplegable en columna G para Estado)
+      // 4. Hoja Aprendices (Plana y limpia)
       const wsAprendicesData = [
         ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"],
         ["CC", "1001021491", "VALENTINA", "TORO SALGADO", "valencia@outlook.com", "3001234567", "En Formación"],
         ["CC", "1001153239", "JUAN JOSE", "CANO RUA", "juancano@gmail.com", "3007654321", "En Formación"]
       ];
       const wsAprendices = XLSX.utils.aoa_to_sheet(wsAprendicesData);
-      
-      const rangeAprendices = XLSX.utils.decode_range(wsAprendices['!ref'] || "A1:G3");
-      const estadosAprendiz = "En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion";
-      (wsAprendices as any)['!dataValidation'] = [
-        {
-          sqref: `G2:G${rangeAprendices.e.r + 100}`,
-          type: 'list',
-          formula1: `"${estadosAprendiz}"`,
-          allowBlank: true,
-          showDropDown: true
-        }
-      ];
-
       XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
+
       XLSX.writeFile(wb, `Plantilla_Configuracion_Ficha_${currentFicha}.xlsx`);
 
     } else {
-      // 4. Plantilla de Inasistencias (Estructura intacta)
+      // 5. Plantilla de Inasistencias con Hoja de Instrucciones
       const wbInas = XLSX.utils.book_new();
       
+      const wsInstruccionesInasData = [
+        ["INSTRUCCIONES PARA EL REGISTRO Y CARGUE DE INASISTENCIAS - SENA"],
+        ["1. Mantenga la estructura de las columnas de aprendices y fechas."],
+        ["2. Al cargar este archivo, la plataforma validará mediante Parsing la correcta escritura de las novedades."],
+        ["3. OPCIONES VÁLIDAS DE ASISTENCIA RECONOCIDAS POR EL SISTEMA:"],
+        ["- Presente:", "Celda vacía o asistencia regular"],
+        ["- X:", "Inasistencia injustificada / Falta"],
+        ["- Tarde:", "Llegada tarde / Retardo"],
+        ["- Excusa:", "Inasistencia justificada con soporte"]
+      ];
+      const wsInstruccionesInas = XLSX.utils.aoa_to_sheet(wsInstruccionesInasData);
+      XLSX.utils.book_append_sheet(wbInas, wsInstruccionesInas, "Instrucciones");
+
       const wsFichaInasData = [
         ["ficha_de_caracterizacion", "denominacion", "centro", "instructor_titular", "competencia_activa"],
         [currentFicha, courseData.denominacion || "GESTIÓN ADMINISTRATIVA", courseData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", instructorActual.nombre_del_instructor, instructorActual.competencia || "Competencia General"]
@@ -462,20 +451,8 @@ export function SheetsTemplateModal({
       });
 
       const wsAprendicesInas = XLSX.utils.json_to_sheet(aprendicesRows, { header: headerAprendices });
-      
-      const rangeInas = XLSX.utils.decode_range(wsAprendicesInas['!ref'] || "A1:G10");
-      const estadosAprendiz = "En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion";
-      (wsAprendicesInas as any)['!dataValidation'] = [
-        {
-          sqref: `G2:G${rangeInas.e.r + 100}`,
-          type: 'list',
-          formula1: `"${estadosAprendiz}"`,
-          allowBlank: true,
-          showDropDown: true
-        }
-      ];
-
       XLSX.utils.book_append_sheet(wbInas, wsAprendicesInas, "Aprendices");
+
       XLSX.writeFile(wbInas, `Plantilla_Asistencia_Ficha_${currentFicha}_${instructorActual.nombre_del_instructor}.xlsx`);
     }
   };
@@ -556,8 +533,8 @@ export function SheetsTemplateModal({
       onDataLoaded(refreshedData, excelFichaId);
      
       const mensajeExito = uploadType === 'inasistencias' 
-        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y aplicadas con éxito!`
-        : `¡Configuración general de la Ficha N° ${excelFichaId} actualizada con éxito mediante Pasarela de Validación Previa!`;
+        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y aplicadas con éxito mediante Parsing!`
+        : `¡Configuración general de la Ficha N° ${excelFichaId} actualizada con éxito mediante Verificación por Parsing!`;
 
       alert(mensajeExito);
       onClose();
@@ -647,10 +624,10 @@ export function SheetsTemplateModal({
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-emerald-950">
-                    Formato oficial con Catálogo en Tiempo Real y Listas Desplegables
+                    Formato oficial de configuración y control mediante instrucciones y verificación por Parsing
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Las plantillas descargadas consultan de forma síncrona los instructores vigentes en Firebase. Incluyen validación de datos en listas desplegables para estados del aprendiz y nombres del equipo ejecutor.
+                    Las plantillas descargadas incluyen una hoja guía con instrucciones precisas y opciones de marcado exactas para minimizar errores al máximo.
                   </p>
                 </div>
               </div>
@@ -665,7 +642,7 @@ export function SheetsTemplateModal({
                       Plantilla Configuración General (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Estructura completa con listas desplegables y catálogo sincronizado de instructores.
+                      Incluye hoja de instrucciones, valores válidos y estructura limpia para la configuración.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -674,7 +651,7 @@ export function SheetsTemplateModal({
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
                     >
                       <Download className="w-4 h-4" />
-                      Descargar Plantilla con Catálogo Real
+                      Descargar Plantilla General
                     </button>
                   </div>
                 </div>
@@ -688,7 +665,7 @@ export function SheetsTemplateModal({
                       Plantilla para Inasistencias (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga el formato simplificado con los aprendices y fechas de asistencia vigentes.
+                      Incluye hoja de instrucciones y el formato simplificado con los aprendices y fechas vigentes.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -708,22 +685,27 @@ export function SheetsTemplateModal({
           {activeTab === 'estructura' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
-                <h4 className="font-bold text-sm text-slate-800">Reglas y Opciones Válidas</h4>
+                <h4 className="font-bold text-sm text-slate-800">Instrucciones y Valores Válidos del Sistema</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Para mantener la integridad de la base de datos, la pasarela de validación previa aplica filtros estrictos en los correos de instructores y permite flexibilidad en correos de aprendices.
+                  Para garantizar que la información cargue correctamente, verifique que los datos coincidan con las siguientes opciones válidas:
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-semibold">
-                  <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 text-center">
-                    Presente
+                <div className="space-y-3 text-xs">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <strong className="text-slate-800 block mb-1">Roles de Instructores Permitidos:</strong>
+                    <p className="text-slate-600 font-mono">Instructor / Tutor, Instructor Líder, Instructor Técnico, Coordinador Académico</p>
                   </div>
-                  <div className="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-center">
-                    X (Inasistencia)
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <strong className="text-slate-800 block mb-1">Estados Válidos de Aprendices:</strong>
+                    <p className="text-slate-600 font-mono">En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Desercion</p>
                   </div>
-                  <div className="p-3 bg-amber-50 text-amber-700 rounded-lg border border-amber-200 text-center">
-                    Tarde (Retardo)
-                  </div>
-                  <div className="p-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 text-center">
-                    Excusa (Justificada)
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <strong className="text-slate-800 block mb-1">Opciones de Asistencia:</strong>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 font-semibold">
+                      <div className="p-2 bg-emerald-50 text-emerald-800 rounded border border-emerald-200 text-center">Presente</div>
+                      <div className="p-2 bg-red-50 text-red-700 rounded border border-red-200 text-center">X (Falta)</div>
+                      <div className="p-2 bg-amber-50 text-amber-700 rounded border border-amber-200 text-center">Tarde (Retardo)</div>
+                      <div className="p-2 bg-blue-50 text-blue-700 rounded border border-blue-200 text-center">Excusa (Justificada)</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -741,9 +723,9 @@ export function SheetsTemplateModal({
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                       <Settings className="w-7 h-7" />
                     </div>
-                    <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General (Pre-Parsing)</h3>
+                    <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General (Parsing)</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Actualiza la estructura base, aprendices e instructores con semáforo de errores en tiempo real.
+                      Actualiza la estructura base, aprendices e instructores con verificación automática y semáforo de errores.
                     </p>
                   </div>
 
@@ -754,9 +736,9 @@ export function SheetsTemplateModal({
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                       <ClipboardList className="w-7 h-7" />
                     </div>
-                    <h3 className="font-bold text-slate-800 text-base">Cargar Registro de Inasistencias</h3>
+                    <h3 className="font-bold text-slate-800 text-base">Cargar Registro de Inasistencias (Parsing)</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Actualiza únicamente las novedades de asistencia marcadas en el formato simplificado para tu competencia.
+                      Actualiza únicamente las novedades de asistencia verificando los datos mediante el motor de parsing.
                     </p>
                   </div>
                 </div>
@@ -764,7 +746,7 @@ export function SheetsTemplateModal({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-xl">
                     <span className="text-xs font-bold text-emerald-900">
-                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General (Pasarela Pre-Parsing)' : `📋 Registro de Inasistencias (${instructorActual.nombre_del_instructor})`}
+                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General (Parsing)' : `📋 Registro de Inasistencias (${instructorActual.nombre_del_instructor})`}
                     </span>
                     <button 
                       onClick={() => { setUploadType(null); setSelectedFile(null); setUploadResult(null); }}
@@ -837,7 +819,7 @@ export function SheetsTemplateModal({
                     )}
                     <div>
                       <h4 className={`text-sm font-bold ${uploadResult.success ? 'text-emerald-950' : 'text-red-950'}`}>
-                        {uploadResult.success ? '¡Archivo validado correctamente!' : 'Error en la validación'}
+                        {uploadResult.success ? '¡Verificación por Parsing Exitosa!' : 'Error en la Verificación'}
                       </h4>
                       <p className={`text-xs mt-0.5 ${uploadResult.success ? 'text-emerald-800' : 'text-red-800'}`}>
                         {uploadResult.message}
@@ -864,9 +846,9 @@ export function SheetsTemplateModal({
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block font-medium">Total Aprendices:</span>
+                        <span className="text-slate-400 block font-medium">Total Registros:</span>
                         <span className="font-bold text-emerald-700 text-sm">
-                          {uploadResult.counts.aprendices} alumnos
+                          {uploadResult.counts.aprendices} aprendices / {uploadResult.counts.instructores} instructores
                         </span>
                       </div>
                     </div>
