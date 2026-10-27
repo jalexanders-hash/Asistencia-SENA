@@ -11,8 +11,7 @@ import {
   Loader2,
   Table,
   Settings,
-  ClipboardList,
-  AlertTriangle
+  ClipboardList
 } from 'lucide-react';
 import { getInstructorFromSession } from '../lib/authSession';
 import { replaceFichaCompleteData, db } from '../lib/firebase';
@@ -104,7 +103,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
           });
         }
 
-        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con validación estricta de dominios)
+        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con validación estricta de dominios institucionales/Gmail)
         const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
         const sheetEquipo = workbook.Sheets[hojaEquipoName];
         if (sheetEquipo) {
@@ -357,7 +356,7 @@ export function SheetsTemplateModal({
     competencias: instructorActual.competencia ? [instructorActual.competencia] : courseData.competencias
   };
 
-  // Generación optimizada de la plantilla con catálogos en tiempo real y Listas Desplegables de Excel (Data Validation) sin campos redundantes
+  // Generador de plantillas con catálogo en tiempo real desde Firebase y Listas Desplegables de Excel (Data Validation)
   const handleDownloadTemplateWithRealtimeCatalog = (type: 'configuracion' | 'inasistencias') => {
     const wb = XLSX.utils.book_new();
 
@@ -370,10 +369,10 @@ export function SheetsTemplateModal({
       const wsFicha = XLSX.utils.aoa_to_sheet(wsFichaData);
       XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-      // 2. Hoja Equipo_Ejecutor sincronizada en tiempo real con instructores de Firebase
+      // 2. Hoja Equipo_Ejecutor con instructores en tiempo real de Firebase
       const nombresInstructores = instructoresCatalogo.map(i => i.nombreCompleto || i.nombre_del_instructor).filter(Boolean);
       if (nombresInstructores.length === 0) {
-        nombresInstructores.push(instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPULVEDA");
+        nombresInstructores.push(instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPÚLVEDA VÉLEZ");
       }
 
       const wsEquipoData = [
@@ -390,7 +389,7 @@ export function SheetsTemplateModal({
       ];
       const wsEquipo = XLSX.utils.aoa_to_sheet(wsEquipoData);
 
-      // Aplicar listas desplegables en Excel (Data Validation) para la columna de instructores (Columna B)
+      // Aplicar lista desplegable en Excel para la columna de instructores (Columna B)
       const rangeEquipo = XLSX.utils.decode_range(wsEquipo['!ref'] || "A1:G2");
       wsEquipo['!dataValidation'] = wsEquipo['!dataValidation'] || [];
       wsEquipo['!dataValidation'].push({
@@ -411,12 +410,14 @@ export function SheetsTemplateModal({
       
       const rangeAprendices = XLSX.utils.decode_range(wsAprendices['!ref'] || "A1:G3");
       wsAprendices['!dataValidation'] = wsAprendices['!dataValidation'] || [];
+      
       // Lista desplegable para Tipo de Documento (Columna A)
       wsAprendices['!dataValidation'].push({
         sqref: `A2:A${rangeAprendices.e.r + 100}`,
         type: 'list',
         formula1: `"CC,TI,CE,PP,PPT"`
       });
+      
       // Lista desplegable para Estado (Columna G)
       wsAprendices['!dataValidation'].push({
         sqref: `G2:G${rangeAprendices.e.r + 100}`,
@@ -428,14 +429,40 @@ export function SheetsTemplateModal({
       XLSX.writeFile(wb, `Plantilla_Configuracion_Ficha_${currentFicha}.xlsx`);
 
     } else {
+      // 4. Plantilla original restaurada de Inasistencias con aprendices precargados del instructor y fechas
       const wbInas = XLSX.utils.book_new();
-      const rowsInas = [
-        ["ficha_de_caracterizacion", "instructor_titular", "numero_documento", "nombres", "apellidos", "fecha_sesion", "estado_asistencia"],
-        [currentFicha, instructorActual.nombre_del_instructor, "1001021491", "VALENTINA", "TORO SALGADO", "20/01/2026", "Presente"]
+      
+      const wsFichaInasData = [
+        ["ficha_de_caracterizacion", "denominacion", "centro", "instructor_titular", "competencia_activa"],
+        [currentFicha, courseData.denominacion || "GESTIÓN ADMINISTRATIVA", courseData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", instructorActual.nombre_del_instructor, instructorActual.competencia || "Competencia General"]
       ];
-      const wsInas = XLSX.utils.aoa_to_sheet(rowsInas);
-      XLSX.utils.book_append_sheet(wbInas, wsInas, "Inasistencias");
-      XLSX.writeFile(wbInas, `Plantilla_Inasistencias_Ficha_${currentFicha}.xlsx`);
+      const wsFichaInas = XLSX.utils.aoa_to_sheet(wsFichaInasData);
+      XLSX.utils.book_append_sheet(wbInas, wsFichaInas, "Ficha");
+
+      // Construir listado de aprendices con las columnas de fechas del instructor actual
+      const fechasInstructor = courseData.fechas_por_instructor?.[instructorActual.nombre_del_instructor] || courseData.fechas_asistencia || [];
+      const headerAprendices = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado", ...fechasInstructor];
+
+      const aprendicesRows = (courseData.asistencias_aprendices || []).map((student: any) => {
+        const rowObj: any = {
+          tipo_documento: student.tipo_documento || "CC",
+          numero_documento: student.numero_documento,
+          nombres: student.nombres,
+          apellidos: student.apellidos,
+          correo_electronico: student.correo || student.correo_electronico || "",
+          telefono: student.telefono || "",
+          estado: student.estado || "En Formación"
+        };
+        fechasInstructor.forEach((fecha: string) => {
+          rowObj[fecha] = student.registros?.[fecha] || "";
+        });
+        return rowObj;
+      });
+
+      const wsAprendicesInas = XLSX.utils.json_to_sheet(aprendicesRows, { header: headerAprendices });
+      XLSX.utils.book_append_sheet(wbInas, wsAprendicesInas, "Aprendices");
+
+      XLSX.writeFile(wbInas, `Plantilla_Asistencia_Ficha_${currentFicha}_${instructorActual.nombre_del_instructor}.xlsx`);
     }
   };
 
@@ -651,7 +678,7 @@ export function SheetsTemplateModal({
                       Plantilla para Inasistencias (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga el formato simplificado para registrar asistencia bajo las opciones permitidas.
+                      Descarga el formato simplificado con los aprendices y fechas de asistencia vigentes.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -843,34 +870,4 @@ export function SheetsTemplateModal({
                       <button
                         onClick={handleApplyData}
                         disabled={isSaving}
-                        className="px-5 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60 cursor-pointer"
-                      >
-                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                        {isSaving ? 'Sincronizando con la nube...' : 'Confirmar y Actualizar Aplicativo'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-        </div>
-
-        {/* Modal Footer */}
-        <div className="px-6 py-3.5 bg-slate-100/80 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            Instructor Titular: <strong className="text-slate-700">{instructorActual.nombre_del_instructor}</strong>
-          </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-md font-medium transition-colors cursor-pointer"
-          >
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+                        className="px-5 py-2.5 bg-sena hover:bg-sena-dark text-white rounded
