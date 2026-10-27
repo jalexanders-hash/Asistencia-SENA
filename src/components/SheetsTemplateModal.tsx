@@ -19,7 +19,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { courseData as initialCourseData } from '../data';
 
 // ==========================================
-// MOTOR DE VALIDACIÓN PREVIA (PRE-PARSING)
+// MOTOR DE VALIDACIÓN PREVIA (PRE-PARSING) CON CONTROL DE TRASLAPES
 // ==========================================
 
 export interface ParsedTemplateResult {
@@ -38,6 +38,7 @@ const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/;
 
 const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
 const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
+const DIAS_VALIDOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 const sanitizarTextoPreParser = (texto: string): string => {
   if (!texto) return '';
@@ -62,7 +63,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
         const instructoresProcesados: any[] = [];
         const aprendicesProcesados: any[] = [];
 
-        // 1. Procesar Hoja 'Aprendices' (Ignorando la hoja de Instrucciones si existe)
+        // 1. Procesar Hoja 'Aprendices'
         const hojaAprendicesName = workbook.SheetNames.find(s => s.toLowerCase().includes('aprendiz')) || workbook.SheetNames[2] || workbook.SheetNames[0];
         const sheetAprendices = workbook.Sheets[hojaAprendicesName];
         if (sheetAprendices) {
@@ -103,9 +104,12 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
           });
         }
 
-        // 2. Procesar Hoja 'Equipo_Ejecutor'
+        // 2. Procesar Hoja 'Equipo_Ejecutor' y Validar Traslapes de Días
         const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
         const sheetEquipo = workbook.Sheets[hojaEquipoName];
+        
+        const diasAsignadosSet = new Set<string>();
+
         if (sheetEquipo) {
           const rowsEquipo: any[] = XLSX.utils.sheet_to_json(sheetEquipo);
           rowsEquipo.forEach((row, index) => {
@@ -113,12 +117,27 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
             const seleccionInstructor = String(row['nombre_del_instructor'] || row['nombre'] || '').trim();
             const correoGoogle = String(row['correo_google'] || '').trim().toLowerCase();
             const correoSena = String(row['correo_institucional_sena'] || row['correo_institucional'] || '').trim().toLowerCase();
+            const diaRaw = String(row['dia'] || '').trim();
+            const diaFormateado = diaRaw.charAt(0).toUpperCase() + diaRaw.slice(1).toLowerCase();
 
             if (correoGoogle && !EMAIL_INSTRUCTOR_REGEX.test(correoGoogle)) {
               errores.push(`Fila ${filaNum} [Instructor]: El correo Google debe ser @gmail.com autorizado: "${correoGoogle}".`);
             }
             if (correoSena && !EMAIL_INSTRUCTOR_REGEX.test(correoSena)) {
-              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional debe ser @sena.edu.co: "${correoSena}".`);
+              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional debe ser @sena.edu.co o @misena.edu.co: "${correoSena}".`);
+            }
+
+            if (diaFormateado && !DIAS_VALIDOS.includes(diaFormateado)) {
+              errores.push(`Fila ${filaNum} [Instructor]: Día de formación inválido: "${diaRaw}". Debe ser Lunes, Martes, Miércoles, Jueves o Viernes.`);
+            }
+
+            // Control de integridad contra traslapes en el mismo día
+            if (diaFormateado && DIAS_VALIDOS.includes(diaFormateado)) {
+              if (diasAsignadosSet.has(diaFormateado)) {
+                errores.push(`[Conflicto de Programación - Fila ${filaNum}]: Se detectó un traslape en el día "${diaFormateado}" asignado a múltiples instructores. Cada día debe tener una única asignación principal.`);
+              } else {
+                diasAsignadosSet.add(diaFormateado);
+              }
             }
 
             if (seleccionInstructor) {
@@ -129,13 +148,15 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
                   nombreCompleto: sanitizarTextoPreParser(seleccionInstructor),
                   correoSena: correoSena,
                   correoGmail: correoGoogle,
+                  dia: diaFormateado,
                   activo: true
                 });
               } else {
                 instructoresProcesados.push({
                   nombre_del_instructor: instructorEncontrado.nombreCompleto || instructorEncontrado.nombre_del_instructor,
                   correo_institucional_sena: instructorEncontrado.correoSena || instructorEncontrado.correo_institucional_sena,
-                  correo_gmail: instructorEncontrado.correoGmail || instructorEncontrado.correo_gmail
+                  correo_gmail: instructorEncontrado.correoGmail || instructorEncontrado.correo_gmail,
+                  dia: diaFormateado
                 });
               }
             }
@@ -145,13 +166,13 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
         if (errores.length > 0) {
           resolve({
             success: false,
-            message: `Se encontraron ${errores.length} errores de validación en el archivo. Corríjalos e intente de nuevo.`,
+            message: `Se encontraron ${errores.length} errores o conflictos de programación en el archivo. Corríjalos e intente de nuevo.`,
             errors: errores
           });
         } else {
           resolve({
             success: true,
-            message: "Archivo validado y sanitizado correctamente mediante Parsing.",
+            message: "Archivo validado, sanitizado y libre de traslapes correctamente.",
             counts: {
               aprendices: aprendicesProcesados.length,
               instructores: instructoresProcesados.length
@@ -359,15 +380,17 @@ export function SheetsTemplateModal({
     const wb = XLSX.utils.book_new();
 
     if (type === 'configuracion') {
-      // 1. Hoja de Instrucciones y Opciones Válidas
+      // 1. Hoja de Instrucciones detallada con directrices de Competencia, Día y Turnos Activos
       const wsInstruccionesData = [
-        ["INSTRUCCIONES GENERALES DE DILIGENCIAMIENTO - PLATAFORMA ACADÉMICA SENA"],
-        ["1. Lea detenidamente cada columna y asegúrese de no alterar los nombres de las cabeceras en las siguientes hojas."],
-        ["2. Al cargar este archivo en la plataforma, el sistema ejecutará un motor de Parsing para corroborar y depurar la información antes de guardarla."],
-        ["3. VALORES Y OPCIONES VÁLIDAS PARA MINIMIZAR ERRORES:"],
-        ["- Roles de Instructores permitidos:", "Instructor / Tutor, Instructor Líder, Instructor Técnico, Coordinador Académico"],
-        ["- Estados válidos de Aprendices:", "En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Desercion"],
-        ["- Formatos obligatorios:", "Nombres completos (nombres y apellidos), correo SENA (@sena.edu.co) y Google (@gmail.com)"]
+        ["INSTRUCCIONES OPERATIVAS Y GUÍA DE DILIGENCIAMIENTO - SENA"],
+        ["1. Competencia: Indique el nombre completo de la competencia o, si es compartida entre varios instructores, especifique el nombre exacto del Resultado de Aprendizaje."],
+        ["2. Día de Formación: Registre únicamente el día activo en que el instructor imparte formación en la ficha. Valores permitidos exactos: Lunes, Martes, Miércoles, Jueves o Viernes."],
+        ["3. Instructores Activos: Cargue exclusivamente los instructores que se encuentran dando formación actualmente (días programados en la ficha). Evite traslapes en los días de la semana."],
+        ["4. Al cargar este archivo, la plataforma ejecutará un motor de Parsing para corroborar y depurar la información antes de guardarla."],
+        ["5. VALORES VÁLIDOS PARA MINIMIZAR ERRORES:"],
+        ["- Roles permitidos:", "Instructor / Tutor, Instructor Líder, Instructor Técnico, Coordinador Académico"],
+        ["- Estados de Aprendices:", "En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Desercion"],
+        ["- Correos requeridos:", "Nombres completos, correo institucional SENA (@sena.edu.co / @misena.edu.co) y Google (@gmail.com)"]
       ];
       const wsInstrucciones = XLSX.utils.aoa_to_sheet(wsInstruccionesData);
       XLSX.utils.book_append_sheet(wb, wsInstrucciones, "Instrucciones");
@@ -627,7 +650,7 @@ export function SheetsTemplateModal({
                     Formato oficial de configuración y control mediante instrucciones y verificación por Parsing
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Las plantillas descargadas incluyen una hoja guía con instrucciones precisas y opciones de marcado exactas para minimizar errores al máximo.
+                    Las plantillas descargadas incluyen una hoja guía con instrucciones precisas, prohibición de traslapes y opciones de marcado exactas.
                   </p>
                 </div>
               </div>
@@ -642,7 +665,7 @@ export function SheetsTemplateModal({
                       Plantilla Configuración General (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Incluye hoja de instrucciones, valores válidos y estructura limpia para la configuración.
+                      Incluye hoja de instrucciones operativas, validación anti-traslapes y estructura limpia.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -687,7 +710,7 @@ export function SheetsTemplateModal({
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
                 <h4 className="font-bold text-sm text-slate-800">Instrucciones y Valores Válidos del Sistema</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Para garantizar que la información cargue correctamente, verifique que los datos coincidan con las siguientes opciones válidas:
+                  Para garantizar que la información cargue correctamente, verifique que los datos coincidan con las siguientes opciones válidas y evite traslapes en los días de los instructores:
                 </p>
                 <div className="space-y-3 text-xs">
                   <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -725,7 +748,7 @@ export function SheetsTemplateModal({
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General (Parsing)</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Actualiza la estructura base, aprendices e instructores con verificación automática y semáforo de errores.
+                      Actualiza la estructura base, aprendices e instructores con verificación anti-traslapes en tiempo real.
                     </p>
                   </div>
 
@@ -819,7 +842,7 @@ export function SheetsTemplateModal({
                     )}
                     <div>
                       <h4 className={`text-sm font-bold ${uploadResult.success ? 'text-emerald-950' : 'text-red-950'}`}>
-                        {uploadResult.success ? '¡Verificación por Parsing Exitosa!' : 'Error en la Verificación'}
+                        {uploadResult.success ? '¡Verificación por Parsing Exitosa!' : 'Error en la Verificación o Conflictos de Programación'}
                       </h4>
                       <p className={`text-xs mt-0.5 ${uploadResult.success ? 'text-emerald-800' : 'text-red-800'}`}>
                         {uploadResult.message}
