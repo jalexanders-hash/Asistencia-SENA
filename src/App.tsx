@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { courseData as initialCourseData } from './data';
 import { subscribeToFichaData, saveAttendanceData, updateFichaCompleteData } from './lib/firebase';
 import { SheetsTemplateModal } from './components/SheetsTemplateModal';
 import ExportReportModal from './components/ExportReportModal';
 import { auth, db } from "./lib/firebase";
-import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, addDoc, serverTimestamp, doc, setDoc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { Login } from "./components/Login";
 import { getUserSystemRole } from './lib/securityRoles';
@@ -40,6 +41,339 @@ import {
 const LOGO_SENA_SVG = `data:image/svg+xml,%3c?xml%20version=%271.0%27%20encoding=%27utf-8%27?%3e%3c!--%20Generator:%20Adobe%20Illustrator%2026.0.1,%20SVG%20Export%20Plug-In%20.%20SVG%20Version:%206.00%20Build%200)%20--%3e%3csvg%20version=%271.1%27%20id=%27Capa_1%27%20xmlns=%27http://www.w3.org/2000/svg%27%20xmlns:xlink=%27http://www.w3.org/1999/xlink%27%20x=%270px%27%20y=%270px%27%20viewBox=%270%200%201000%201000%27%20style=%27enable-background:new%200%200%201000%201000;%27%20xml:space=%27preserve%27%3e%3cstyle%20type=%27text/css%27%3e%20.st0{fill:%2339a900;}%20%3c/style%3e%3cpath%20id=%27path47-5%27%20class=%27st0%27%20d=%27M504.2,20.5c-58.3,0.1-105.6,47.4-105.5,105.8c0.1,58.3,47.4,105.6,105.7,105.6%20c58.3,0,105.6-47.3,105.6-105.7V126C609.9,67.6,562.6,20.4,504.2,20.5z%20M155.6,264.6c-18.6,0.1-37.5,1.1-55.2,5.6%20c-11.7,3-23,7.8-30.3,15.4c-9.2,9.5-10.4,22.3-5.9,33.3c4,9.7,14.8,16.9,26.8,21.1c25.9,8.9,54.6,10.7,81.8,16.3%20c5,1.2,10.6,2.6,13.7,6c3.2,4.1,1.3,9.7-4,12.2c-8.8,4.5-20.1,4.5-30.4,4.4c-9.4-0.4-19.7-1.2-27.2-5.9c-5.5-3.4-6.5-9.1-5.2-14.1%20l-60.6,0c-0.2,9.2,1.6,18.9,8.4,26.8c5.6,6.8,14.8,11.5,24.6,14.4c15.7,4.6,32.7,6,49.4,6.4c22.7,0.4,45.8-0.3,67.6-5.4%20c13-3.2,25.8-8.3,34.1-16.6c14.8-14.8,11.3-38.3-8.3-49.8c-9.8-5.7-21.5-9.2-33.4-11.5c-17.5-3.6-35.3-6.3-52.9-9.2%20c-6.2-1.2-12.8-2.3-18-5.2c-5.5-2.9-5.9-9.8-0.3-12.9c7.2-4.1,16.8-4,25.4-4c9.1,0.2,19,0.7,26.5,5c4.2,2.3,5.9,6.3,5.9,10.1%20l57.6-0.1c-0.2-7.3-1.6-14.9-6.9-21.2c-6.2-7.8-17.1-12.7-28.3-15.5C192.8,265.6,174.1,264.7,155.6,264.6L155.6,264.6z%20M280.6,268.9%20l0,137.7l168.1,0l0-30H342.3v-26.7h94.9v-29.3h-94.9l0-21.9l102.6,0l-0.1-29.7L280.6,268.9z%20M557.5,269c0,0-51.9,0-77.9,0l0,137.7%20l59,0l0-92.7l80.8,92.6l81,0.1l0-137.7l-59.1,0l0.1,92L557.5,269z%20M805.6,269.2c0,0-63.6,91.9-95.6,137.7l61.9,0l14.9-24.8h95.7%20l13.9,24.9l68.8,0L874,269.2L805.6,269.2z%20M836.6,302.1l29.4,49.9l-60.7,0.1L836.6,302.1z%20M10.6,445.6l0.5,75l280.1-1%20c14.3,3.1,22.6,12.4,19.7,33.5L138.6,854.7l56.1,52.5l266.9-461.6L10.6,445.6z%20M545.2,446.2l262.4,459.6l58-52.1L691.3,552.9%20c-2.9-21.2,5.4-30.6,19.7-33.7l280.2,1l-0.1-73.7L545.2,446.2z%20M500.9,522.3L254.8,944.7l65.4,31.9L484.4,699%20c5.7-4.6,11.4-7.1,17.1-7.3c6-0.2,12.2,2,18.3,6.8l163.8,278.4l67.4-35.2L500.9,522.3z%27/%3e%3cg%20id=%27_x23_000000ff-2%27%20transform=%27matrix(0.31570611,0,0,0.23560774,-391.49698,-10.601126)%27%3e%3c/g%3e%3c/svg%3e`;
 
 const ADMIN_EMAIL = "jalexanders@gmail.com";
+
+// ==========================================
+// MÓDULO DE HABEAS DATA Y PRE-PARSING DE EXCEL
+// ==========================================
+
+export interface InstructorMaestro {
+  id?: string;
+  numeroDocumento: string;
+  nombreCompleto: string;
+  correoSena: string;
+  correoGmail: string;
+  activo: boolean;
+}
+
+export interface ValidationError {
+  fila: number;
+  seccion: 'Ficha' | 'Instructor' | 'Aprendiz';
+  campo: string;
+  mensaje: string;
+}
+
+export interface ParseResult {
+  valido: boolean;
+  errores: ValidationError[];
+  instructores: InstructorMaestro[];
+  aprendices: any[];
+}
+
+const EMAIL_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
+const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
+const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
+
+const sanitizarTextoPreParser = (texto: string): string => {
+  if (!texto) return '';
+  const limpio = String(texto).trim().replace(/_/g, ' ');
+  return limpio
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+export const procesarArchivoExcelPreParsing = async (file: File, instructoresExistentes: InstructorMaestro[]): Promise<ParseResult> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        const errores: ValidationError[] = [];
+        const instructoresProcesados: InstructorMaestro[] = [];
+        const aprendicesProcesados: any[] = [];
+
+        const hojaAprendicesName = workbook.SheetNames.find(s => s.toLowerCase().includes('aprendiz')) || workbook.SheetNames[2] || workbook.SheetNames[0];
+        const sheetAprendices = workbook.Sheets[hojaAprendicesName];
+        if (sheetAprendices) {
+          const rowsAprendices: any[] = XLSX.utils.sheet_to_json(sheetAprendices);
+          rowsAprendices.forEach((row, index) => {
+            const filaNum = index + 2;
+            const nombres = sanitizarTextoPreParser(row['nombres'] || row['nombre'] || '');
+            const apellidos = sanitizarTextoPreParser(row['apellidos'] || row['apellido'] || '');
+            const tipoDoc = String(row['tipo_documento'] || row['tipo_doc'] || 'CC').trim().toUpperCase();
+            const numDoc = String(row['numero_documento'] || row['documento'] || '').trim();
+            const correo = sanitizarEmail(row['correo_electronico'] || row['correo'] || row['email'] || '');
+            const estadoRaw = String(row['estado'] || row['estado_aprendiz'] || 'En Formación').trim();
+            const estado = estadoRaw === 'En formacion' ? 'En Formación' : estadoRaw;
+
+            if (!TIPOS_DOC_VALIDOS.includes(tipoDoc)) {
+              errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'tipo_documento', mensaje: `Tipo de documento inválido: "${tipoDoc}".` });
+            }
+            if (!numDoc) {
+              errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'numero_documento', mensaje: `El número de documento es obligatorio.` });
+            }
+            if (!ESTADOS_VALIDOS_MODAL.includes(estado)) {
+              errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'estado', mensaje: `Estado inválido o mal escrito: "${estado}". Use la lista desplegable.` });
+            }
+            if (correo && !EMAIL_REGEX.test(correo)) {
+              errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'correo_electronico', mensaje: `Dominio de correo no permitido: "${correo}".` });
+            }
+
+            aprendicesProcesados.push({
+              tipo_documento: tipoDoc,
+              numero_documento: numDoc,
+              nombres,
+              apellidos,
+              correo: correo,
+              telefono: String(row['telefono'] || ''),
+              estado: ESTADOS_VALIDOS_MODAL.includes(estado) ? (estado === 'En formacion' ? 'En Formación' : estado) : 'En Formación',
+              registros: {}
+            });
+          });
+        }
+
+        const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
+        const sheetEquipo = workbook.Sheets[hojaEquipoName];
+        if (sheetEquipo) {
+          const rowsEquipo: any[] = XLSX.utils.sheet_to_json(sheetEquipo);
+          rowsEquipo.forEach((row, index) => {
+            const filaNum = index + 2;
+            const seleccionInstructor = String(row['nombre_del_instructor'] || row['nombre'] || '').trim();
+
+            if (seleccionInstructor.toLowerCase().includes('instructor nuevo') || seleccionInstructor.includes('+ Instructor Nuevo')) {
+              const docNuevo = String(row['nuevo_documento'] || row['numero_documento'] || '').trim();
+              const nombreNuevo = sanitizarTextoPreParser(row['nuevo_nombre'] || row['nombre_del_instructor'] || '');
+              const correoSenaNuevo = sanitizarEmail(row['nuevo_correo_sena'] || row['correo_sena'] || '');
+              const correoGmailNuevo = sanitizarEmail(row['nuevo_correo_gmail'] || row['correo_gmail'] || '');
+
+              if (!docNuevo || !nombreNuevo) {
+                errores.push({ fila: filaNum, seccion: 'Instructor', campo: 'Instructor Nuevo', mensaje: `Se seleccionó Instructor Nuevo pero faltan Documento o Nombre.` });
+              }
+              if (correoSenaNuevo && !EMAIL_REGEX.test(correoSenaNuevo)) {
+                errores.push({ fila: filaNum, seccion: 'Instructor', campo: 'nuevo_correo_sena', mensaje: `Correo SENA inválido para nuevo instructor: "${correoSenaNuevo}".` });
+              }
+
+              instructoresProcesados.push({
+                numeroDocumento: docNuevo,
+                nombreCompleto: nombreNuevo,
+                correoSena: correoSenaNuevo,
+                correoGmail: correoGmailNuevo,
+                activo: true
+              });
+            } else if (seleccionInstructor) {
+              const instructorEncontrado = instructoresExistentes.find(i => i.nombreCompleto.toLowerCase() === seleccionInstructor.toLowerCase());
+              if (!instructorEncontrado) {
+                instructoresProcesados.push({
+                  numeroDocumento: String(row['numero_documento'] || '000000'),
+                  nombreCompleto: sanitizarTextoPreParser(seleccionInstructor),
+                  correoSena: sanitizarEmail(row['correo_institucional_sena'] || row['correo'] || ''),
+                  correoGmail: sanitizarEmail(row['correo_gmail'] || ''),
+                  activo: true
+                });
+              } else {
+                instructoresProcesados.push(instructorEncontrado);
+              }
+            }
+          });
+        }
+
+        resolve({
+          valido: errores.length === 0,
+          errores,
+          instructores: instructoresProcesados,
+          aprendices: aprendicesProcesados
+        });
+
+      } catch (error) {
+        resolve({
+          valido: false,
+          errores: [{ fila: 0, seccion: 'Ficha', campo: 'Archivo', mensaje: 'Error al leer el archivo Excel. Verifique que el formato sea correcto.' }],
+          instructores: [],
+          aprendices: []
+        });
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+export const HabeasDataModalComponent: React.FC<{ userUid: string; userEmail: string }> = ({ userUid, userEmail }) => {
+  const [requiereAceptacion, setRequiereAceptacion] = useState(false);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    const verificarConsentimiento = async () => {
+      if (!userUid) return;
+      try {
+        const ref = doc(db, 'consentimientos_habeas_data', userUid);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          setRequiereAceptacion(true);
+        }
+      } catch (e) {
+        const localConsent = localStorage.getItem(`habeas_data_${userUid}`);
+        if (!localConsent) setRequiereAceptacion(true);
+      }
+      setCargando(false);
+    };
+    verificarConsentimiento();
+  }, [userUid]);
+
+  const handleAceptar = async () => {
+    try {
+      const ref = doc(db, 'consentimientos_habeas_data', userUid);
+      await setDoc(ref, {
+        uid: userUid,
+        email: userEmail,
+        timestamp: new Date().toISOString(),
+        leyAplicada: 'Ley 1581 de 2012 - Colombia'
+      });
+    } catch (e) {}
+    localStorage.setItem(`habeas_data_${userUid}`, 'true');
+    setRequiereAceptacion(false);
+  };
+
+  if (cargando || !requiereAceptacion) return null;
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white max-w-lg w-full p-6 rounded-2xl shadow-2xl space-y-4 border border-slate-200">
+        <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          🛡️ Política de Tratamiento de Datos (Habeas Data)
+        </h3>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          De conformidad con la <strong>Ley 1581 de 2012</strong> de protección de datos personales en Colombia, le informamos que los datos recolectados en esta aplicación académica interna serán tratados exclusivamente para fines de gestión de asistencia, control pedagógico y seguimiento de fichas de caracterización.
+        </p>
+        <p className="text-xs text-slate-600">
+          Usted tiene derecho a conocer, actualizar y rectificar sus datos personales. Al hacer clic en "Aceptar", otorga su autorización expresa para el tratamiento de su información.
+        </p>
+        <button
+          onClick={handleAceptar}
+          className="w-full bg-[#39a900] text-white py-3 rounded-xl font-bold hover:bg-[#329600] transition cursor-pointer shadow-md text-sm"
+        >
+          Acepto los Términos y Autorizo el Tratamiento
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export const FileUploaderPasarelaSection: React.FC<{ currentFichaId: string; onDataLoaded: (data: any, fichaId: string) => void }> = ({ currentFichaId, onDataLoaded }) => {
+  const [analizando, setAnalizando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [resultadoParse, setResultadoParse] = useState<ParseResult | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAnalizando(true);
+      let instructoresCatalogo: InstructorMaestro[] = [];
+      try {
+        const snap = await getDocs(collection(db, 'instructores_maestros'));
+        snap.forEach(d => instructoresCatalogo.push(d.data() as InstructorMaestro));
+      } catch (err) {}
+
+      const resultado = await procesarArchivoExcelPreParsing(file, instructoresCatalogo);
+      setResultadoParse(resultado);
+      setAnalizando(false);
+    }
+  };
+
+  const handleCommit = async () => {
+    if (!resultadoParse || !resultadoParse.valido) return;
+    setGuardando(true);
+    try {
+      for (const inst of resultadoParse.instructores) {
+        if (!inst.id && inst.numeroDocumento) {
+          try {
+            await addDoc(collection(db, 'instructores_maestros'), inst);
+          } catch (e) {}
+        }
+      }
+
+      const baseData = {
+        ficha_de_caracterizacion: currentFichaId,
+        denominacion: "GESTIÓN ADMINISTRATIVA",
+        centro: "Complejo Tecnológico Agroindustrial, Pecuario y Turístico",
+        asistencias_aprendices: resultadoParse.aprendices,
+        equipo_instructores: resultadoParse.instructores.map(i => ({
+          nombre_del_instructor: i.nombreCompleto,
+          correo_institucional_sena: i.correoSena,
+          correo_gmail: i.correoGmail,
+          competencia: "Competencia General Formación",
+          dia: "Viernes",
+          rol: "Instructor / Tutor"
+        }))
+      };
+
+      await updateFichaCompleteData(baseData, currentFichaId);
+      onDataLoaded(baseData, currentFichaId);
+      alert("¡Cargue validado y exitoso! Los datos se han guardado depurados.");
+      setResultadoParse(null);
+    } catch (e) {
+      alert("Error al guardar en base de datos.");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="p-5 bg-white rounded-xl border border-emerald-200 shadow-sm space-y-4 my-4">
+      <div className="flex items-center gap-2">
+        <span className="p-2 bg-emerald-100 text-[#39a900] rounded-lg font-bold">🛡️</span>
+        <div>
+          <h4 className="font-bold text-slate-800 text-sm">Pasarela de Validación Previa (Pre-Parsing) & Catálogo Dinámico</h4>
+          <p className="text-xs text-slate-500">Sube tu archivo Excel con validación estricta, sanitización automática y soporte para "[ + Instructor Nuevo ]".</p>
+        </div>
+      </div>
+
+      <input 
+        type="file" 
+        accept=".xlsx, .xls" 
+        onChange={handleFileChange}
+        className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-[#39a900] hover:file:bg-emerald-100 cursor-pointer"
+      />
+
+      {analizando && <p className="text-xs text-blue-600 animate-pulse font-medium">Analizando y sanitizando archivo en memoria...</p>}
+
+      {resultadoParse && (
+        <div className="mt-3">
+          {resultadoParse.valido ? (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between">
+              <div>
+                <span className="text-emerald-800 font-bold text-xs block">🟢 Archivo Aprobado y Limpio</span>
+                <p className="text-[11px] text-emerald-600">{resultadoParse.aprendices.length} aprendices y {resultadoParse.instructores.length} instructores validados.</p>
+              </div>
+              <button 
+                onClick={handleCommit}
+                disabled={guardando}
+                className="bg-[#39a900] text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#329600] transition cursor-pointer"
+              >
+                {guardando ? 'Guardando...' : 'Confirmar e Importar'}
+              </button>
+            </div>
+          ) : (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg space-y-2">
+              <span className="text-red-800 font-bold text-xs block">🔴 Archivo Rechazado (Errores Encontrados)</span>
+              <ul className="max-h-40 overflow-y-auto space-y-1 text-[11px]">
+                {resultadoParse.errores.map((err, idx) => (
+                  <li key={idx} className="bg-white p-1.5 rounded border border-red-100 text-red-700">
+                    <strong>Fila {err.fila}</strong> [{err.seccion} - {err.campo}]: {err.mensaje}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export type EstadoAprendiz = 
   | 'En Formación' 
@@ -422,11 +756,6 @@ export default function App() {
     return getUserSystemRole(user, fichasDataMap);
   }, [user, fichasDataMap]);
 
-  /**
-   * MAPEO FLEXIBLE MULTI-FICHA:
-   * Evalúa todas las fichas en fichasDataMap comparando el correo del usuario contra
-   * todos los campos posibles de correo en el equipo ejecutor.
-   */
   const fichasDisponiblesMap = useMemo(() => {
     if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
       return fichasDataMap;
@@ -466,7 +795,6 @@ export default function App() {
     return Object.keys(fichasDisponiblesMap);
   }, [fichasDisponiblesMap]);
 
-  // Si la ficha actual no está en las permitidas para el usuario, se ajusta a la primera disponible.
   useEffect(() => {
     if (llavesFichasDisponibles.length > 0 && !fichasDisponiblesMap[currentFichaId]) {
       setCurrentFichaId(llavesFichasDisponibles[0]);
@@ -499,7 +827,6 @@ export default function App() {
     return getInstructorFromSession(user, courseData);
   }, [user, courseData]);
 
-  // CORRECCIÓN CLAVE: Verificación de autorización de sesión sin sobreescribir la selección manual de ficha del usuario.
   useEffect(() => {
     if (user && fichasDataMap) {
       if (currentUserRole === 'ADMIN' || currentUserRole === 'COORDINADOR') {
@@ -906,8 +1233,9 @@ CC: ${correoInstructorActual}`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-12 flex flex-col justify-between">
+      {/* 🛡️ Modal Bloqueante de Habeas Data */}
+      <HabeasDataModalComponent userUid={user.uid} userEmail={user.email || ADMIN_EMAIL} />
       
-      {/* HEADER INSTITUCIONAL DINÁMICO */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between py-3">
           
@@ -1041,7 +1369,7 @@ CC: ${correoInstructorActual}`;
               <button
                 onClick={() => signOut(auth)}
                 className="ml-2 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-xs font-bold border border-red-200 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-                title="Cerrar Sesión de forma segura (Ideal para computadores públicos)"
+                title="Cerrar Sesión de forma segura"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden lg:inline">Cerrar Sesión</span>
@@ -1051,7 +1379,6 @@ CC: ${correoInstructorActual}`;
         </div>
       </header>
 
-      {/* CUERPO PRINCIPAL */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6 w-full flex-grow">
         
         {currentUserRole === 'COORDINADOR' && (
@@ -1092,7 +1419,7 @@ CC: ${correoInstructorActual}`;
                 className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-[#39a900] hover:border-[#39a900]/50 shadow-sm transition-colors cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4 text-[#39a900]" />
-                <span className="hidden sm:inline">Google Sheets</span>
+                <span className="hidden sm:inline">Google Sheets & Validación</span>
               </button>
             )}
           </div>
@@ -1103,7 +1430,7 @@ CC: ${correoInstructorActual}`;
             Inicio &gt; {mainView === 'listado' ? 'Listado de Aprendices' : 'Vista de Tablero'} &gt; <span className="font-semibold text-slate-800">Ficha {courseData.ficha_de_caracterizacion}</span>
           </p>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <img src={LOGO_SENA_SVG} alt="" className="w-7 h-7 inline-block" />
+            <img src={LOGO_SENA_SVG} alt="" className="w-7 h7 inline-block" />
             {courseData.denominacion} - Ficha {courseData.ficha_de_caracterizacion}
           </h1>
         </div>
@@ -1143,7 +1470,6 @@ CC: ${correoInstructorActual}`;
               </button>
             </div>
 
-            {/* PESTAÑA: DATOS DE LA FICHA */}
             {activeTab === 'ficha' && (
               <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
                 <div className="border-b border-slate-200 pb-5">
@@ -1163,6 +1489,19 @@ CC: ${correoInstructorActual}`;
                     </span>
                   </div>
                 </div>
+
+                {/* 🛡️ Inserción de la pasarela de validación previa en la pestaña de la ficha */}
+                <FileUploaderPasarelaSection 
+                  currentFichaId={currentFichaId}
+                  onDataLoaded={(newData, targetFichaId) => {
+                    const fichaToUse = targetFichaId || currentFichaId;
+                    if (fichaToUse !== currentFichaId) {
+                      setCurrentFichaId(fichaToUse);
+                    }
+                    updateCurrentFichaData(newData);
+                    localStorage.setItem(`sena_ficha_data_${fichaToUse}`, JSON.stringify(newData));
+                  }}
+                />
 
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -1357,7 +1696,6 @@ CC: ${correoInstructorActual}`;
               </div>
             )}
 
-            {/* PESTAÑA DE GESTIÓN DE NOVEDADES */}
             {activeTab === 'novedades' && (
               <GestionNovedadesTab 
                 courseData={courseData}
@@ -1440,7 +1778,6 @@ CC: ${correoInstructorActual}`;
         )}
       </main>
 
-      {/* MODAL: PERFIL HISTÓRICO DEL APRENDIZ */}
       {selectedStudentForProfile && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -1518,7 +1855,6 @@ CC: ${correoInstructorActual}`;
         </div>
       )}
 
-      {/* MODAL TOMAR ASISTENCIA */}
       {showAttendanceModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -1584,7 +1920,6 @@ CC: ${correoInstructorActual}`;
         </div>
       )}
 
-      {/* MODAL PLANTILLA NOTIFICACIÓN ACUERDO 009 DE 2024 */}
       {showNotificationModal && selectedStudentForNotification && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col">
@@ -1650,7 +1985,6 @@ CC: ${correoInstructorActual}`;
         </div>
       )}
 
-      {/* MODAL GOOGLE SHEETS */}
       <SheetsTemplateModal 
         isOpen={isSheetsModalOpen} 
         onClose={() => setIsSheetsModalOpen(false)} 
@@ -1667,7 +2001,6 @@ CC: ${correoInstructorActual}`;
         }}
       />
 
-      {/* MODAL EXPORTAR / REPORTES */}
       <ExportReportModal 
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
@@ -1679,7 +2012,6 @@ CC: ${correoInstructorActual}`;
   );
 }
 
-// COMPONENTE DE LA PESTAÑA: GESTIÓN DE NOVEDADES
 interface GestionNovedadesTabProps {
   courseData: any;
   currentFichaId: string;
@@ -2031,7 +2363,7 @@ export const GestionNovedadesTab: React.FC<GestionNovedadesTabProps> = ({
                     type="text" 
                     value={nuevoDoc} 
                     onChange={(e) => setNuevoDoc(e.target.value)}
-                    placeholder="Ej. 1020.304.050 (sin puntos)"
+                    placeholder="Ej. 1020304050"
                     className="w-full border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 font-mono font-semibold"
                     required 
                   />
