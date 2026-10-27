@@ -14,23 +14,28 @@ import {
   ClipboardList,
   AlertTriangle
 } from 'lucide-react';
-import { 
-  downloadGoogleSheetsTemplate, 
-  downloadCompleteConfigurationTemplate,
-  parseUploadedTemplate,
-  ParsedTemplateResult
-} from '../lib/templateGenerator';
 import { getInstructorFromSession } from '../lib/authSession';
 import { replaceFichaCompleteData, db } from '../lib/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { courseData as initialCourseData } from '../data';
 
 // ==========================================
-// MOTOR DE VALIDACIÓN PREVIA Y SANITIZACIÓN
+// TIPOS Y MOTOR DE VALIDACIÓN PREVIA (PRE-PARSING)
 // ==========================================
 
+export interface ParsedTemplateResult {
+  success: boolean;
+  message: string;
+  errors?: string[];
+  counts?: {
+    aprendices: number;
+    instructores: number;
+  };
+  data?: any;
+}
+
 const EMAIL_INSTRUCTOR_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
-const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/; // Permite cualquier proveedor de correo válido para aprendices
+const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/; // Permite cualquier proveedor para aprendices (Gmail, Hotmail, Outlook, Yahoo, etc.)
 
 const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
 const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
@@ -82,7 +87,6 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
             if (!ESTADOS_VALIDOS_MODAL.includes(estado)) {
               errores.push(`Fila ${filaNum} [Aprendiz]: Estado inválido o mal escrito: "${estado}".`);
             }
-            // FLEXIBILIZACIÓN: Se permite cualquier formato de correo válido para aprendices
             if (correo && !EMAIL_APRENDIZ_REGEX.test(correo)) {
               errores.push(`Fila ${filaNum} [Aprendiz]: Estructura de correo electrónico inválida: "${correo}".`);
             }
@@ -100,7 +104,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
           });
         }
 
-        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con restricción estricta de correo)
+        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con validación estricta de dominios institucionales/Gmail)
         const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
         const sheetEquipo = workbook.Sheets[hojaEquipoName];
         if (sheetEquipo) {
@@ -111,12 +115,11 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
             const correoGoogle = String(row['correo_google'] || '').trim().toLowerCase();
             const correoSena = String(row['correo_institucional_sena'] || row['correo_institucional'] || '').trim().toLowerCase();
 
-            // RESTRICCIÓN ESTRICTA EXCLUSIVA PARA INSTRUCTORES
             if (correoGoogle && !EMAIL_INSTRUCTOR_REGEX.test(correoGoogle)) {
-              errores.push(`Fila ${filaNum} [Instructor]: El correo Google del instructor debe ser @gmail.com autorizado: "${correoGoogle}".`);
+              errores.push(`Fila ${filaNum} [Instructor]: El correo Google debe ser @gmail.com autorizado: "${correoGoogle}".`);
             }
             if (correoSena && !EMAIL_INSTRUCTOR_REGEX.test(correoSena)) {
-              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional del instructor debe ser @sena.edu.co o @misena.edu.co: "${correoSena}".`);
+              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional debe ser @sena.edu.co o @misena.edu.co: "${correoSena}".`);
             }
 
             if (seleccionInstructor.toLowerCase().includes('instructor nuevo') || seleccionInstructor.includes('+ Instructor Nuevo')) {
@@ -340,6 +343,25 @@ export function SheetsTemplateModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Catálogo dinámico sincronizado en tiempo real con Firebase
+  const [instructoresCatalogo, setInstructoresCatalogo] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchInstructoresMaestros = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'instructores_maestros'));
+        const lista: any[] = [];
+        snap.forEach(d => lista.push({ id: d.id, ...d.data() }));
+        setInstructoresCatalogo(lista);
+      } catch (e) {
+        console.error("Error al obtener instructores maestros en tiempo real:", e);
+      }
+    };
+    if (isOpen) {
+      fetchInstructoresMaestros();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const instructorActual = getInstructorFromSession(currentUser || { email: localStorage.getItem('userEmail') }, courseData);
@@ -348,6 +370,92 @@ export function SheetsTemplateModal({
     ...courseData,
     equipo_instructores: [instructorActual],
     competencias: instructorActual.competencia ? [instructorActual.competencia] : courseData.competencias
+  };
+
+  // Generación de plantilla con datos en tiempo real de Firebase y Listas Desplegables de Excel (Data Validation)
+  const handleDownloadTemplateWithRealtimeCatalog = (type: 'configuracion' | 'inasistencias') => {
+    const wb = XLSX.utils.book_new();
+
+    if (type === 'configuracion') {
+      // 1. Hoja Ficha
+      const wsFichaData = [
+        ["ficha_de_caracterizacion", "denominacion", "centro", "fecha_inicio", "fecha_terminacion", "jornada"],
+        [currentFicha, courseData.denominacion || "GESTIÓN ADMINISTRATIVA", courseData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "Diurna"]
+      ];
+      const wsFicha = XLSX.utils.aoa_to_sheet(wsFichaData);
+      XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
+
+      // 2. Hoja Equipo_Ejecutor con instructores de Firebase en tiempo real + Instructor Nuevo
+      const nombresInstructores = instructoresCatalogo.map(i => i.nombreCompleto || i.nombre_del_instructor).filter(Boolean);
+      if (nombresInstructores.length === 0) {
+        nombresInstructores.push(instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPULVEDA");
+      }
+      nombresInstructores.push("[ + Instructor Nuevo ]");
+
+      const wsEquipoData = [
+        ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "rol", "fecha_de_inicio", "nuevo_documento", "nuevo_nombre"],
+        [
+          "Competencia General de Formación",
+          nombresInstructores[0],
+          "instructor@gmail.com",
+          "instructor@sena.edu.co",
+          "Viernes",
+          "Instructor / Tutor",
+          "20/01/2026",
+          "", ""
+        ]
+      ];
+      const wsEquipo = XLSX.utils.aoa_to_sheet(wsEquipoData);
+
+      // Aplicar validación de lista desplegable en la columna de nombres de instructor (Columna B / Índice 1)
+      const rangeEquipo = XLSX.utils.decode_range(wsEquipo['!ref'] || "A1:I2");
+      wsEquipo['!dataValidation'] = wsEquipo['!dataValidation'] || [];
+      wsEquipo['!dataValidation'].push({
+        sqref: `B2:B${rangeEquipo.e.r + 100}`,
+        type: 'list',
+        formula1: `"${nombresInstructores.join(',')}"`
+      });
+
+      XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
+
+      // 3. Hoja Aprendices con listas desplegables para Tipo de Documento y Estado
+      const wsAprendicesData = [
+        ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"],
+        ["CC", "1001021491", "VALENTINA", "TORO SALGADO", "valencia@outlook.com", "3001234567", "En Formación"],
+        ["CC", "1001153239", "JUAN JOSE", "CANO RUA", "juancano@gmail.com", "3007654321", "En Formación"]
+      ];
+      const wsAprendices = XLSX.utils.aoa_to_sheet(wsAprendicesData);
+      
+      const rangeAprendices = XLSX.utils.decode_range(wsAprendices['!ref'] || "A1:G3");
+      wsAprendices['!dataValidation'] = wsAprendices['!dataValidation'] || [];
+      // Lista desplegable para Tipo de Documento (Columna A)
+      wsAprendices['!dataValidation'].push({
+        sqref: `A2:A${rangeAprendices.e.r + 100}`,
+        type: 'list',
+        formula1: `"CC,TI,CE,PP,PPT"`
+      });
+      // Lista desplegable para Estado (Columna G)
+      wsAprendices['!dataValidation'].push({
+        sqref: `G2:G${rangeAprendices.e.r + 100}`,
+        type: 'list',
+        formula1: `"En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion"`
+      });
+
+      XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
+      XLSX.writeFile(wb, `Plantilla_Configuracion_Ficha_${currentFicha}.xlsx`);
+
+    } else {
+      // Plantilla de Inasistencias
+      const wbInas = XLSX.utils.book_new();
+      const aprendicesList = courseData.asistencias_aprendices || [];
+      const rowsInas = [
+        ["ficha_de_caracterizacion", "instructor_titular", "numero_documento", "nombres", "apellidos", "fecha_sesion", "estado_asistencia"],
+        [currentFicha, instructorActual.nombre_del_instructor, "1001021491", "VALENTINA", "TORO SALGADO", "20/01/2026", "Presente"]
+      ];
+      const wsInas = XLSX.utils.aoa_to_sheet(rowsInas);
+      XLSX.utils.book_append_sheet(wbInas, wsInas, "Inasistencias");
+      XLSX.writeFile(wbInas, `Plantilla_Inasistencias_Ficha_${currentFicha}.xlsx`);
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -359,18 +467,11 @@ export function SheetsTemplateModal({
     setUploadResult(null);
 
     try {
-      let instructoresCatalogo: any[] = [];
-      try {
-        const snap = await getDocs(collection(db, 'instructores_maestros'));
-        snap.forEach(d => instructoresCatalogo.push(d.data()));
-      } catch (err) {}
-
-      // Si es carga de configuración, usamos la pasarela de pre-parsing con validación estricta cruzada
       if (uploadType === 'configuracion') {
         const result = await procesarArchivoExcelPreParsing(file, instructoresCatalogo);
         setUploadResult(result);
       } else {
-        const result = await parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
+        const result = await (await import('../lib/templateGenerator')).parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
         setUploadResult(result);
       }
     } catch (err: any) {
@@ -427,15 +528,31 @@ export function SheetsTemplateModal({
 
       finalDataToSave.ficha_de_caracterizacion = excelFichaId;
 
+      // Registrar instructores nuevos ("Instructor Nuevo") en Firebase si aplica
+      if (uploadType === 'configuracion' && uploadResult.data.equipo_instructores) {
+        for (const inst of uploadResult.data.equipo_instructores) {
+          if (inst.numeroDocumento && !instructoresCatalogo.some(existing => (existing.nombreCompleto || '').toLowerCase() === (inst.nombreCompleto || '').toLowerCase())) {
+            try {
+              await addDoc(collection(db, 'instructores_maestros'), {
+                numeroDocumento: inst.numeroDocumento,
+                nombreCompleto: inst.nombreCompleto,
+                correoSena: inst.correoSena || '',
+                correoGmail: inst.correoGmail || '',
+                activo: true
+              });
+            } catch (err) {}
+          }
+        }
+      }
+
       await replaceFichaCompleteData(finalDataToSave, excelFichaId);
 
       const refreshedData = JSON.parse(JSON.stringify(finalDataToSave));
-
       onDataLoaded(refreshedData, excelFichaId);
      
       const mensajeExito = uploadType === 'inasistencias' 
-        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y aplicadas con éxito para la competencia de ${instructorActual.nombre_del_instructor}!`
-        : `¡Configuración general de la Ficha N° ${excelFichaId} actualizada con éxito!`;
+        ? `¡Inasistencias de la Ficha N° ${excelFichaId} cargadas y aplicadas con éxito!`
+        : `¡Configuración general de la Ficha N° ${excelFichaId} actualizada con éxito mediante Pasarela de Validación Previa!`;
 
       alert(mensajeExito);
       onClose();
@@ -529,10 +646,10 @@ export function SheetsTemplateModal({
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-emerald-950">
-                    Formato oficial exclusivo para su sesión activa
+                    Formato oficial con Catálogo en Tiempo Real y Listas Desplegables
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    La plantilla generará únicamente los espacios y aprendices asignados al instructor <strong>{instructorActual.nombre_del_instructor}</strong> bajo la competencia: <em>{instructorActual.competencia || 'General'}</em>. Si aún no cuenta con inasistencias cargadas, la hoja incluirá guías con los valores permitidos (Ej: Presente, X, Tarde, Excusa).
+                    Las plantillas descargadas consultan de forma síncrona los instructores vigentes en Firebase. Incluyen validación de datos en listas desplegables para tipos de documento, estados y nombres del equipo ejecutor.
                   </p>
                 </div>
               </div>
@@ -544,19 +661,19 @@ export function SheetsTemplateModal({
                       <FileSpreadsheet className="w-5 h-5" />
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">
-                      Plantilla para Inasistencias (.xlsx)
+                      Plantilla Configuración General (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga el formato simplificado con los aprendices precargados para registrar asistencia bajo las opciones permitidas.
+                      Estructura completa con listas desplegables y catálogo sincronizado de instructores.
                     </p>
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadGoogleSheetsTemplate(courseDataFiltradoPorInstructor, instructorActual)}
+                      onClick={() => handleDownloadTemplateWithRealtimeCatalog('configuracion')}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
                     >
                       <Download className="w-4 h-4" />
-                      Descargar Plantilla con Aprendices
+                      Descargar Plantilla con Catálogo Real
                     </button>
                   </div>
                 </div>
@@ -567,19 +684,19 @@ export function SheetsTemplateModal({
                       <ExternalLink className="w-5 h-5" />
                     </div>
                     <h3 className="font-bold text-slate-800 text-base">
-                      Formato Completo de Configuración
+                      Plantilla para Inasistencias (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Descarga la estructura completa de múltiples hojas (incluyendo Equipo Ejecutor y denominación unificada) para nuevas fichas.
+                      Descarga el formato simplificado para registrar asistencia bajo las opciones permitidas.
                     </p>
                   </div>
                   <div className="mt-5">
                     <button
-                      onClick={() => downloadCompleteConfigurationTemplate(courseDataFiltradoPorInstructor)}
+                      onClick={() => handleDownloadTemplateWithRealtimeCatalog('inasistencias')}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm cursor-pointer"
                     >
                       <Download className="w-4 h-4" />
-                      Descargar Formato Completo
+                      Descargar Formato Inasistencias
                     </button>
                   </div>
                 </div>
@@ -591,9 +708,9 @@ export function SheetsTemplateModal({
           {activeTab === 'estructura' && (
             <div className="space-y-6">
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs p-5 space-y-4">
-                <h4 className="font-bold text-sm text-slate-800">Opciones Estrictas de Asistencia Permitidas</h4>
+                <h4 className="font-bold text-sm text-slate-800">Reglas y Opciones Válidas</h4>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Para mantener la limpieza de los reportes y evitar errores de validación, diligencie las celdas de asistencia utilizando estrictamente una de las siguientes opciones:
+                  Para mantener la integridad de la base de datos, la pasarela de validación previa aplica filtros estrictos en los correos de instructores y permite flexibilidad en correos de aprendices.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-semibold">
                   <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg border border-emerald-200 text-center">
@@ -625,9 +742,9 @@ export function SheetsTemplateModal({
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                       <Settings className="w-7 h-7" />
                     </div>
-                    <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General</h3>
+                    <h3 className="font-bold text-slate-800 text-base">Cargar Configuración General (Pre-Parsing)</h3>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      Actualiza la estructura base, denominación del programa y aprendices de la ficha mediante Pasarela de Validación Previa.
+                      Actualiza la estructura base, aprendices e instructores con semáforo de errores en tiempo real.
                     </p>
                   </div>
 
@@ -648,7 +765,7 @@ export function SheetsTemplateModal({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-xl">
                     <span className="text-xs font-bold text-emerald-900">
-                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General de Ficha (Pre-Parsing)' : `📋 Registro de Inasistencias (${instructorActual.nombre_del_instructor})`}
+                      Modo seleccionado: {uploadType === 'configuracion' ? '⚙️ Configuración General (Pasarela Pre-Parsing)' : `📋 Registro de Inasistencias (${instructorActual.nombre_del_instructor})`}
                     </span>
                     <button 
                       onClick={() => { setUploadType(null); setSelectedFile(null); setUploadResult(null); }}
@@ -667,7 +784,7 @@ export function SheetsTemplateModal({
                         Selecciona tu archivo Excel (.xlsx) diligenciado
                       </h3>
                       <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                        Ficha activa actual: <strong>{currentFicha}</strong> | Instructor: <strong>{instructorActual.nombre_del_instructor}</strong> ({instructorActual.competencia || 'General'})
+                        Ficha activa actual: <strong>{currentFicha}</strong> | Instructor: <strong>{instructorActual.nombre_del_instructor}</strong>
                       </p>
                     </div>
 
