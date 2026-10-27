@@ -366,6 +366,7 @@ export function SheetsTemplateModal({
       const wsFicha = XLSX.utils.aoa_to_sheet(wsFichaData);
       XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
+      // Inyectar instructores de Firebase en tiempo real + Instructor Nuevo
       const nombresInstructores = instructoresCatalogo.map(i => i.nombreCompleto || i.nombre_del_instructor).filter(Boolean);
       if (nombresInstructores.length === 0) {
         nombresInstructores.push(instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPÚLVEDA VÉLEZ");
@@ -389,12 +390,14 @@ export function SheetsTemplateModal({
       const rangeEquipo = XLSX.utils.decode_range(wsEquipo['!ref'] || "A1:G2");
       (wsEquipo as any)['!dataValidation'] = (wsEquipo as any)['!dataValidation'] || [];
       
+      // Lista desplegable para nombres de instructores (Columna B)
       (wsEquipo as any)['!dataValidation'].push({
         sqref: `B2:B${rangeEquipo.e.r + 100}`,
         type: 'list',
         formula1: `"${nombresInstructores.join(',')}"`
       });
 
+      // Lista desplegable para roles de instructores (Columna F)
       const rolesPermitidos = "Instructor / Tutor,Instructor Líder,Instructor Técnico,Coordinador Académico";
       (wsEquipo as any)['!dataValidation'].push({
         sqref: `F2:F${rangeEquipo.e.r + 100}`,
@@ -414,12 +417,7 @@ export function SheetsTemplateModal({
       const rangeAprendices = XLSX.utils.decode_range(wsAprendices['!ref'] || "A1:G3");
       (wsAprendices as any)['!dataValidation'] = (wsAprendices as any)['!dataValidation'] || [];
       
-      (wsAprendices as any)['!dataValidation'].push({
-        sqref: `A2:A${rangeAprendices.e.r + 100}`,
-        type: 'list',
-        formula1: `"CC,TI,CE,PP,PPT"`
-      });
-      
+      // Lista desplegable enfocada exclusivamente en la columna G (Estado del Aprendiz)
       const estadosAprendiz = "En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion";
       (wsAprendices as any)['!dataValidation'].push({
         sqref: `G2:G${rangeAprendices.e.r + 100}`,
@@ -431,6 +429,7 @@ export function SheetsTemplateModal({
       XLSX.writeFile(wb, `Plantilla_Configuracion_Ficha_${currentFicha}.xlsx`);
 
     } else {
+      // Plantilla de Inasistencias (Respetando la estructura original intacta)
       const wbInas = XLSX.utils.book_new();
       
       const wsFichaInasData = [
@@ -460,8 +459,17 @@ export function SheetsTemplateModal({
       });
 
       const wsAprendicesInas = XLSX.utils.json_to_sheet(aprendicesRows, { header: headerAprendices });
-      XLSX.utils.book_append_sheet(wbInas, wsAprendicesInas, "Aprendices");
+      
+      const rangeInas = XLSX.utils.decode_range(wsAprendicesInas['!ref'] || "A1:G10");
+      (wsAprendicesInas as any)['!dataValidation'] = (wsAprendicesInas as any)['!dataValidation'] || [];
+      const estadosAprendiz = "En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion";
+      (wsAprendicesInas as any)['!dataValidation'].push({
+        sqref: `G2:G${rangeInas.e.r + 100}`,
+        type: 'list',
+        formula1: `"${estadosAprendiz}"`
+      });
 
+      XLSX.utils.book_append_sheet(wbInas, wsAprendicesInas, "Aprendices");
       XLSX.writeFile(wbInas, `Plantilla_Asistencia_Ficha_${currentFicha}_${instructorActual.nombre_del_instructor}.xlsx`);
     }
   };
@@ -636,7 +644,7 @@ export function SheetsTemplateModal({
                     Formato oficial con Catálogo en Tiempo Real y Listas Desplegables
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Las plantillas descargadas consultan de forma síncrona los instructores vigentes en Firebase. Incluyen validación de datos en listas desplegables para tipos de documento, estados, roles y nombres del equipo ejecutor.
+                    Las plantillas descargadas consultan de forma síncrona los instructores vigentes en Firebase. Incluyen validación de datos en listas desplegables para estados del aprendiz y nombres del equipo ejecutor.
                   </p>
                 </div>
               </div>
@@ -865,8 +873,8 @@ export function SheetsTemplateModal({
                         disabled={isSaving}
                         className="px-5 py-2.5 bg-sena hover:bg-sena-dark text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60 cursor-pointer"
                       >
-                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                        {isSaving ? 'Sincronizando con la nube...' : 'Confirmar y Actualizar Aplicativo'}
+                        {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                        Confirmar y Actualizar Aplicativo
                       </button>
                     </div>
                   )}
