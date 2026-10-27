@@ -20,7 +20,7 @@ import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { courseData as initialCourseData } from '../data';
 
 // ==========================================
-// TIPOS Y MOTOR DE VALIDACIÓN PREVIA (PRE-PARSING)
+// MOTOR DE VALIDACIÓN PREVIA (PRE-PARSING)
 // ==========================================
 
 export interface ParsedTemplateResult {
@@ -35,7 +35,7 @@ export interface ParsedTemplateResult {
 }
 
 const EMAIL_INSTRUCTOR_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
-const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/; // Permite cualquier proveedor para aprendices (Gmail, Hotmail, Outlook, Yahoo, etc.)
+const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/; // Permite cualquier proveedor de correo válido para aprendices
 
 const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
 const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
@@ -104,7 +104,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
           });
         }
 
-        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con validación estricta de dominios institucionales/Gmail)
+        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con validación estricta de dominios)
         const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
         const sheetEquipo = workbook.Sheets[hojaEquipoName];
         if (sheetEquipo) {
@@ -122,22 +122,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
               errores.push(`Fila ${filaNum} [Instructor]: El correo institucional debe ser @sena.edu.co o @misena.edu.co: "${correoSena}".`);
             }
 
-            if (seleccionInstructor.toLowerCase().includes('instructor nuevo') || seleccionInstructor.includes('+ Instructor Nuevo')) {
-              const docNuevo = String(row['nuevo_documento'] || row['numero_documento'] || '').trim();
-              const nombreNuevo = sanitizarTextoPreParser(row['nuevo_nombre'] || row['nombre_del_instructor'] || '');
-
-              if (!docNuevo || !nombreNuevo) {
-                errores.push(`Fila ${filaNum} [Instructor]: Se seleccionó Instructor Nuevo pero faltan Documento o Nombre.`);
-              }
-
-              instructoresProcesados.push({
-                numeroDocumento: docNuevo,
-                nombreCompleto: nombreNuevo,
-                correoSena: correoSena,
-                correoGmail: correoGoogle,
-                activo: true
-              });
-            } else if (seleccionInstructor) {
+            if (seleccionInstructor) {
               const instructorEncontrado = instructoresExistentes.find(i => (i.nombreCompleto || i.nombre_del_instructor || '').toLowerCase() === seleccionInstructor.toLowerCase());
               if (!instructorEncontrado) {
                 instructoresProcesados.push({
@@ -343,7 +328,7 @@ export function SheetsTemplateModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Catálogo dinámico sincronizado en tiempo real con Firebase
+  // Catálogo dinámico consultado en tiempo real desde Firebase (instructores_maestros)
   const [instructoresCatalogo, setInstructoresCatalogo] = useState<any[]>([]);
 
   useEffect(() => {
@@ -372,7 +357,7 @@ export function SheetsTemplateModal({
     competencias: instructorActual.competencia ? [instructorActual.competencia] : courseData.competencias
   };
 
-  // Generación de plantilla con datos en tiempo real de Firebase y Listas Desplegables de Excel (Data Validation)
+  // Generación optimizada de la plantilla con catálogos en tiempo real y Listas Desplegables de Excel (Data Validation) sin campos redundantes
   const handleDownloadTemplateWithRealtimeCatalog = (type: 'configuracion' | 'inasistencias') => {
     const wb = XLSX.utils.book_new();
 
@@ -385,15 +370,14 @@ export function SheetsTemplateModal({
       const wsFicha = XLSX.utils.aoa_to_sheet(wsFichaData);
       XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-      // 2. Hoja Equipo_Ejecutor con instructores de Firebase en tiempo real + Instructor Nuevo
+      // 2. Hoja Equipo_Ejecutor sincronizada en tiempo real con instructores de Firebase
       const nombresInstructores = instructoresCatalogo.map(i => i.nombreCompleto || i.nombre_del_instructor).filter(Boolean);
       if (nombresInstructores.length === 0) {
         nombresInstructores.push(instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPULVEDA");
       }
-      nombresInstructores.push("[ + Instructor Nuevo ]");
 
       const wsEquipoData = [
-        ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "rol", "fecha_de_inicio", "nuevo_documento", "nuevo_nombre"],
+        ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "rol", "fecha_de_inicio"],
         [
           "Competencia General de Formación",
           nombresInstructores[0],
@@ -401,14 +385,13 @@ export function SheetsTemplateModal({
           "instructor@sena.edu.co",
           "Viernes",
           "Instructor / Tutor",
-          "20/01/2026",
-          "", ""
+          "20/01/2026"
         ]
       ];
       const wsEquipo = XLSX.utils.aoa_to_sheet(wsEquipoData);
 
-      // Aplicar validación de lista desplegable en la columna de nombres de instructor (Columna B / Índice 1)
-      const rangeEquipo = XLSX.utils.decode_range(wsEquipo['!ref'] || "A1:I2");
+      // Aplicar listas desplegables en Excel (Data Validation) para la columna de instructores (Columna B)
+      const rangeEquipo = XLSX.utils.decode_range(wsEquipo['!ref'] || "A1:G2");
       wsEquipo['!dataValidation'] = wsEquipo['!dataValidation'] || [];
       wsEquipo['!dataValidation'].push({
         sqref: `B2:B${rangeEquipo.e.r + 100}`,
@@ -418,7 +401,7 @@ export function SheetsTemplateModal({
 
       XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-      // 3. Hoja Aprendices con listas desplegables para Tipo de Documento y Estado
+      // 3. Hoja Aprendices con listas desplegables limpias
       const wsAprendicesData = [
         ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"],
         ["CC", "1001021491", "VALENTINA", "TORO SALGADO", "valencia@outlook.com", "3001234567", "En Formación"],
@@ -445,9 +428,7 @@ export function SheetsTemplateModal({
       XLSX.writeFile(wb, `Plantilla_Configuracion_Ficha_${currentFicha}.xlsx`);
 
     } else {
-      // Plantilla de Inasistencias
       const wbInas = XLSX.utils.book_new();
-      const aprendicesList = courseData.asistencias_aprendices || [];
       const rowsInas = [
         ["ficha_de_caracterizacion", "instructor_titular", "numero_documento", "nombres", "apellidos", "fecha_sesion", "estado_asistencia"],
         [currentFicha, instructorActual.nombre_del_instructor, "1001021491", "VALENTINA", "TORO SALGADO", "20/01/2026", "Presente"]
@@ -527,23 +508,6 @@ export function SheetsTemplateModal({
       }
 
       finalDataToSave.ficha_de_caracterizacion = excelFichaId;
-
-      // Registrar instructores nuevos ("Instructor Nuevo") en Firebase si aplica
-      if (uploadType === 'configuracion' && uploadResult.data.equipo_instructores) {
-        for (const inst of uploadResult.data.equipo_instructores) {
-          if (inst.numeroDocumento && !instructoresCatalogo.some(existing => (existing.nombreCompleto || '').toLowerCase() === (inst.nombreCompleto || '').toLowerCase())) {
-            try {
-              await addDoc(collection(db, 'instructores_maestros'), {
-                numeroDocumento: inst.numeroDocumento,
-                nombreCompleto: inst.nombreCompleto,
-                correoSena: inst.correoSena || '',
-                correoGmail: inst.correoGmail || '',
-                activo: true
-              });
-            } catch (err) {}
-          }
-        }
-      }
 
       await replaceFichaCompleteData(finalDataToSave, excelFichaId);
 
