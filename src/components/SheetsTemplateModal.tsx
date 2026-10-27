@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   FileSpreadsheet, 
   Download, 
@@ -10,7 +11,8 @@ import {
   Loader2,
   Table,
   Settings,
-  ClipboardList
+  ClipboardList,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   downloadGoogleSheetsTemplate, 
@@ -19,8 +21,173 @@ import {
   ParsedTemplateResult
 } from '../lib/templateGenerator';
 import { getInstructorFromSession } from '../lib/authSession';
-import { replaceFichaCompleteData } from '../lib/firebase';
+import { replaceFichaCompleteData, db } from '../lib/firebase';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { courseData as initialCourseData } from '../data';
+
+// ==========================================
+// MOTOR DE VALIDACIÓN PREVIA Y SANITIZACIÓN
+// ==========================================
+
+const EMAIL_INSTRUCTOR_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
+const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/; // Permite cualquier proveedor de correo para aprendices
+
+const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
+const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
+
+const sanitizarTextoPreParser = (texto: string): string => {
+  if (!texto) return '';
+  const limpio = String(texto).trim().replace(/_/g, ' ');
+  return limpio
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+export const procesarArchivoExcelPreParsing = async (file: File, instructoresExistentes: any[]): Promise<ParsedTemplateResult> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        const errores: string[] = [];
+        const instructoresProcesados: any[] = [];
+        const aprendicesProcesados: any[] = [];
+
+        // 1. Procesar Hoja 'Aprendices'
+        const hojaAprendicesName = workbook.SheetNames.find(s => s.toLowerCase().includes('aprendiz')) || workbook.SheetNames[2] || workbook.SheetNames[0];
+        const sheetAprendices = workbook.Sheets[hojaAprendicesName];
+        if (sheetAprendices) {
+          const rowsAprendices: any[] = XLSX.utils.sheet_to_json(sheetAprendices);
+          rowsAprendices.forEach((row, index) => {
+            const filaNum = index + 2;
+            const nombres = sanitizarTextoPreParser(row['nombres'] || row['nombre'] || '');
+            const apellidos = sanitizarTextoPreParser(row['apellidos'] || row['apellido'] || '');
+            const tipoDoc = String(row['tipo_documento'] || row['tipo_doc'] || 'CC').trim().toUpperCase();
+            const numDoc = String(row['numero_documento'] || row['documento'] || '').trim();
+            const correo = String(row['correo_electronico'] || row['correo'] || row['email'] || '').trim().toLowerCase();
+            const estadoRaw = String(row['estado'] || row['estado_aprendiz'] || 'En Formación').trim();
+            const estado = estadoRaw === 'En formacion' ? 'En Formación' : estadoRaw;
+
+            if (!TIPOS_DOC_VALIDOS.includes(tipoDoc)) {
+              errores.push(`Fila ${filaNum} [Aprendiz]: Tipo de documento inválido: "${tipoDoc}".`);
+            }
+            if (!numDoc) {
+              errores.push(`Fila ${filaNum} [Aprendiz]: El número de documento es obligatorio.`);
+            }
+            if (!ESTADOS_VALIDOS_MODAL.includes(estado)) {
+              errores.push(`Fila ${filaNum} [Aprendiz]: Estado inválido o mal escrito: "${estado}".`);
+            }
+            // FLEXIBILIZACIÓN: Se permite cualquier formato de correo válido para aprendices
+            if (correo && !EMAIL_APRENDIZ_REGEX.test(correo)) {
+              errores.push(`Fila ${filaNum} [Aprendiz]: Estructura de correo electrónico inválida: "${correo}".`);
+            }
+
+            aprendicesProcesados.push({
+              tipo_documento: tipoDoc,
+              numero_documento: numDoc,
+              nombres,
+              apellidos,
+              correo: correo,
+              telefono: String(row['telefono'] || ''),
+              estado: ESTADOS_VALIDOS_MODAL.includes(estado) ? (estado === 'En formacion' ? 'En Formación' : estado) : 'En Formación',
+              registros: {}
+            });
+          });
+        }
+
+        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con restricción estricta de correo)
+        const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
+        const sheetEquipo = workbook.Sheets[hojaEquipoName];
+        if (sheetEquipo) {
+          const rowsEquipo: any[] = XLSX.utils.sheet_to_json(sheetEquipo);
+          rowsEquipo.forEach((row, index) => {
+            const filaNum = index + 2;
+            const seleccionInstructor = String(row['nombre_del_instructor'] || row['nombre'] || '').trim();
+            const correoGoogle = String(row['correo_google'] || '').trim().toLowerCase();
+            const correoSena = String(row['correo_institucional_sena'] || row['correo_institucional'] || '').trim().toLowerCase();
+
+            // RESTRICCIÓN ESTRICTA EXCLUSIVA PARA INSTRUCTORES
+            if (correoGoogle && !EMAIL_INSTRUCTOR_REGEX.test(correoGoogle)) {
+              errores.push(`Fila ${filaNum} [Instructor]: El correo Google del instructor debe ser @gmail.com autorizado: "${correoGoogle}".`);
+            }
+            if (correoSena && !EMAIL_INSTRUCTOR_REGEX.test(correoSena)) {
+              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional del instructor debe ser @sena.edu.co o @misena.edu.co: "${correoSena}".`);
+            }
+
+            if (seleccionInstructor.toLowerCase().includes('instructor nuevo') || seleccionInstructor.includes('+ Instructor Nuevo')) {
+              const docNuevo = String(row['nuevo_documento'] || row['numero_documento'] || '').trim();
+              const nombreNuevo = sanitizarTextoPreParser(row['nuevo_nombre'] || row['nombre_del_instructor'] || '');
+
+              if (!docNuevo || !nombreNuevo) {
+                errores.push(`Fila ${filaNum} [Instructor]: Se seleccionó Instructor Nuevo pero faltan Documento o Nombre.`);
+              }
+
+              instructoresProcesados.push({
+                numeroDocumento: docNuevo,
+                nombreCompleto: nombreNuevo,
+                correoSena: correoSena,
+                correoGmail: correoGoogle,
+                activo: true
+              });
+            } else if (seleccionInstructor) {
+              const instructorEncontrado = instructoresExistentes.find(i => (i.nombreCompleto || i.nombre_del_instructor || '').toLowerCase() === seleccionInstructor.toLowerCase());
+              if (!instructorEncontrado) {
+                instructoresProcesados.push({
+                  numeroDocumento: String(row['numero_documento'] || '000000'),
+                  nombreCompleto: sanitizarTextoPreParser(seleccionInstructor),
+                  correoSena: correoSena,
+                  correoGmail: correoGoogle,
+                  activo: true
+                });
+              } else {
+                instructoresProcesados.push({
+                  nombre_del_instructor: instructorEncontrado.nombreCompleto || instructorEncontrado.nombre_del_instructor,
+                  correo_institucional_sena: instructorEncontrado.correoSena || instructorEncontrado.correo_institucional_sena,
+                  correo_gmail: instructorEncontrado.correoGmail || instructorEncontrado.correo_gmail
+                });
+              }
+            }
+          });
+        }
+
+        if (errores.length > 0) {
+          resolve({
+            success: false,
+            message: `Se encontraron ${errores.length} errores de validación en el archivo. Corríjalos e intente de nuevo.`,
+            errors: errores
+          });
+        } else {
+          resolve({
+            success: true,
+            message: "Archivo validado y sanitizado correctamente.",
+            counts: {
+              aprendices: aprendicesProcesados.length,
+              instructores: instructoresProcesados.length
+            },
+            data: {
+              ...initialCourseData,
+              asistencias_aprendices: aprendicesProcesados,
+              equipo_instructores: instructoresProcesados.length > 0 ? instructoresProcesados : initialCourseData.equipo_instructores
+            }
+          });
+        }
+
+      } catch (error: any) {
+        resolve({
+          success: false,
+          message: `Error al procesar el archivo Excel: ${error.message || error.toString()}`
+        });
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+};
 
 // Función unificada global para asegurar formato estricto DD/MM/YYYY
 const displayAsDDMMYYYY = (dateStr: string) => {
@@ -55,14 +222,9 @@ interface SheetsTemplateModalProps {
   currentFicha: string;
   courseData: typeof initialCourseData;
   onDataLoaded: (newData: typeof initialCourseData, targetFichaId?: string) => void;
-  currentUser?: any; // Prop opcional para recibir el usuario autenticado de Firebase/Google Auth
+  currentUser?: any;
 }
 
-/**
- * Fusiona de manera segura las inasistencias de un archivo de asistencia descargado 
- * con los datos existentes en la nube, discriminando por el instructor y competencia activos,
- * y proveyendo pautas guiadas en blanco si no existen registros previos.
- */
 function mergeInstructorAttendance(
   currentCloudData: typeof initialCourseData,
   uploadedData: typeof initialCourseData,
@@ -144,7 +306,6 @@ function mergeInstructorAttendance(
 
         const trimmedVal = val !== null && val !== undefined ? String(val).trim() : '';
         
-        // Si la celda viene vacía o con el ejemplo guía inicial, no sobreescribimos con error sino que limpiamos o dejamos por defecto
         if (opcionesValidas.includes(trimmedVal) && trimmedVal !== 'Presente') {
           normalizedCloudRegistros[fecha] = trimmedVal;
         } else {
@@ -182,13 +343,11 @@ export function SheetsTemplateModal({
 
   if (!isOpen) return null;
 
-  // Caracterización estricta del instructor y su competencia usando la sesión actual normalizada
   const instructorActual = getInstructorFromSession(currentUser || { email: localStorage.getItem('userEmail') }, courseData);
 
-  // Filtramos estrictamente los datos de la ficha para que la plantilla refleje solo la competencia y sesiones del instructor logueado
   const courseDataFiltradoPorInstructor = {
     ...courseData,
-    equipo_instructores: [instructorActual], // Limitamos al instructor activo en la plantilla generada
+    equipo_instructores: [instructorActual],
     competencias: instructorActual.competencia ? [instructorActual.competencia] : courseData.competencias
   };
 
@@ -201,7 +360,14 @@ export function SheetsTemplateModal({
     setUploadResult(null);
 
     try {
-      const result = await parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
+      // Cargar catálogo dinámico de instructores desde Firebase para validación cruzada
+      let instructoresCatalogo: any[] = [];
+      try {
+        const snap = await getDocs(collection(db, 'instructores_maestros'));
+        snap.forEach(d => instructoresCatalogo.push(d.data()));
+      } catch (err) {}
+
+      const result = await procesarArchivoExcelPreParsing(file, instructoresCatalogo);
       
       if (result.success && result.data) {
         if (result.data.programa && !result.data.denominacion) {
@@ -326,7 +492,7 @@ export function SheetsTemplateModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             title="Cerrar ventana"
           >
             <X className="w-5 h-5" />
@@ -337,7 +503,7 @@ export function SheetsTemplateModal({
         <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 gap-2">
           <button
             onClick={() => setActiveTab('descargar')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'descargar'
                 ? 'border-sena text-sena bg-white rounded-t-lg shadow-xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -348,7 +514,7 @@ export function SheetsTemplateModal({
           </button>
           <button
             onClick={() => setActiveTab('estructura')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'estructura'
                 ? 'border-sena text-sena bg-white rounded-t-lg shadow-xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -359,7 +525,7 @@ export function SheetsTemplateModal({
           </button>
           <button
             onClick={() => setActiveTab('cargar')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
               activeTab === 'cargar'
                 ? 'border-sena text-sena bg-white rounded-t-lg shadow-xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -388,7 +554,6 @@ export function SheetsTemplateModal({
                 </div>
               </div>
 
-              {/* Action Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition-all group">
                   <div>
@@ -581,6 +746,16 @@ export function SheetsTemplateModal({
                       </p>
                     </div>
                   </div>
+
+                  {!uploadResult.success && uploadResult.errors && (
+                    <div className="bg-white p-3 rounded-lg border border-red-100 max-h-40 overflow-y-auto space-y-1 text-xs text-red-700 font-medium">
+                      {uploadResult.errors.map((errStr, idx) => (
+                        <div key={idx} className="border-b border-red-50 pb-1 last:border-0">
+                          {errStr}
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {uploadResult.success && uploadResult.counts && (
                     <div className="grid grid-cols-2 gap-3 bg-white p-3.5 rounded-lg border border-emerald-100 text-xs">
