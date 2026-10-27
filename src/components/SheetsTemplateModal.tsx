@@ -118,7 +118,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
               errores.push(`Fila ${filaNum} [Instructor]: El correo Google debe ser @gmail.com autorizado: "${correoGoogle}".`);
             }
             if (correoSena && !EMAIL_INSTRUCTOR_REGEX.test(correoSena)) {
-              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional debe ser @sena.edu.co o @misena.edu.co: "${correoSena}".`);
+              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional debe ser @sena.edu.co: "${correoSena}".`);
             }
 
             if (seleccionInstructor) {
@@ -367,7 +367,7 @@ export function SheetsTemplateModal({
         ["3. VALORES Y OPCIONES VÁLIDAS PARA MINIMIZAR ERRORES:"],
         ["- Roles de Instructores permitidos:", "Instructor / Tutor, Instructor Líder, Instructor Técnico, Coordinador Académico"],
         ["- Estados válidos de Aprendices:", "En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Desercion"],
-        ["- Formatos obligatorios:", "Nombres completos (nombres y apellidos), correo SENA (@sena.edu.co / @misena.edu.co) y Google (@gmail.com)"]
+        ["- Formatos obligatorios:", "Nombres completos (nombres y apellidos), correo SENA (@sena.edu.co) y Google (@gmail.com)"]
       ];
       const wsInstrucciones = XLSX.utils.aoa_to_sheet(wsInstruccionesData);
       XLSX.utils.book_append_sheet(wb, wsInstrucciones, "Instrucciones");
