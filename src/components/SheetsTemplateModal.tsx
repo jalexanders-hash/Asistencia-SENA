@@ -34,7 +34,7 @@ export interface ParsedTemplateResult {
 }
 
 const EMAIL_INSTRUCTOR_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
-const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/; // Permite cualquier proveedor de correo válido para aprendices
+const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/;
 
 const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
 const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
@@ -103,7 +103,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
           });
         }
 
-        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con validación estricta de dominios)
+        // 2. Procesar Hoja 'Equipo_Ejecutor'
         const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
         const sheetEquipo = workbook.Sheets[hojaEquipoName];
         if (sheetEquipo) {
@@ -359,6 +359,7 @@ export function SheetsTemplateModal({
     const wb = XLSX.utils.book_new();
 
     if (type === 'configuracion') {
+      // 1. Hoja Ficha
       const wsFichaData = [
         ["ficha_de_caracterizacion", "denominacion", "centro", "fecha_inicio", "fecha_terminacion", "jornada"],
         [currentFicha, courseData.denominacion || "GESTIÓN ADMINISTRATIVA", courseData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "Diurna"]
@@ -366,7 +367,7 @@ export function SheetsTemplateModal({
       const wsFicha = XLSX.utils.aoa_to_sheet(wsFichaData);
       XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-      // Inyectar instructores de Firebase en tiempo real + Instructor Nuevo
+      // 2. Hoja Equipo_Ejecutor (Catálogo de Firebase en tiempo real + Instructor Nuevo)
       const nombresInstructores = instructoresCatalogo.map(i => i.nombreCompleto || i.nombre_del_instructor).filter(Boolean);
       if (nombresInstructores.length === 0) {
         nombresInstructores.push(instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPÚLVEDA VÉLEZ");
@@ -388,25 +389,26 @@ export function SheetsTemplateModal({
       const wsEquipo = XLSX.utils.aoa_to_sheet(wsEquipoData);
 
       const rangeEquipo = XLSX.utils.decode_range(wsEquipo['!ref'] || "A1:G2");
-      (wsEquipo as any)['!dataValidation'] = (wsEquipo as any)['!dataValidation'] || [];
-      
-      // Lista desplegable para nombres de instructores (Columna B)
-      (wsEquipo as any)['!dataValidation'].push({
-        sqref: `B2:B${rangeEquipo.e.r + 100}`,
-        type: 'list',
-        formula1: `"${nombresInstructores.join(',')}"`
-      });
-
-      // Lista desplegable para roles de instructores (Columna F)
-      const rolesPermitidos = "Instructor / Tutor,Instructor Líder,Instructor Técnico,Coordinador Académico";
-      (wsEquipo as any)['!dataValidation'].push({
-        sqref: `F2:F${rangeEquipo.e.r + 100}`,
-        type: 'list',
-        formula1: `"${rolesPermitidos}"`
-      });
+      (wsEquipo as any)['!dataValidation'] = [
+        {
+          sqref: `B2:B${rangeEquipo.e.r + 100}`,
+          type: 'list',
+          formula1: `"${nombresInstructores.join(',')}"`,
+          allowBlank: true,
+          showDropDown: true
+        },
+        {
+          sqref: `F2:F${rangeEquipo.e.r + 100}`,
+          type: 'list',
+          formula1: `"Instructor / Tutor,Instructor Líder,Instructor Técnico,Coordinador Académico"`,
+          allowBlank: true,
+          showDropDown: true
+        }
+      ];
 
       XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
+      // 3. Hoja Aprendices (Lista desplegable en columna G para Estado)
       const wsAprendicesData = [
         ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"],
         ["CC", "1001021491", "VALENTINA", "TORO SALGADO", "valencia@outlook.com", "3001234567", "En Formación"],
@@ -415,21 +417,22 @@ export function SheetsTemplateModal({
       const wsAprendices = XLSX.utils.aoa_to_sheet(wsAprendicesData);
       
       const rangeAprendices = XLSX.utils.decode_range(wsAprendices['!ref'] || "A1:G3");
-      (wsAprendices as any)['!dataValidation'] = (wsAprendices as any)['!dataValidation'] || [];
-      
-      // Lista desplegable enfocada exclusivamente en la columna G (Estado del Aprendiz)
       const estadosAprendiz = "En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion";
-      (wsAprendices as any)['!dataValidation'].push({
-        sqref: `G2:G${rangeAprendices.e.r + 100}`,
-        type: 'list',
-        formula1: `"${estadosAprendiz}"`
-      });
+      (wsAprendices as any)['!dataValidation'] = [
+        {
+          sqref: `G2:G${rangeAprendices.e.r + 100}`,
+          type: 'list',
+          formula1: `"${estadosAprendiz}"`,
+          allowBlank: true,
+          showDropDown: true
+        }
+      ];
 
       XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
       XLSX.writeFile(wb, `Plantilla_Configuracion_Ficha_${currentFicha}.xlsx`);
 
     } else {
-      // Plantilla de Inasistencias (Respetando la estructura original intacta)
+      // 4. Plantilla de Inasistencias (Estructura intacta)
       const wbInas = XLSX.utils.book_new();
       
       const wsFichaInasData = [
@@ -461,13 +464,16 @@ export function SheetsTemplateModal({
       const wsAprendicesInas = XLSX.utils.json_to_sheet(aprendicesRows, { header: headerAprendices });
       
       const rangeInas = XLSX.utils.decode_range(wsAprendicesInas['!ref'] || "A1:G10");
-      (wsAprendicesInas as any)['!dataValidation'] = (wsAprendicesInas as any)['!dataValidation'] || [];
       const estadosAprendiz = "En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion";
-      (wsAprendicesInas as any)['!dataValidation'].push({
-        sqref: `G2:G${rangeInas.e.r + 100}`,
-        type: 'list',
-        formula1: `"${estadosAprendiz}"`
-      });
+      (wsAprendicesInas as any)['!dataValidation'] = [
+        {
+          sqref: `G2:G${rangeInas.e.r + 100}`,
+          type: 'list',
+          formula1: `"${estadosAprendiz}"`,
+          allowBlank: true,
+          showDropDown: true
+        }
+      ];
 
       XLSX.utils.book_append_sheet(wbInas, wsAprendicesInas, "Aprendices");
       XLSX.writeFile(wbInas, `Plantilla_Asistencia_Ficha_${currentFicha}_${instructorActual.nombre_del_instructor}.xlsx`);
