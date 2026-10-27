@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { getInstructorFromSession } from '../lib/authSession';
 import { replaceFichaCompleteData, db } from '../lib/firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { courseData as initialCourseData } from '../data';
 
 // ==========================================
@@ -370,6 +370,7 @@ export function SheetsTemplateModal({
       if (nombresInstructores.length === 0) {
         nombresInstructores.push(instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPÚLVEDA VÉLEZ");
       }
+      nombresInstructores.push("[ + Instructor Nuevo ]");
 
       const wsEquipoData = [
         ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "rol", "fecha_de_inicio"],
@@ -387,10 +388,18 @@ export function SheetsTemplateModal({
 
       const rangeEquipo = XLSX.utils.decode_range(wsEquipo['!ref'] || "A1:G2");
       (wsEquipo as any)['!dataValidation'] = (wsEquipo as any)['!dataValidation'] || [];
+      
       (wsEquipo as any)['!dataValidation'].push({
         sqref: `B2:B${rangeEquipo.e.r + 100}`,
         type: 'list',
         formula1: `"${nombresInstructores.join(',')}"`
+      });
+
+      const rolesPermitidos = "Instructor / Tutor,Instructor Líder,Instructor Técnico,Coordinador Académico";
+      (wsEquipo as any)['!dataValidation'].push({
+        sqref: `F2:F${rangeEquipo.e.r + 100}`,
+        type: 'list',
+        formula1: `"${rolesPermitidos}"`
       });
 
       XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
@@ -411,10 +420,11 @@ export function SheetsTemplateModal({
         formula1: `"CC,TI,CE,PP,PPT"`
       });
       
+      const estadosAprendiz = "En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion";
       (wsAprendices as any)['!dataValidation'].push({
         sqref: `G2:G${rangeAprendices.e.r + 100}`,
         type: 'list',
-        formula1: `"En Formación,Retiro Voluntario,Cancelado,Aplazado,Trasladado,Desercion"`
+        formula1: `"${estadosAprendiz}"`
       });
 
       XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
@@ -626,7 +636,7 @@ export function SheetsTemplateModal({
                     Formato oficial con Catálogo en Tiempo Real y Listas Desplegables
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Las plantillas descargadas consultan de forma síncrona los instructores vigentes en Firebase. Incluyen validación de datos en listas desplegables para tipos de documento, estados y nombres del equipo ejecutor.
+                    Las plantillas descargadas consultan de forma síncrona los instructores vigentes en Firebase. Incluyen validación de datos en listas desplegables para tipos de documento, estados, roles y nombres del equipo ejecutor.
                   </p>
                 </div>
               </div>
