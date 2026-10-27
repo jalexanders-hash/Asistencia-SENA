@@ -1,12 +1,15 @@
-// src/lib/preParsingEngine.ts
+// src/lib/preParsingEngine.ts (Actualizado)
 import * as XLSX from 'xlsx';
-import { ParseResult, ValidationError, Instructor, AprendizImport, EstadoAprendiz, TipoDocumento } from '../types'; // O ajusta la ruta a tu archivo types si está en otra parte
+import { ParseResult, ValidationError, InstructorMaestro } from '../types';
 
-const EMAIL_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
-const ESTADOS_VALIDOS: EstadoAprendiz[] = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Deserción'];
-const TIPOS_DOC_VALIDOS: TipoDocumento[] = ['CC', 'TI', 'CE', 'PP', 'PPT'];
+const EMAIL_INSTRUCTOR_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
+// Validación genérica para correos de aprendices (permite cualquier proveedor: gmail, hotmail, outlook, yahoo, etc.)
+const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/;
 
-const sanitizarTexto = (texto: string): string => {
+const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
+const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
+
+const sanitizarTextoPreParser = (texto: string): string => {
   if (!texto) return '';
   const limpio = String(texto).trim().replace(/_/g, ' ');
   return limpio
@@ -16,7 +19,7 @@ const sanitizarTexto = (texto: string): string => {
     .join(' ');
 };
 
-export const procesarArchivoExcel = async (file: File, instructoresExistentes: Instructor[]): Promise<ParseResult> => {
+export const procesarArchivoExcelPreParsing = async (file: File, instructoresExistentes: InstructorMaestro[]): Promise<ParseResult> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
     
@@ -26,85 +29,101 @@ export const procesarArchivoExcel = async (file: File, instructoresExistentes: I
         const workbook = XLSX.read(data, { type: 'array' });
         
         const errores: ValidationError[] = [];
-        const instructoresProcesados: Instructor[] = [];
-        const aprendicesProcesados: AprendizImport[] = [];
+        const instructoresProcesados: InstructorMaestro[] = [];
+        const aprendicesProcesados: any[] = [];
 
         // 1. Procesar Hoja 'Aprendices'
-        const hojaAprendicesName = workbook.SheetNames.find(s => s.toLowerCase().includes('aprendiz')) || workbook.SheetNames[2];
+        const hojaAprendicesName = workbook.SheetNames.find(s => s.toLowerCase().includes('aprendiz')) || workbook.SheetNames[2] || workbook.SheetNames[0];
         const sheetAprendices = workbook.Sheets[hojaAprendicesName];
-        const rowsAprendices: any[] = XLSX.utils.sheet_to_json(sheetAprendices);
+        if (sheetAprendices) {
+          const rowsAprendices: any[] = XLSX.utils.sheet_to_json(sheetAprendices);
+          rowsAprendices.forEach((row, index) => {
+            const filaNum = index + 2;
+            const nombres = sanitizarTextoPreParser(row['nombres'] || row['nombre'] || '');
+            const apellidos = sanitizarTextoPreParser(row['apellidos'] || row['apellido'] || '');
+            const tipoDoc = String(row['tipo_documento'] || row['tipo_doc'] || 'CC').trim().toUpperCase();
+            const numDoc = String(row['numero_documento'] || row['documento'] || '').trim();
+            const correo = String(row['correo_electronico'] || row['correo'] || row['email'] || '').trim().toLowerCase();
+            const estadoRaw = String(row['estado'] || row['estado_aprendiz'] || 'En Formación').trim();
+            const estado = estadoRaw === 'En formacion' ? 'En Formación' : estadoRaw;
 
-        rowsAprendices.forEach((row, index) => {
-          const filaNum = index + 2;
-          const nombres = sanitizarTexto(row['nombres']);
-          const apellidos = sanitizarTexto(row['apellidos']);
-          const tipoDoc = String(row['tipo_documento'] || '').trim().toUpperCase() as TipoDocumento;
-          const numDoc = String(row['numero_documento'] || '').trim();
-          const correo = String(row['correo_electronico'] || '').trim();
-          const estado = String(row['estado'] || '').trim() as EstadoAprendiz;
+            if (!TIPOS_DOC_VALIDOS.includes(tipoDoc)) {
+              errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'tipo_documento', mensaje: `Tipo de documento inválido: "${tipoDoc}".` });
+            }
+            if (!numDoc) {
+              errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'numero_documento', mensaje: `El número de documento es obligatorio.` });
+            }
+            if (!ESTADOS_VALIDOS_MODAL.includes(estado)) {
+              errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'estado', mensaje: `Estado inválido o mal escrito: "${estado}".` });
+            }
+            // FLEXIBILIZACIÓN: Se permite cualquier formato de correo válido para aprendices
+            if (correo && !EMAIL_APRENDIZ_REGEX.test(correo)) {
+              errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'correo_electronico', mensaje: `Estructura de correo electrónico inválida: "${correo}".` });
+            }
 
-          if (!TIPOS_DOC_VALIDOS.includes(tipoDoc)) {
-            errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'tipo_documento', mensaje: `Tipo de documento inválido: "${tipoDoc}".` });
-          }
-          if (!numDoc) {
-            errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'numero_documento', mensaje: `El número de documento es obligatorio.` });
-          }
-          if (!ESTADOS_VALIDOS.includes(estado)) {
-            errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'estado', mensaje: `Estado inválido o mal escrito: "${estado}".` });
-          }
-          if (correo && !EMAIL_REGEX.test(correo)) {
-            errores.push({ fila: filaNum, seccion: 'Aprendiz', campo: 'correo_electronico', mensaje: `Dominio de correo no permitido: "${correo}".` });
-          }
-
-          aprendicesProcesados.push({
-            tipoDocumento: tipoDoc,
-            numeroDocumento: numDoc,
-            nombres,
-            apellidos,
-            correoElectronico: correo,
-            telefono: String(row['telefono'] || ''),
-            estado: ESTADOS_VALIDOS.includes(estado) ? estado : 'En Formación'
+            aprendicesProcesados.push({
+              tipo_documento: tipoDoc,
+              numero_documento: numDoc,
+              nombres,
+              apellidos,
+              correo: correo,
+              telefono: String(row['telefono'] || ''),
+              estado: ESTADOS_VALIDOS_MODAL.includes(estado) ? (estado === 'En formacion' ? 'En Formación' : estado) : 'En Formación',
+              registros: {}
+            });
           });
-        });
+        }
 
-        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores)
+        // 2. Procesar Hoja 'Equipo_Ejecutor' (Instructores con restricción estricta de correo)
         const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
         const sheetEquipo = workbook.Sheets[hojaEquipoName];
-        const rowsEquipo: any[] = XLSX.utils.sheet_to_json(sheetEquipo);
+        if (sheetEquipo) {
+          const rowsEquipo: any[] = XLSX.utils.sheet_to_json(sheetEquipo);
+          rowsEquipo.forEach((row, index) => {
+            const filaNum = index + 2;
+            const seleccionInstructor = String(row['nombre_del_instructor'] || row['nombre'] || '').trim();
+            const correoGoogle = String(row['correo_google'] || '').trim().toLowerCase();
+            const correoSena = String(row['correo_institucional_sena'] || row['correo_institucional'] || '').trim().toLowerCase();
 
-        rowsEquipo.forEach((row, index) => {
-          const filaNum = index + 2;
-          const seleccionInstructor = String(row['nombre_del_instructor'] || '').trim();
-
-          if (seleccionInstructor.includes('Instructor Nuevo')) {
-            const docNuevo = String(row['nuevo_documento'] || '').trim();
-            const nombreNuevo = sanitizarTexto(row['nuevo_nombre'] || '');
-            const correoSenaNuevo = String(row['nuevo_correo_sena'] || '').trim();
-            const correoGmailNuevo = String(row['nuevo_correo_gmail'] || '').trim();
-
-            if (!docNuevo || !nombreNuevo) {
-              errores.push({ fila: filaNum, seccion: 'Instructor', campo: 'Instructor Nuevo', mensaje: `Faltan Documento o Nombre para el nuevo instructor.` });
+            // RESTRICCIÓN ESTRICTA EXCLUSIVA PARA INSTRUCTORES
+            if (correoGoogle && !EMAIL_INSTRUCTOR_REGEX.test(correoGoogle)) {
+              errores.push({ fila: filaNum, seccion: 'Instructor', campo: 'correo_google', mensaje: `El correo Google del instructor debe ser @gmail.com autorizado: "${correoGoogle}".` });
             }
-            if (!EMAIL_REGEX.test(correoSenaNuevo)) {
-              errores.push({ fila: filaNum, seccion: 'Instructor', campo: 'nuevo_correo_sena', mensaje: `Correo SENA inválido: "${correoSenaNuevo}".` });
+            if (correoSena && !EMAIL_INSTRUCTOR_REGEX.test(correoSena)) {
+              errores.push({ fila: filaNum, seccion: 'Instructor', campo: 'correo_institucional_sena', mensaje: `El correo institucional del instructor debe ser @sena.edu.co o @misena.edu.co: "${correoSena}".` });
             }
 
-            instructoresProcesados.push({
-              numeroDocumento: docNuevo,
-              nombreCompleto: nombreNuevo,
-              correoSena: correoSenaNuevo,
-              correoGmail: correoGmailNuevo,
-              activo: true
-            });
-          } else {
-            const instructorEncontrado = instructoresExistentes.find(i => i.nombreCompleto.toLowerCase() === seleccionInstructor.toLowerCase());
-            if (!instructorEncontrado) {
-              errores.push({ fila: filaNum, seccion: 'Instructor', campo: 'nombre_del_instructor', mensaje: `El instructor "${seleccionInstructor}" no existe en el catálogo.` });
-            } else {
-              instructoresProcesados.push(instructorEncontrado);
+            if (seleccionInstructor.toLowerCase().includes('instructor nuevo') || seleccionInstructor.includes('+ Instructor Nuevo')) {
+              const docNuevo = String(row['nuevo_documento'] || row['numero_documento'] || '').trim();
+              const nombreNuevo = sanitizarTextoPreParser(row['nuevo_nombre'] || row['nombre_del_instructor'] || '');
+
+              if (!docNuevo || !nombreNuevo) {
+                errores.push({ fila: filaNum, seccion: 'Instructor', campo: 'Instructor Nuevo', mensaje: `Se seleccionó Instructor Nuevo pero faltan Documento o Nombre.` });
+              }
+
+              instructoresProcesados.push({
+                numeroDocumento: docNuevo,
+                nombreCompleto: nombreNuevo,
+                correoSena: correoSena,
+                correoGmail: correoGoogle,
+                activo: true
+              });
+            } else if (seleccionInstructor) {
+              const instructorEncontrado = instructoresExistentes.find(i => i.nombreCompleto.toLowerCase() === seleccionInstructor.toLowerCase());
+              if (!instructorEncontrado) {
+                instructoresProcesados.push({
+                  numeroDocumento: String(row['numero_documento'] || '000000'),
+                  nombreCompleto: sanitizarTextoPreParser(seleccionInstructor),
+                  correoSena: correoSena,
+                  correoGmail: correoGoogle,
+                  activo: true
+                });
+              } else {
+                instructoresProcesados.push(instructorEncontrado);
+              }
             }
-          }
-        });
+          });
+        }
 
         resolve({
           valido: errores.length === 0,
@@ -116,7 +135,7 @@ export const procesarArchivoExcel = async (file: File, instructoresExistentes: I
       } catch (error) {
         resolve({
           valido: false,
-          errores: [{ fila: 0, seccion: 'Ficha', campo: 'Archivo', mensaje: 'Error al leer el archivo Excel. Verifique el formato.' }],
+          errores: [{ fila: 0, seccion: 'Ficha', campo: 'Archivo', mensaje: 'Error al leer el archivo Excel. Verifique que el formato sea correcto.' }],
           instructores: [],
           aprendices: []
         });
