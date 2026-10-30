@@ -7,6 +7,7 @@ export interface ParsedTemplateResult {
   data?: typeof initialCourseData;
   counts?: {
     aprendices: number;
+    instructores?: number;
   };
 }
 
@@ -57,7 +58,7 @@ function toStrictDDMMYYYY(key: string | number): string {
 }
 
 /**
- * Convierte una fecha DD/MM/YYYY a objeto Date para comparaciones seguras de rangos
+ * Convierte una fecha DD/MM/YYYY o YYYY-MM-DD a objeto Date para ordenamiento y rangos seguros
  */
 function parseDateToObj(dateStr: string): Date {
   const clean = toStrictDDMMYYYY(dateStr);
@@ -72,11 +73,30 @@ function parseDateToObj(dateStr: string): Date {
 }
 
 /**
- * 1. Genera la Plantilla Simplificada con datos precargados del instructor, filtrando estrictamente
- * sus fechas válidas (respetando su fecha de inicio) y aislando su hoja de aprendices de históricos ajenos.
+ * Normaliza las fechas y las ordena estrictamente en orden cronológico ascendente
+ */
+function ordenarFechasCronologicamente(fechas: string[]): string[] {
+  if (!Array.isArray(fechas)) return [];
+  const unicas = Array.from(new Set(fechas.map(f => toStrictDDMMYYYY(f)).filter(Boolean)));
+  return unicas.sort((a, b) => parseDateToObj(a).getTime() - parseDateToObj(b).getTime());
+}
+
+/**
+ * 1. Genera la Plantilla Simplificada de Asistencia precargada con fechas en orden cronológico estricto
  */
 export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseData, instructorActual?: any): Uint8Array {
   const wb = XLSX.utils.book_new();
+
+  // 0. Hoja LÉAME (Instrucciones visuales y guía rápida)
+  const wsLeameData = [
+    ["GUÍA RÁPIDA DE DILIGENCIAMIENTO - REGISTRO DE ASISTENCIAS"],
+    ["1. No modifique las cabeceras de identificación del aprendiz (vienen protegidas)."],
+    ["2. Las columnas de fecha se encuentran organizadas estrictamente en orden cronológico."],
+    ["3. Valores permitidos para la asistencia: (Vacío) / Presente, X (Inasistencia), Tarde (Retardo), Excusa (Justificada)."],
+    ["4. Entradas informales como 'falta' se normalizarán a 'X', y 'evento' u otras justificadas a 'Excusa'."]
+  ];
+  const wsLeame = XLSX.utils.aoa_to_sheet(wsLeameData);
+  XLSX.utils.book_append_sheet(wb, wsLeame, "LÉAME");
 
   const fichaActual = courseData?.ficha_de_caracterizacion || "";
   const denominacionProg = courseData?.denominacion || courseData?.programa || "";
@@ -100,7 +120,7 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
   const wsFicha = XLSX.utils.aoa_to_sheet(fichaRows);
   XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-  // Filtrado estricto de fechas para el instructor (ej. si inicia el lunes 19, se omiten fechas anteriores)
+  // Filtrado estricto de fechas para el instructor respetando su fecha de inicio
   const todasLasFechas = Array.isArray(courseData?.fechas_asistencia) && courseData.fechas_asistencia.length > 0
     ? courseData.fechas_asistencia
     : [];
@@ -112,16 +132,18 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
     if (fechaInicioInstObj && !isNaN(fechaInicioInstObj.getTime())) {
       const fechaItemObj = parseDateToObj(fechaStr);
       if (fechaItemObj < fechaInicioInstObj) {
-        return false; // Omitimos fechas anteriores a la fecha de inicio del instructor (Ej: Ximena desde el lunes 19)
+        return false; 
       }
     }
     return true;
   });
 
-  // Si no quedan fechas tras el filtro o está vacío, se provee una fecha por defecto o se respeta el array limpio
-  const fechasFinales = fechasAsistencia.length > 0 ? fechasAsistencia : (todasLasFechas.length > 0 ? [todasLasFechas[todasLasFechas.length - 1]] : ["19/10/2026"]);
+  const fechasFinalesCrudas = fechasAsistencia.length > 0 ? fechasAsistencia : (todasLasFechas.length > 0 ? [todasLasFechas[todasLasFechas.length - 1]] : ["19/10/2026"]);
+  
+  // ORDEN CRONOLÓGICO ESTRICTO
+  const fechasFinales = ordenarFechasCronologicamente(fechasFinalesCrudas);
 
-  // Hoja de Aprendices precargada con la base de datos de la ficha
+  // Hoja de Aprendices precargada
   const aprendicesHeaders = [
     "tipo_documento", 
     "numero_documento", 
@@ -162,7 +184,6 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
     ];
 
     fechasFinales.forEach((fecha: string) => {
-      // Si el instructor no tiene registros previos para sus fechas válidas, se deja limpio o con guía vacía/presente
       const estadoReg = instructorActual ? (aprendiz.registros?.[fecha] || "") : (aprendiz.registros?.[fecha] || "Presente");
       row.push(estadoReg);
     });
@@ -178,10 +199,21 @@ export function generateGoogleSheetsTemplate(courseData?: typeof initialCourseDa
 }
 
 /**
- * 2. Genera el Formato Completo de Configuración Inicial (Ficha, Equipo_Ejecutor y Aprendices)
+ * 2. Genera el Formato Completo de Configuración Inicial (LÉAME, Ficha, Equipo_Ejecutor y Aprendices)
  */
 export function generateCompleteConfigurationTemplate(courseData?: typeof initialCourseData): Uint8Array {
   const wb = XLSX.utils.book_new();
+
+  // Hoja LÉAME para Configuración
+  const wsLeameData = [
+    ["GUÍA RÁPIDA DE DILIGENCIAMIENTO - CONFIGURACIÓN DE FICHA"],
+    ["1. No modifique las cabeceras ni el orden de las columnas."],
+    ["2. La primera fila de datos en Equipo_Ejecutor y Aprendices con etiqueta 'EJEMPLO' es de guía y el sistema la ignorará automáticamente."],
+    ["3. Registre instructores activos sin traslapes en los días de la semana."],
+    ["4. Dominios institucionales permitidos para instructores: @sena.edu.co y @gmail.com (correos de aprendices abiertos a cualquier servidor)."]
+  ];
+  const wsLeame = XLSX.utils.aoa_to_sheet(wsLeameData);
+  XLSX.utils.book_append_sheet(wb, wsLeame, "LÉAME");
 
   const fichaActual = courseData?.ficha_de_caracterizacion || "";
   const denominacionProg = courseData?.denominacion || courseData?.programa || "";
@@ -201,7 +233,10 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
     "rol",
     "fecha_de_inicio"
   ];
-  const equipoRows: any[][] = [equipoHeaders];
+  const equipoRows: any[][] = [
+    equipoHeaders,
+    ["EJEMPLO – NO SE IMPORTA", "JUAN PÉREZ", "instructor@gmail.com", "instructor@sena.edu.co", "Viernes", "Instructor / Tutor", "20/01/2026"]
+  ];
   
   if (Array.isArray(courseData?.equipo_instructores) && courseData.equipo_instructores.length > 0) {
     courseData.equipo_instructores.forEach((inst: any) => {
@@ -215,15 +250,16 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
         inst.fecha_de_inicio || ""
       ]);
     });
-  } else {
-    equipoRows.push(["", "", "", "", "", "", ""]);
   }
 
   const wsEquipo = XLSX.utils.aoa_to_sheet(equipoRows);
   XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
   const aprendicesHeaders = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"];
-  const aprendicesRows: any[][] = [aprendicesHeaders];
+  const aprendicesRows: any[][] = [
+    aprendicesHeaders,
+    ["EJEMPLO", "1001021491", "VALENTINA", "TORO", "valencia@outlook.com", "3001234567", "En Formación"]
+  ];
 
   const listadoAprendices = Array.isArray(courseData?.asistencias_aprendices) ? courseData.asistencias_aprendices : [];
   if (listadoAprendices.length > 0) {
@@ -238,8 +274,6 @@ export function generateCompleteConfigurationTemplate(courseData?: typeof initia
         aprendiz.estado || "En formación"
       ]);
     });
-  } else {
-    aprendicesRows.push(["CC", "", "", "", "", "", "En formación"]);
   }
 
   const wsAprendices = XLSX.utils.aoa_to_sheet(aprendicesRows);
@@ -289,7 +323,8 @@ export function downloadAprendicesCSVTemplate() {
 }
 
 /**
- * Parsea el archivo de configuración inicial o asistencia con blindaje completo de fechas y registros.
+ * Parsea el archivo de configuración inicial o asistencia con normalización automática
+ * (falta -> X, evento -> Excusa) y orden cronológico.
  */
 export async function parseUploadedTemplate(file: File, baseData: typeof initialCourseData): Promise<ParsedTemplateResult> {
   try {
@@ -371,12 +406,16 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       const rows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
       if (rows.length > 0) {
         const newInstructors = rows
-          .filter((r: any) => r && (r.nombre_del_instructor || r.nombre || r.instructor) && r.competencia)
+          .filter((r: any) => {
+            if (!r) return false;
+            const name = String(r.nombre_del_instructor || r.nombre || r.instructor || "").trim();
+            return name !== "" && !name.toUpperCase().includes("EJEMPLO");
+          })
           .map((r: any) => ({
-            competencia: String(r.competencia).trim(),
+            competencia: String(r.competencia || "").trim(),
             nombre_del_instructor: String(r.nombre_del_instructor || r.nombre || r.instructor).trim(),
-            correo_google: String(r.correo_google || r.correo || "").trim(),
-            correo_institucional_sena: String(r.correo_institucional_sena || "").trim(),
+            correo_google: String(r.correo_google || r.correo || "").trim().toLowerCase(),
+            correo_institucional_sena: String(r.correo_institucional_sena || "").trim().toLowerCase(),
             dia: String(r.dia || "Lunes").trim(),
             rol: String(r.rol || "Instructor").trim(),
             fecha_de_inicio: String(r.fecha_de_inicio || r.fecha_inicio || "20/01/2026").trim(),
@@ -389,7 +428,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
       }
     }
 
-    // 3. Parsear Aprendices, fechas y validación estricta de opciones de asistencia
+    // 3. Parsear Aprendices, fechas en orden cronológico y normalización estricta de opciones de asistencia
     if (aprendicesSheetName) {
       const ws = wb.Sheets[aprendicesSheetName];
       const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
@@ -416,7 +455,9 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
 
         const uniqueDatesMap = new Set<string>();
         dateMapping.forEach(d => uniqueDatesMap.add(d.normalized));
-        const normalizedDates = Array.from(uniqueDatesMap);
+        
+        // ORDEN CRONOLÓGICO ESTRICTO de las fechas parseadas
+        const normalizedDates = ordenarFechasCronologicamente(Array.from(uniqueDatesMap));
         
         if (normalizedDates.length > 0) {
           updatedData.fechas_asistencia = normalizedDates;
@@ -429,6 +470,7 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
             if (!r) return false;
             const docRow = String(r.numero_documento || r.documento || "").trim();
             const nombresRow = String(r.nombres || r.nombre || "").trim();
+            if (nombresRow.toUpperCase().includes("EJEMPLO")) return false;
             return docRow !== "" || nombresRow !== "";
           })
           .map((uploadedRow: any) => {
@@ -443,11 +485,12 @@ export async function parseUploadedTemplate(file: File, baseData: typeof initial
                   let finalVal = valStr;
                   const lowerVal = valStr.toLowerCase();
                   
-                  if (lowerVal === 'x' || lowerVal.includes('falla') || lowerVal.includes('inasistencia')) {
+                  // Normalización solicitada: falta -> X, evento -> Excusa
+                  if (lowerVal === 'x' || lowerVal.includes('falla') || lowerVal.includes('inasistencia') || lowerVal === 'falta') {
                     finalVal = 'X';
                   } else if (lowerVal.includes('tarde') || lowerVal === 't') {
                     finalVal = 'Tarde';
-                  } else if (lowerVal.includes('excusa') || lowerVal === 'e') {
+                  } else if (lowerVal.includes('excusa') || lowerVal === 'e' || lowerVal.includes('evento') || lowerVal === 'evento institucional') {
                     finalVal = 'Excusa';
                   } else if (lowerVal.includes('presente') || lowerVal === 'p') {
                     finalVal = 'Presente';
