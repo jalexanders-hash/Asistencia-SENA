@@ -33,11 +33,11 @@ export interface ParsedTemplateResult {
   data?: any;
 }
 
-const EMAIL_INSTRUCTOR_REGEX = /^[\w\.-]+@(sena\.edu\.co|misena\.edu\.co|gmail\.com)$/;
+const EMAIL_INSTRUCTOR_REGEX = /^[\w\.-]+@(sena\.edu\.co|gmail\.com)$/;
 const EMAIL_APRENDIZ_REGEX = /^[\w\.-]+@[\w\.-]+\.\w+$/;
 
-const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Desercion', 'En formacion'];
-const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT'];
+const ESTADOS_VALIDOS_MODAL = ['En Formación', 'Retiro Voluntario', 'Cancelado', 'Aplazado', 'Trasladado', 'Deserción', 'Desercion', 'En formacion'];
+const TIPOS_DOC_VALIDOS = ['CC', 'TI', 'CE', 'PP', 'PPT', 'PEP'];
 const DIAS_VALIDOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 const sanitizarTextoPreParser = (texto: string): string => {
@@ -48,6 +48,56 @@ const sanitizarTextoPreParser = (texto: string): string => {
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+};
+
+const toStrictDDMMYYYY = (key: string | number): string => {
+  if (key === null || key === undefined || key === "") return "";
+  const cleanKey = String(key).replace(/\.\d+$/, '').trim();
+
+  if (typeof key === 'number' || /^\d{5}$/.test(cleanKey)) {
+    const excelEpoch = new Date(1899, 11, 30);
+    const dateObj = new Date(excelEpoch.getTime() + Number(cleanKey) * 24 * 60 * 60 * 1000);
+    if (!isNaN(dateObj.getTime())) {
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const y = dateObj.getFullYear();
+      return `${d}/${m}/${y}`;
+    }
+  }
+
+  const parts = cleanKey.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    let day: number, month: number, year: number;
+    if (parts[0].length === 4) {
+      year = Number(parts[0]);
+      month = Number(parts[1]);
+      day = Number(parts[2]);
+    } else {
+      day = Number(parts[0]);
+      month = Number(parts[1]);
+      year = Number(parts[2]);
+      if (year < 100) year += 2000;
+    }
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    }
+  }
+  return cleanKey;
+};
+
+const parseDateToObj = (dateStr: string): Date => {
+  const clean = toStrictDDMMYYYY(dateStr);
+  const parts = clean.split('/');
+  if (parts.length === 3) {
+    return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+  }
+  return new Date(0);
+};
+
+const ordenarFechasCronologicamente = (fechas: string[]): string[] => {
+  if (!Array.isArray(fechas)) return [];
+  const unicas = Array.from(new Set(fechas.map(f => toStrictDDMMYYYY(f)).filter(Boolean)));
+  return unicas.sort((a, b) => parseDateToObj(a).getTime() - parseDateToObj(b).getTime());
 };
 
 export const procesarArchivoExcelPreParsing = async (file: File, instructoresExistentes: any[]): Promise<ParsedTemplateResult> => {
@@ -76,7 +126,15 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
             const numDoc = String(row['numero_documento'] || row['documento'] || '').trim();
             const correo = String(row['correo_electronico'] || row['correo'] || row['email'] || '').trim().toLowerCase();
             const estadoRaw = String(row['estado'] || row['estado_aprendiz'] || 'En Formación').trim();
-            const estado = estadoRaw === 'En formacion' ? 'En Formación' : estadoRaw;
+            
+            if (tipoDoc === 'EJEMPLO' || nombres.toUpperCase().includes('EJEMPLO')) return;
+
+            const estado = estadoRaw.toLowerCase().includes('formacion') ? 'En Formación' : 
+                           estadoRaw.toLowerCase().includes('retiro') ? 'Retiro Voluntario' :
+                           estadoRaw.toLowerCase().includes('cancelado') ? 'Cancelado' :
+                           estadoRaw.toLowerCase().includes('aplazado') ? 'Aplazado' :
+                           estadoRaw.toLowerCase().includes('trasladado') ? 'Trasladado' :
+                           estadoRaw.toLowerCase().includes('deserc') ? 'Deserción' : 'En Formación';
 
             if (!TIPOS_DOC_VALIDOS.includes(tipoDoc)) {
               errores.push(`Fila ${filaNum} [Aprendiz]: Tipo de documento inválido: "${tipoDoc}".`);
@@ -84,21 +142,15 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
             if (!numDoc) {
               errores.push(`Fila ${filaNum} [Aprendiz]: El número de documento es obligatorio.`);
             }
-            if (!ESTADOS_VALIDOS_MODAL.includes(estado)) {
-              errores.push(`Fila ${filaNum} [Aprendiz]: Estado inválido o mal escrito: "${estado}".`);
-            }
-            if (correo && !EMAIL_APRENDIZ_REGEX.test(correo)) {
-              errores.push(`Fila ${filaNum} [Aprendiz]: Estructura de correo electrónico inválida: "${correo}".`);
-            }
 
             aprendicesProcesados.push({
               tipo_documento: tipoDoc,
               numero_documento: numDoc,
               nombres,
               apellidos,
-              correo: correo,
+              correo: correo, // Abierto a cualquier servidor de correo
               telefono: String(row['telefono'] || ''),
-              estado: ESTADOS_VALIDOS_MODAL.includes(estado) ? (estado === 'En formacion' ? 'En Formación' : estado) : 'En Formación',
+              estado,
               registros: {}
             });
           });
@@ -115,16 +167,18 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
           rowsEquipo.forEach((row, index) => {
             const filaNum = index + 2;
             const seleccionInstructor = String(row['nombre_del_instructor'] || row['nombre'] || '').trim();
+            if (seleccionInstructor.toUpperCase().includes('EJEMPLO')) return;
+
             const correoGoogle = String(row['correo_google'] || '').trim().toLowerCase();
             const correoSena = String(row['correo_institucional_sena'] || row['correo_institucional'] || '').trim().toLowerCase();
             const diaRaw = String(row['dia'] || '').trim();
             const diaFormateado = diaRaw.charAt(0).toUpperCase() + diaRaw.slice(1).toLowerCase();
 
             if (correoGoogle && !EMAIL_INSTRUCTOR_REGEX.test(correoGoogle)) {
-              errores.push(`Fila ${filaNum} [Instructor]: El correo Google debe ser @gmail.com autorizado: "${correoGoogle}".`);
+              errores.push(`Fila ${filaNum} [Instructor]: El correo Google debe terminar en @gmail.com: "${correoGoogle}".`);
             }
-            if (correoSena && !EMAIL_INSTRUCTOR_REGEX.test(correoSena)) {
-              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional debe ser @sena.edu.co o @misena.edu.co: "${correoSena}".`);
+            if (correoSena && !correoSena.endsWith('@sena.edu.co')) {
+              errores.push(`Fila ${filaNum} [Instructor]: El correo institucional debe terminar en @sena.edu.co: "${correoSena}".`);
             }
 
             if (diaFormateado && !DIAS_VALIDOS.includes(diaFormateado)) {
@@ -134,7 +188,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
             // Control de integridad contra traslapes en el mismo día
             if (diaFormateado && DIAS_VALIDOS.includes(diaFormateado)) {
               if (diasAsignadosSet.has(diaFormateado)) {
-                errores.push(`[Conflicto de Programación - Fila ${filaNum}]: Se detectó un traslape en el día "${diaFormateado}" asignado a múltiples instructores. Cada día debe tener una única asignación principal.`);
+                errores.push(`[Conflicto de Programación - Fila ${filaNum}]: Se detectó un traslape en el día "${diaFormateado}" asignado a múltiples instructores.`);
               } else {
                 diasAsignadosSet.add(diaFormateado);
               }
@@ -197,32 +251,6 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
   });
 };
 
-const displayAsDDMMYYYY = (dateStr: string) => {
-  if (!dateStr) return "";
-  let cleanStr = String(dateStr).trim().replace(/['"]/g, '');
-  let parts: string[] = [];
-  if (cleanStr.includes('/')) {
-    parts = cleanStr.split('/');
-  } else if (cleanStr.includes('-')) {
-    parts = cleanStr.split('-');
-  }
-
-  if (parts.length === 3) {
-    let p1 = parts[0].trim();
-    let p2 = parts[1].trim();
-    let p3 = parts[2].trim();
-
-    if (p1.length === 4) {
-      return `${String(p3).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p1}`;
-    }
-
-    if (p3.length === 4) {
-      return `${String(p1).padStart(2, '0')}/${String(p2).padStart(2, '0')}/${p3}`;
-    }
-  }
-  return cleanStr;
-};
-
 interface SheetsTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -255,7 +283,7 @@ function mergeInstructorAttendance(
     || uploadedData.fechas_asistencia 
     || [];
   
-  const fechasSubidasInstructor = rawFechasDelInstructor.map((f: string) => displayAsDDMMYYYY(f));
+  const fechasSubidasInstructor = rawFechasDelInstructor.map((f: string) => toStrictDDMMYYYY(f));
 
   const mergedData = baseData;
 
@@ -273,7 +301,7 @@ function mergeInstructorAttendance(
   if (currentInstructorName) {
     const fechasPreviasInstructor = mergedData.fechas_por_instructor[currentInstructorName] || [];
     const setFechasInstructor = new Set([
-      ...fechasPreviasInstructor.map((f: string) => displayAsDDMMYYYY(f)), 
+      ...fechasPreviasInstructor.map((f: string) => toStrictDDMMYYYY(f)), 
       ...fechasSubidasInstructor
     ]);
     
@@ -298,7 +326,7 @@ function mergeInstructorAttendance(
       const normalizedCloudRegistros: Record<string, string> = {};
       
       Object.keys(cloudRegistros).forEach(k => {
-        normalizedCloudRegistros[displayAsDDMMYYYY(k)] = cloudRegistros[k];
+        normalizedCloudRegistros[toStrictDDMMYYYY(k)] = cloudRegistros[k];
       });
 
       fechasSubidasInstructor.forEach((fecha: string) => {
@@ -306,7 +334,7 @@ function mergeInstructorAttendance(
         let val = undefined;
         
         Object.keys(rawUploadedRegs).forEach(rk => {
-          if (displayAsDDMMYYYY(rk) === fecha) {
+          if (toStrictDDMMYYYY(rk) === fecha) {
             val = rawUploadedRegs[rk];
           }
         });
@@ -380,50 +408,41 @@ export function SheetsTemplateModal({
     const wb = XLSX.utils.book_new();
 
     if (type === 'configuracion') {
-      // 1. Hoja de Instrucciones detallada con directrices de Competencia, Día y Turnos Activos
-      const wsInstruccionesData = [
-        ["INSTRUCCIONES OPERATIVAS Y GUÍA DE DILIGENCIAMIENTO - SENA"],
-        ["1. Competencia: Indique el nombre completo de la competencia o, si es compartida entre varios instructores, especifique el nombre exacto del Resultado de Aprendizaje."],
-        ["2. Día de Formación: Registre únicamente el día activo en que el instructor imparte formación en la ficha. Valores permitidos exactos: Lunes, Martes, Miércoles, Jueves o Viernes."],
-        ["3. Instructores Activos: Cargue exclusivamente los instructores que se encuentran dando formación actualmente (días programados en la ficha). Evite traslapes en los días de la semana."],
-        ["4. Al cargar este archivo, la plataforma ejecutará un motor de Parsing para corroborar y depurar la información antes de guardarla."],
-        ["5. VALORES VÁLIDOS PARA MINIMIZAR ERRORES:"],
+      // 1. Hoja LÉAME estructurada
+      const wsLeameData = [
+        ["GUÍA RÁPIDA DE DILIGENCIAMIENTO - CONFIGURACIÓN DE FICHA"],
+        ["1. Competencia: Indique el nombre completo de la competencia o, si es compartida, el Resultado de Aprendizaje."],
+        ["2. Día de Formación: Registre únicamente el día activo (Lunes, Martes, Miércoles, Jueves o Viernes)."],
+        ["3. Instructores Activos: Cargue exclusivamente los instructores programados y evite traslapes en los días de la semana."],
+        ["4. La primera fila con etiqueta 'EJEMPLO – NO SE IMPORTA' es solo una guía visual y será ignorada por el motor de parsing."],
+        ["5. VALORES Y OPCIONES VÁLIDAS:"],
         ["- Roles permitidos:", "Instructor / Tutor, Instructor Líder, Instructor Técnico, Coordinador Académico"],
-        ["- Estados de Aprendices:", "En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Desercion"],
-        ["- Correos requeridos:", "Nombres completos, correo institucional SENA (@sena.edu.co / @misena.edu.co) y Google (@gmail.com)"]
+        ["- Estados válidos:", "En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Deserción"],
+        ["- Correos:", "Instructores obligatoriamente @sena.edu.co / @gmail.com; aprendices abiertos a cualquier servidor."]
       ];
-      const wsInstrucciones = XLSX.utils.aoa_to_sheet(wsInstruccionesData);
-      XLSX.utils.book_append_sheet(wb, wsInstrucciones, "Instrucciones");
+      const wsLeame = XLSX.utils.aoa_to_sheet(wsLeameData);
+      XLSX.utils.book_append_sheet(wb, wsLeame, "LÉAME");
 
       // 2. Hoja Ficha
       const wsFichaData = [
         ["ficha_de_caracterizacion", "denominacion", "centro", "fecha_inicio", "fecha_terminacion", "jornada"],
-        [currentFicha, courseData.denominacion || "GESTIÓN ADMINISTRATIVA", courseData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "", "", "Diurna"]
+        [currentFicha, courseData.denominacion || "GESTIÓN ADMINISTRATIVA", courseData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "20/01/2026", "20/11/2026", "Diurna"]
       ];
       const wsFicha = XLSX.utils.aoa_to_sheet(wsFichaData);
       XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-      // 3. Hoja Equipo_Ejecutor (Plana y limpia)
+      // 3. Hoja Equipo_Ejecutor con EJEMPLO
       const wsEquipoData = [
         ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "rol", "fecha_de_inicio"],
-        [
-          "Competencia General de Formación",
-          instructorActual.nombre_del_instructor || "JORGE ALEXANDER SEPÚLVEDA VÉLEZ",
-          "instructor@gmail.com",
-          "instructor@sena.edu.co",
-          "Viernes",
-          "Instructor / Tutor",
-          "20/01/2026"
-        ]
+        ["EJEMPLO – NO SE IMPORTA", "JUAN PÉREZ GÓMEZ", "instructor@gmail.com", "instructor@sena.edu.co", "Viernes", "Instructor / Tutor", "20/01/2026"]
       ];
       const wsEquipo = XLSX.utils.aoa_to_sheet(wsEquipoData);
       XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-      // 4. Hoja Aprendices (Plana y limpia)
+      // 4. Hoja Aprendices con EJEMPLO
       const wsAprendicesData = [
         ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"],
-        ["CC", "1001021491", "VALENTINA", "TORO SALGADO", "valencia@outlook.com", "3001234567", "En Formación"],
-        ["CC", "1001153239", "JUAN JOSE", "CANO RUA", "juancano@gmail.com", "3007654321", "En Formación"]
+        ["EJEMPLO", "1001021491", "VALENTINA", "TORO SALGADO", "valencia@outlook.com", "3001234567", "En Formación"]
       ];
       const wsAprendices = XLSX.utils.aoa_to_sheet(wsAprendicesData);
       XLSX.utils.book_append_sheet(wb, wsAprendices, "Aprendices");
@@ -431,21 +450,21 @@ export function SheetsTemplateModal({
       XLSX.writeFile(wb, `Plantilla_Configuracion_Ficha_${currentFicha}.xlsx`);
 
     } else {
-      // 5. Plantilla de Inasistencias con Hoja de Instrucciones
+      // 5. Plantilla de Inasistencias con LÉAME y orden cronológico estricto
       const wbInas = XLSX.utils.book_new();
       
-      const wsInstruccionesInasData = [
-        ["INSTRUCCIONES PARA EL REGISTRO Y CARGUE DE INASISTENCIAS - SENA"],
-        ["1. Mantenga la estructura de las columnas de aprendices y fechas."],
-        ["2. Al cargar este archivo, la plataforma validará mediante Parsing la correcta escritura de las novedades."],
-        ["3. OPCIONES VÁLIDAS DE ASISTENCIA RECONOCIDAS POR EL SISTEMA:"],
+      const wsLeameInasData = [
+        ["GUÍA RÁPIDA DE DILIGENCIAMIENTO - REGISTRO DE ASISTENCIAS"],
+        ["1. Mantenga la estructura de las columnas de aprendices y fechas (ordenadas cronológicamente)."],
+        ["2. Las columnas de identificación se encuentran protegidas."],
+        ["3. OPCIONES VÁLIDAS DE ASISTENCIA:"],
         ["- Presente:", "Celda vacía o asistencia regular"],
-        ["- X:", "Inasistencia injustificada / Falta"],
+        ["- X:", "Inasistencia injustificada (también acepta 'falta')"],
         ["- Tarde:", "Llegada tarde / Retardo"],
-        ["- Excusa:", "Inasistencia justificada con soporte"]
+        ["- Excusa:", "Inasistencia justificada (también acepta 'evento')"]
       ];
-      const wsInstruccionesInas = XLSX.utils.aoa_to_sheet(wsInstruccionesInasData);
-      XLSX.utils.book_append_sheet(wbInas, wsInstruccionesInas, "Instrucciones");
+      const wsLeameInas = XLSX.utils.aoa_to_sheet(wsLeameInasData);
+      XLSX.utils.book_append_sheet(wbInas, wsLeameInas, "LÉAME");
 
       const wsFichaInasData = [
         ["ficha_de_caracterizacion", "denominacion", "centro", "instructor_titular", "competencia_activa"],
@@ -454,8 +473,9 @@ export function SheetsTemplateModal({
       const wsFichaInas = XLSX.utils.aoa_to_sheet(wsFichaInasData);
       XLSX.utils.book_append_sheet(wbInas, wsFichaInas, "Ficha");
 
-      const fechasInstructor = courseData.fechas_por_instructor?.[instructorActual.nombre_del_instructor] || courseData.fechas_asistencia || [];
-      const headerAprendices = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado", ...fechasInstructor];
+      const rawFechas = courseData.fechas_por_instructor?.[instructorActual.nombre_del_instructor] || courseData.fechas_asistencia || [];
+      const fechasOrdenadas = ordenarFechasCronologicamente(rawFechas);
+      const headerAprendices = ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado", ...fechasOrdenadas];
 
       const aprendicesRows = (courseData.asistencias_aprendices || []).map((student: any) => {
         const rowObj: any = {
@@ -467,7 +487,7 @@ export function SheetsTemplateModal({
           telefono: student.telefono || "",
           estado: student.estado || "En Formación"
         };
-        fechasInstructor.forEach((fecha: string) => {
+        fechasOrdenadas.forEach((fecha: string) => {
           rowObj[fecha] = student.registros?.[fecha] || "";
         });
         return rowObj;
@@ -493,7 +513,7 @@ export function SheetsTemplateModal({
         const result = await procesarArchivoExcelPreParsing(file, instructoresCatalogo);
         setUploadResult(result);
       } else {
-        const result = await (await import('../lib/templateGenerator')).parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
+        const result = await (await import('./templateParser')).parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
         setUploadResult(result);
       }
     } catch (err: any) {
@@ -647,10 +667,10 @@ export function SheetsTemplateModal({
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-emerald-950">
-                    Formato oficial de configuración y control mediante instrucciones y verificación por Parsing
+                    Formato oficial de configuración y control mediante LÉAME y verificación por Parsing
                   </p>
                   <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                    Las plantillas descargadas incluyen una hoja guía con instrucciones precisas, prohibición de traslapes y opciones de marcado exactas.
+                    Las plantillas descargadas incluyen la hoja LÉAME con instrucciones precisas, prohibición de traslapes y opciones de marcado exactas.
                   </p>
                 </div>
               </div>
@@ -665,7 +685,7 @@ export function SheetsTemplateModal({
                       Plantilla Configuración General (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Incluye hoja de instrucciones operativas, validación anti-traslapes y estructura limpia.
+                      Incluye hoja LÉAME operativas, validación anti-traslapes y estructura limpia.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -688,7 +708,7 @@ export function SheetsTemplateModal({
                       Plantilla para Inasistencias (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Incluye hoja de instrucciones y el formato simplificado con los aprendices y fechas vigentes.
+                      Incluye hoja LÉAME y el formato simplificado con los aprendices y fechas ordenadas cronológicamente.
                     </p>
                   </div>
                   <div className="mt-5">
@@ -719,15 +739,15 @@ export function SheetsTemplateModal({
                   </div>
                   <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <strong className="text-slate-800 block mb-1">Estados Válidos de Aprendices:</strong>
-                    <p className="text-slate-600 font-mono">En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Desercion</p>
+                    <p className="text-slate-600 font-mono">En Formación, Retiro Voluntario, Cancelado, Aplazado, Trasladado, Deserción</p>
                   </div>
                   <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <strong className="text-slate-800 block mb-1">Opciones de Asistencia:</strong>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 font-semibold">
                       <div className="p-2 bg-emerald-50 text-emerald-800 rounded border border-emerald-200 text-center">Presente</div>
-                      <div className="p-2 bg-red-50 text-red-700 rounded border border-red-200 text-center">X (Falta)</div>
+                      <div className="p-2 bg-red-50 text-red-700 rounded border border-red-200 text-center">X / Falta</div>
                       <div className="p-2 bg-amber-50 text-amber-700 rounded border border-amber-200 text-center">Tarde (Retardo)</div>
-                      <div className="p-2 bg-blue-50 text-blue-700 rounded border border-blue-200 text-center">Excusa (Justificada)</div>
+                      <div className="p-2 bg-blue-50 text-blue-700 rounded border border-blue-200 text-center">Excusa / Evento</div>
                     </div>
                   </div>
                 </div>
