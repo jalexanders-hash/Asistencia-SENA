@@ -1,37 +1,77 @@
-// src/types.ts
-export type TipoDocumento = 'CC' | 'TI' | 'CE' | 'PP' | 'PPT';
-export type EstadoAprendiz = 'En Formación' | 'Retiro Voluntario' | 'Cancelado' | 'Aplazado' | 'Trasladado' | 'Deserción';
+// ==========================================
+// CONSTANTES Y CATÁLOGOS OFICIALES SENA
+// ==========================================
+
+export const ESTADOS_APRENDIZ_CANONICOS = [
+  'En Formación',
+  'Retiro Voluntario',
+  'Cancelado',
+  'Aplazado',
+  'Trasladado',
+  'Deserción'
+] as const;
+
+export type EstadoAprendiz = typeof ESTADOS_APRENDIZ_CANONICOS[number];
+
+export const TIPOS_DOCUMENTO = ['CC', 'TI', 'CE', 'PPT', 'PEP'] as const;
+export type TipoDocumento = typeof TIPOS_DOCUMENTO[number];
+
+export const ROLES_INSTRUCTOR = [
+  'Instructor / Tutor',
+  'Instructor Líder',
+  'Instructor Técnico',
+  'Coordinador Académico'
+] as const;
+
+export type RolInstructor = typeof ROLES_INSTRUCTOR[number];
+
+export const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'] as const;
+export type DiaSemana = typeof DIAS_SEMANA[number];
+
+export const OPCIONES_ASISTENCIA = ['Presente', 'X', 'Tarde', 'Excusa'] as const;
+export type OpcionAsistencia = typeof OPCIONES_ASISTENCIA[number];
+
+// ==========================================
+// INTERFACES DE DATOS DE LA FICHA
+// ==========================================
 
 export interface Instructor {
   id?: string;
-  numeroDocumento: string;
-  nombreCompleto: string;
-  correoSena: string;
-  correoGmail: string;
-  activo: boolean;
+  competencia: string;
+  nombre_del_instructor: string;
+  nombreCompleto?: string;
+  correo_google: string;
+  correo_institucional_sena: string;
+  correoGmail?: string;
+  correoSena?: string;
+  dia?: DiaSemana | string;
+  rol: RolInstructor | string;
+  fecha_de_inicio?: string;
+  activo?: boolean;
 }
 
-export interface AprendizImport {
-  tipoDocumento: TipoDocumento;
-  numeroDocumento: string;
+export interface Aprendiz {
+  tipo_documento: TipoDocumento | string;
+  numero_documento: string;
   nombres: string;
   apellidos: string;
-  correoElectronico: string;
-  telefono: string;
-  estado: EstadoAprendiz;
+  correo: string;
+  correo_electronico?: string;
+  telefono?: string;
+  estado: EstadoAprendiz | string;
+  registros: Record<string, string>; // Clave: Fecha (DD/MM/YYYY), Valor: 'X' | 'Tarde' | 'Excusa' | ''
 }
 
-export interface ValidationError {
-  fila: number;
-  seccion: 'Ficha' | 'Instructor' | 'Aprendiz';
-  campo: string;
-  mensaje: string;
-}
-
-export interface ParseResult {
-  valido: boolean;
-  errores: ValidationError[];
-  datosFicha?: any;
-  instructores: Instructor[];
-  aprendices: AprendizImport[];
+export interface CourseData {
+  ficha_de_caracterizacion: string;
+  denominacion: string;
+  centro: string;
+  fecha_inicio?: string;
+  fecha_terminacion?: string;
+  jornada?: string;
+  competencias?: string[];
+  fechas_asistencia: string[];
+  fechas_por_instructor: Record<string, string[]>;
+  asistencias_aprendices: Aprendiz[];
+  equipo_instructores: Instructor[];
 }
