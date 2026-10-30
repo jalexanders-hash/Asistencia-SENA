@@ -113,7 +113,6 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
         const instructoresProcesados: any[] = [];
         const aprendicesProcesados: any[] = [];
 
-        // 1. Procesar Hoja 'Aprendices'
         const hojaAprendicesName = workbook.SheetNames.find(s => s.toLowerCase().includes('aprendiz')) || workbook.SheetNames[2] || workbook.SheetNames[0];
         const sheetAprendices = workbook.Sheets[hojaAprendicesName];
         if (sheetAprendices) {
@@ -156,7 +155,6 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
           });
         }
 
-        // 2. Procesar Hoja 'Equipo_Ejecutor' y Validar Traslapes de Días
         const hojaEquipoName = workbook.SheetNames.find(s => s.toLowerCase().includes('equipo') || s.toLowerCase().includes('instructor')) || workbook.SheetNames[1];
         const sheetEquipo = workbook.Sheets[hojaEquipoName];
         
@@ -185,7 +183,6 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
               errores.push(`Fila ${filaNum} [Instructor]: Día de formación inválido: "${diaRaw}". Debe ser Lunes, Martes, Miércoles, Jueves o Viernes.`);
             }
 
-            // Control de integridad contra traslapes en el mismo día
             if (diaFormateado && DIAS_VALIDOS.includes(diaFormateado)) {
               if (diasAsignadosSet.has(diaFormateado)) {
                 errores.push(`[Conflicto de Programación - Fila ${filaNum}]: Se detectó un traslape en el día "${diaFormateado}" asignado a múltiples instructores.`);
@@ -408,7 +405,6 @@ export function SheetsTemplateModal({
     const wb = XLSX.utils.book_new();
 
     if (type === 'configuracion') {
-      // 1. Hoja LÉAME estructurada
       const wsLeameData = [
         ["GUÍA RÁPIDA DE DILIGENCIAMIENTO - CONFIGURACIÓN DE FICHA"],
         ["1. Competencia: Indique el nombre completo de la competencia o, si es compartida, el Resultado de Aprendizaje."],
@@ -423,7 +419,6 @@ export function SheetsTemplateModal({
       const wsLeame = XLSX.utils.aoa_to_sheet(wsLeameData);
       XLSX.utils.book_append_sheet(wb, wsLeame, "LÉAME");
 
-      // 2. Hoja Ficha
       const wsFichaData = [
         ["ficha_de_caracterizacion", "denominacion", "centro", "fecha_inicio", "fecha_terminacion", "jornada"],
         [currentFicha, courseData.denominacion || "GESTIÓN ADMINISTRATIVA", courseData.centro || "Complejo Tecnológico Agroindustrial, Pecuario y Turístico", "20/01/2026", "20/11/2026", "Diurna"]
@@ -431,7 +426,6 @@ export function SheetsTemplateModal({
       const wsFicha = XLSX.utils.aoa_to_sheet(wsFichaData);
       XLSX.utils.book_append_sheet(wb, wsFicha, "Ficha");
 
-      // 3. Hoja Equipo_Ejecutor con EJEMPLO
       const wsEquipoData = [
         ["competencia", "nombre_del_instructor", "correo_google", "correo_institucional_sena", "dia", "rol", "fecha_de_inicio"],
         ["EJEMPLO – NO SE IMPORTA", "JUAN PÉREZ GÓMEZ", "instructor@gmail.com", "instructor@sena.edu.co", "Viernes", "Instructor / Tutor", "20/01/2026"]
@@ -439,7 +433,6 @@ export function SheetsTemplateModal({
       const wsEquipo = XLSX.utils.aoa_to_sheet(wsEquipoData);
       XLSX.utils.book_append_sheet(wb, wsEquipo, "Equipo_Ejecutor");
 
-      // 4. Hoja Aprendices con EJEMPLO
       const wsAprendicesData = [
         ["tipo_documento", "numero_documento", "nombres", "apellidos", "correo_electronico", "telefono", "estado"],
         ["EJEMPLO", "1001021491", "VALENTINA", "TORO SALGADO", "valencia@outlook.com", "3001234567", "En Formación"]
@@ -450,7 +443,6 @@ export function SheetsTemplateModal({
       XLSX.writeFile(wb, `Plantilla_Configuracion_Ficha_${currentFicha}.xlsx`);
 
     } else {
-      // 5. Plantilla de Inasistencias con LÉAME y orden cronológico estricto
       const wbInas = XLSX.utils.book_new();
       
       const wsLeameInasData = [
@@ -513,7 +505,8 @@ export function SheetsTemplateModal({
         const result = await procesarArchivoExcelPreParsing(file, instructoresCatalogo);
         setUploadResult(result);
       } else {
-        const result = await (await import('./templateParser')).parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
+        // Corrección de ruta de importación relativa correcta hacia src/lib/templateParser
+        const result = await (await import('../lib/templateParser')).parseUploadedTemplate(file, courseDataFiltradoPorInstructor);
         setUploadResult(result);
       }
     } catch (err: any) {
