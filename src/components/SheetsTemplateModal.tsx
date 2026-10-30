@@ -148,7 +148,7 @@ export const procesarArchivoExcelPreParsing = async (file: File, instructoresExi
               numero_documento: numDoc,
               nombres,
               apellidos,
-              correo: correo, // Abierto a cualquier servidor de correo
+              correo: correo,
               telefono: String(row['telefono'] || ''),
               estado,
               registros: {}
@@ -685,7 +685,7 @@ export function SheetsTemplateModal({
                       Plantilla Configuración General (.xlsx)
                     </h3>
                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                      Incluye hoja LÉAME operativas, validación anti-traslapes y estructura limpia.
+                      Incluye hoja LÉAME con instrucciones operativas, validación anti-traslapes y estructura limpia.
                     </p>
                   </div>
                   <div className="mt-5">
